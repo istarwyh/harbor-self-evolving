@@ -24,6 +24,7 @@ PROMOTE / REJECT（部署由既有 CI/CD 负责）
 - Harbor Agent：通过 Harbor 内置 ACP runner 启动真实 DSH composition。
 - Harbor Job Plugin：把 Candidate 身份、Trial 事件和稳定的指标汇总写入 Job。
 - DSH Cordis bundle：向 DSH Agent 注册 snapshot、run、result、compare 四个工具。
+- 本项目官方 Skill：让 Agent 先澄清评测契约并初始化所需结构，再稳定执行 baseline、受控改动、回归比较和晋级建议。
 - 可比性保护：为 Dataset、Task、Environment、Verifier 和运行时版本生成 `evaluation-context` digest。
 - Promotion Gate：先确认两个 Job 上下文一致，再要求主指标提升、关键指标达标、回归指标不下降且无执行异常。
 - DeepResearch 示例：明确展示工具调用失败、无效搜索和错误引用如何进入 reward。
@@ -36,7 +37,7 @@ PROMOTE / REJECT（部署由既有 CI/CD 负责）
 harbor-self-evolving/
 ├── packages/
 │   ├── harbor-plugin/       # Python: Candidate、ACP Agent、Job Plugin、Gate
-│   └── dsh-plugin/          # npm: DSH/Cordis bundle 与模型工具
+│   └── dsh-plugin/          # npm: DSH/Cordis bundle、随附 Skill 与模型工具
 ├── examples/
 │   ├── deep-research/       # DSH ACP → Harbor → Promotion 的完整示例
 │   └── shell-minimal/       # 不依赖 DSH 的最小 Harbor Candidate 示例
@@ -88,29 +89,74 @@ evaluation-summary.json     # 稳定指标汇总
 promotion-report.json       # 晋级或拒绝及原因
 ```
 
-## 在 DSH 中安装
+## 在本地 DSH Web 中安装
 
-先把 Harbor 插件安装到独立 Python 环境，再把 Cordis bundle 加入 DSH profile：
+集成由两个正式包组成，必须都安装：
+
+| 包 | 安装位置 | 作用 |
+| --- | --- | --- |
+| `harbor-dsh-evolution` | 独立 Python 环境 | Harbor Agent、Job Plugin、结果汇总与 Gate |
+| `dsh-harbor-evolution` | 当前 DSH profile | 注册本项目自进化 Skill 与四个评测工具 |
+
+包含本项目官方 Skill 的正式 bundle 版本为 `0.2.0`；源码开发也可以使用 `./hse dsh-install web`。这里的 Skill 通过 DSH 官方 Skill Registry 加载，不表示 DeepSeek 官方背书。
+
+先建立 Harbor 运行环境：
 
 ```bash
-uv venv .venv
-uv pip install --python .venv/bin/python harbor-dsh-evolution
-source .venv/bin/activate
-pnpm dlx @deepseek-ai/dsh@0.1.0-rc.6 plugin --profile headless add dsh-harbor-evolution
+HSE_RUNTIME_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/harbor-dsh-evolution"
+mkdir -p "$HSE_RUNTIME_DIR"
+uv venv --python 3.12 "$HSE_RUNTIME_DIR/.venv"
+uv pip install --python "$HSE_RUNTIME_DIR/.venv/bin/python" \
+  harbor-dsh-evolution==0.2.0
+
+"$HSE_RUNTIME_DIR/.venv/bin/harbor" plugins list
+"$HSE_RUNTIME_DIR/.venv/bin/harbor-dsh" --help
 ```
 
-Harbor 和 `harbor-dsh-evolution` 必须位于同一个 Python 环境，DSH 才能通过 Harbor 找到插件。源码开发仍可使用仓库的一键安装：
+截图中的本地 Web UI 使用 `web` profile，因此 npm bundle 也要安装到 `web`；只有命令行 Agent 才改用 `headless`：
 
 ```bash
-./hse dsh-install headless
+pnpm dlx @deepseek-ai/dsh@0.1.0-rc.6 \
+  plugin --profile web add -w dsh-harbor-evolution@0.2.0
 ```
 
-安装后，DSH Agent 可调用：
+安装后先停止旧的 DSH 进程，再从业务 Agent 工作区启动。启动目录就是默认 `projectRoot`：
+
+```bash
+cd /absolute/path/to/your-agent-workspace
+
+HSE_RUNTIME_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/harbor-dsh-evolution"
+HARBOR_BIN="$HSE_RUNTIME_DIR/.venv/bin/harbor" \
+HARBOR_DSH_BIN="$HSE_RUNTIME_DIR/.venv/bin/harbor-dsh" \
+pnpm dlx @deepseek-ai/dsh@0.1.0-rc.6 web
+```
+
+打开 DSH 的“设置 → 插件 → 插件列表”，搜索插件 ID `harbor-evolution`。它同时注册：
+
+- `evolve-agent-with-harbor`：Plugin 随附 Skill，负责需求澄清、初始化、评测闭环和 Promotion 建议；输入 `/evolve-agent-with-harbor` 可显式启用。
 
 - `harbor_candidate_snapshot`：把当前 composition 固化为 Candidate；默认从 `package.json` 读取名称和版本。
 - `harbor_eval_run`：自动命名 Job、发起评测，并直接返回 summary。
 - `harbor_eval_result`：读取规范化指标与失败证据。
 - `harbor_candidate_compare`：执行确定性的 Promotion Gate。
+
+第一次运行建议先让 Skill 帮你建立评测契约：
+
+```text
+/evolve-agent-with-harbor
+请先检查当前工作区，帮我澄清并初始化一个 Harbor 自进化项目；
+在运行任何 Job 前，列出仍需要我确认的指标、基线和允许改动范围。
+```
+
+它会先复用现有文件，只追问无法从项目中确定的关键选择。若只是调试工具，也可以直接说：
+
+```text
+请调用 harbor_eval_run：
+candidatePath = examples/deep-research/candidates/v1
+datasetPath = examples/deep-research/task
+```
+
+`candidatePath`、`datasetPath`、`jobPath` 和 `policyPath` 都必须位于 `projectRoot` 内。完整的 UI 配置、v1/v2 比较流程和排错方法见 [本地 DSH Web 快速开始](docs/dsh-web-quickstart.md)。源码开发仍可使用 `./hse dsh-install web`。
 
 开发与验证：
 

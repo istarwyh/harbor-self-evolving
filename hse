@@ -159,6 +159,7 @@ case "$command_name" in
     pnpm --silent dlx @deepseek-ai/dsh@0.1.0-rc.6 \
       plugin --profile "$profile" add -w "$dsh_package"
     echo "Installed dsh-harbor-evolution into DSH profile: $profile"
+    echo "Restart DSH, then invoke /evolve-agent-with-harbor to clarify and initialize the first evaluation cycle."
     ;;
   -h|--help|help)
     usage

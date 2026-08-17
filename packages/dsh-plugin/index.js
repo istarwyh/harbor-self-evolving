@@ -5,9 +5,10 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { compareCandidates, readEvaluation, runEvaluation, snapshot } from './lib/evolution.js'
+import { loadBundledSkill } from './lib/official-skill.js'
 
 export const name = 'harbor-evolution'
-export const inject = ['tools']
+export const inject = ['tools', 'skills']
 
 const packageDir = path.dirname(fileURLToPath(import.meta.url))
 const checkoutPythonPackage = path.resolve(packageDir, '../harbor-plugin')
@@ -54,6 +55,8 @@ export function apply(ctx, config) {
         : ''
     ),
   }
+
+  ctx.skills.register(loadBundledSkill())
 
   ctx.tools.register(jsonTool({
     name: 'harbor_candidate_snapshot',
