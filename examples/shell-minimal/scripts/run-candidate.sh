@@ -4,6 +4,7 @@ set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 demo_dir="$(cd "$script_dir/.." && pwd)"
+repo_dir="$(cd "$demo_dir/../.." && pwd)"
 candidate_label="${1:-}"
 
 case "$candidate_label" in
@@ -50,7 +51,7 @@ printf 'Version:   %s\n' "$candidate_version"
 printf 'Digest:    %s\n' "$candidate_digest"
 printf 'Job:       %s\n' "$job_name"
 
-DOCKER_CONFIG="$demo_dir/.runtime/docker" \
+DOCKER_CONFIG="$repo_dir/.runtime/docker" \
 BUILDX_CONFIG="${TMPDIR:-/tmp}/harbor-minimal-demo-buildx" \
 PYTHONDONTWRITEBYTECODE=1 \
 PYTHONPATH="$script_dir${PYTHONPATH:+:$PYTHONPATH}" \
@@ -61,6 +62,6 @@ PYTHONPATH="$script_dir${PYTHONPATH:+:$PYTHONPATH}" \
     --ak "candidate_version=$candidate_version" \
     --ak "candidate_digest=$candidate_digest" \
     --job-name "$job_name" \
-    --jobs-dir "$demo_dir/jobs"
+    --jobs-dir "$repo_dir/jobs"
 
-printf 'Job directory: %s\n' "$demo_dir/jobs/$job_name"
+printf 'Job directory: %s\n' "$repo_dir/jobs/$job_name"

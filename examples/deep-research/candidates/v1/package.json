@@ -1,0 +1,10 @@
+{
+  "name": "deep-research-candidate-v1",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@deepseek-ai/cordis": "4.0.1",
+    "@deepseek-ai/dsh-llm": "0.1.0-rc.6"
+  }
+}
