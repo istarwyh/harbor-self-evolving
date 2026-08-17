@@ -90,7 +90,16 @@ promotion-report.json       # 晋级或拒绝及原因
 
 ## 在 DSH 中安装
 
-当前包尚未发布到 npm/PyPI，可以从源码安装：
+先把 Harbor 插件安装到独立 Python 环境，再把 Cordis bundle 加入 DSH profile：
+
+```bash
+uv venv .venv
+uv pip install --python .venv/bin/python harbor-dsh-evolution
+source .venv/bin/activate
+pnpm dlx @deepseek-ai/dsh@0.1.0-rc.6 plugin --profile headless add dsh-harbor-evolution
+```
+
+Harbor 和 `harbor-dsh-evolution` 必须位于同一个 Python 环境，DSH 才能通过 Harbor 找到插件。源码开发仍可使用仓库的一键安装：
 
 ```bash
 ./hse dsh-install headless
@@ -115,4 +124,6 @@ promotion-report.json       # 晋级或拒绝及原因
 
 详见 [架构与角色](docs/architecture.md)、[接入指南](docs/integration.md) 和 [安全边界](docs/security.md)。
 
-> 当前仓库尚未选择开源许可证；在作者明确许可证前，公开可见不等于获得再分发或商用授权。
+## License
+
+本项目基于 [MIT License](LICENSE) 开源。

@@ -8,7 +8,17 @@ It provides:
 - `EvolutionPlugin`: records Candidate identity, evaluation-context identity, Trial events, and `evaluation-summary.json` for each Job.
 - `harbor-dsh`: snapshots/verifies Candidates, fingerprints datasets, summarizes Jobs, and runs the deterministic Promotion Gate.
 
-Development install:
+Install it into the same Python environment as Harbor so the plugin entry point is discoverable:
+
+```bash
+uv venv .venv
+uv pip install --python .venv/bin/python harbor-dsh-evolution
+source .venv/bin/activate
+harbor plugins list
+harbor-dsh --help
+```
+
+Development from this repository:
 
 ```bash
 uv sync

@@ -2,7 +2,18 @@
 
 Cordis bundle for evaluating immutable DeepSeek Harness Candidates with Harbor.
 
-## Install from this checkout
+## Install
+
+Install `harbor-dsh-evolution` into the same Python environment as Harbor, then add this bundle to the DSH profile:
+
+```bash
+uv venv .venv
+uv pip install --python .venv/bin/python harbor-dsh-evolution
+source .venv/bin/activate
+pnpm dlx @deepseek-ai/dsh@0.1.0-rc.6 plugin --profile headless add dsh-harbor-evolution
+```
+
+For development from this repository:
 
 ```bash
 ./hse dsh-install headless
