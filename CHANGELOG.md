@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.3.0 - 2026-08-17
+
+- Position the project primarily as an installable DSH Plugin + Skill; keep the templates as reference implementations.
+- Add one repeatable `dsh-harbor setup` command that installs the matching Python runtime and DSH bundle.
+- Persist the Agent workspace and Harbor executable paths in the selected DSH profile without replacing unrelated user patch entries.
+- Verify Harbor and its `dsh-evolution` entry point during setup, and print the exact DSH restart command and first Skill invocation.
+- Keep registry and source-checkout installation on the same workflow.
+
 ## 0.2.0 - 2026-08-17
 
 - Bundle this project's official `evolve-agent-with-harbor` DSH Skill with the Cordis plugin.
