@@ -20,7 +20,7 @@ Commands:
   doctor                Check local prerequisites and integration health
   test                  Run all local package tests and build checks
   context <dataset>     Print the reproducible evaluation-context fingerprint
-  dsh-install [profile] Install the Cordis bundle into DSH (default: headless)
+  dsh-install [profile] Install and configure the local Plugin + Skill (default: web)
 EOF
 }
 
@@ -152,14 +152,13 @@ case "$command_name" in
     "$harbor_dsh_bin" context "$dataset_path"
     ;;
   dsh-install)
-    profile="${2:-headless}"
-    setup_python
-    setup_node
-    require_command pnpm "DeepSeek Harness uses pnpm to manage profile plugins."
-    pnpm --silent dlx @deepseek-ai/dsh@0.1.0-rc.6 \
-      plugin --profile "$profile" add -w "$dsh_package"
-    echo "Installed dsh-harbor-evolution into DSH profile: $profile"
-    echo "Restart DSH, then invoke /evolve-agent-with-harbor to clarify and initialize the first evaluation cycle."
+    profile="${2:-web}"
+    node "$dsh_package/bin/dsh-harbor.mjs" setup \
+      --profile "$profile" \
+      --project-root "$repo_dir" \
+      --runtime-dir "$python_package" \
+      --python-spec "$python_package" \
+      --plugin-spec "$dsh_package"
     ;;
   -h|--help|help)
     usage
