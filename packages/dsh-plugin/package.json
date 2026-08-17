@@ -4,6 +4,7 @@
   "description": "DeepSeek Harness plugin for snapshotting Cordis Candidates and evaluating them with Harbor.",
   "type": "module",
   "main": "index.js",
+  "exports": "./index.js",
   "bin": {
     "dsh-harbor": "bin/dsh-harbor.mjs"
   },
@@ -12,7 +13,8 @@
     "lib/",
     "bin/",
     "cordis.patch.yml",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "test": "node --test",
@@ -36,10 +38,25 @@
   "engines": {
     "node": ">=22"
   },
-  "license": "UNLICENSED",
+  "license": "MIT",
+  "keywords": [
+    "deepseek-harness",
+    "dsh-plugin",
+    "harbor",
+    "agent-evaluation",
+    "agent-evolution",
+    "cordis"
+  ],
+  "homepage": "https://github.com/istarwyh/harbor-self-evolving#readme",
+  "bugs": {
+    "url": "https://github.com/istarwyh/harbor-self-evolving/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/istarwyh/harbor-self-evolving.git",
     "directory": "packages/dsh-plugin"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

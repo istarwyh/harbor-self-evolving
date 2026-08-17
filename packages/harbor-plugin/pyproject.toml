@@ -4,7 +4,30 @@ version = "0.1.0"
 description = "Candidate identity, evaluation summaries, and promotion gates for DeepSeek Harness agents evaluated with Harbor."
 readme = "README.md"
 requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "istarwyh" }]
+keywords = [
+  "agent-evaluation",
+  "agent-evolution",
+  "deepseek-harness",
+  "harbor",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+]
 dependencies = ["harbor>=0.21.0,<0.22"]
+
+[project.urls]
+Homepage = "https://github.com/istarwyh/harbor-self-evolving"
+Documentation = "https://github.com/istarwyh/harbor-self-evolving#readme"
+Issues = "https://github.com/istarwyh/harbor-self-evolving/issues"
+Repository = "https://github.com/istarwyh/harbor-self-evolving.git"
 
 [project.entry-points."harbor.plugins"]
 dsh-evolution = "harbor_dsh_evolution.plugin:EvolutionPlugin"
