@@ -1,0 +1,3 @@
+FROM redis@sha256:3e1b24a1a8f24ff926b15e5ace8c38a03e5657fb66e1fc7e5188e315aa5fa094
+
+WORKDIR /app
