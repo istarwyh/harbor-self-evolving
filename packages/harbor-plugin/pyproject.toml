@@ -1,0 +1,27 @@
+[project]
+name = "harbor-dsh-evolution"
+version = "0.1.0"
+description = "Candidate identity, evaluation summaries, and promotion gates for DeepSeek Harness agents evaluated with Harbor."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["harbor>=0.21.0,<0.22"]
+
+[project.entry-points."harbor.plugins"]
+dsh-evolution = "harbor_dsh_evolution.plugin:EvolutionPlugin"
+
+[project.scripts]
+harbor-dsh = "harbor_dsh_evolution.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8.4", "pytest-asyncio>=1.0"]
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/harbor_dsh_evolution"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

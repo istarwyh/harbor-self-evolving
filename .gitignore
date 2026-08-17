@@ -1,11 +1,18 @@
 .DS_Store
 __pycache__/
 *.py[cod]
+.pytest_cache/
+.venv/
+dist/
 
 # Harbor execution results are local evidence, not template source.
 jobs/*
 !jobs/.gitkeep
 
-# Local Docker/Buildx state; keep only the portable config file.
-.runtime/docker/buildx/
-.runtime/docker/contexts/
+# Local Docker/Buildx state.
+.runtime/
+
+# Generated Candidate snapshots and local package installs.
+examples/**/candidate-manifest.json
+examples/**/node_modules/
+packages/**/node_modules/

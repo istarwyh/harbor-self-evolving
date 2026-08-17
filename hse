@@ -1,0 +1,175 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+python_package="$repo_dir/packages/harbor-plugin"
+dsh_package="$repo_dir/packages/dsh-plugin"
+harbor_bin="$python_package/.venv/bin/harbor"
+harbor_dsh_bin="$python_package/.venv/bin/harbor-dsh"
+
+usage() {
+  cat <<'EOF'
+Harbor Self-Evolving helper
+
+Usage: ./hse <command>
+
+Commands:
+  demo                  Set up Python and run the complete v1 -> v2 example
+  setup                 Install locked Python and Node.js dependencies
+  doctor                Check local prerequisites and integration health
+  test                  Run all local package tests and build checks
+  context <dataset>     Print the reproducible evaluation-context fingerprint
+  dsh-install [profile] Install the Cordis bundle into DSH (default: headless)
+EOF
+}
+
+require_command() {
+  local command_name="$1"
+  local install_hint="$2"
+  if ! command -v "$command_name" >/dev/null 2>&1; then
+    echo "Missing $command_name. $install_hint" >&2
+    exit 1
+  fi
+}
+
+setup_python() {
+  require_command uv "Install it from https://docs.astral.sh/uv/."
+  echo "Setting up Harbor integration..."
+  (cd "$python_package" && uv sync --frozen)
+}
+
+setup_node() {
+  require_command node "Install Node.js 22 or newer."
+  require_command npm "Install npm with Node.js."
+  local node_major
+  node_major="$(node -p 'process.versions.node.split(".")[0]')"
+  if (( node_major < 22 )); then
+    echo "Node.js 22 or newer is required; found $(node --version)." >&2
+    exit 1
+  fi
+  echo "Setting up DSH integration..."
+  (cd "$dsh_package" && npm ci)
+}
+
+doctor() {
+  local failed=0
+
+  check_command() {
+    local command_name="$1"
+    if command -v "$command_name" >/dev/null 2>&1; then
+      echo "[ok] $command_name: $(command -v "$command_name")"
+    else
+      echo "[missing] $command_name"
+      failed=1
+    fi
+  }
+
+  check_command docker
+  check_command node
+  check_command npm
+  check_command pnpm
+  check_command uv
+
+  if command -v node >/dev/null 2>&1; then
+    local node_major
+    node_major="$(node -p 'process.versions.node.split(".")[0]')"
+    if (( node_major >= 22 )); then
+      echo "[ok] Node.js: $(node --version)"
+    else
+      echo "[unsupported] Node.js $(node --version); version 22+ is required"
+      failed=1
+    fi
+  fi
+
+  if command -v docker >/dev/null 2>&1; then
+    if docker info >/dev/null 2>&1; then
+      echo "[ok] Docker daemon is reachable"
+    else
+      echo "[unavailable] Docker daemon is not reachable"
+      failed=1
+    fi
+  fi
+
+  if [[ -x "$harbor_bin" ]]; then
+    echo "[ok] $($harbor_bin --version)"
+    if "$harbor_bin" plugins list | grep -q 'dsh-evolution'; then
+      echo "[ok] Harbor plugin: dsh-evolution"
+    else
+      echo "[broken] Harbor cannot discover dsh-evolution"
+      failed=1
+    fi
+  else
+    echo "[not set up] Harbor environment; run ./hse setup or ./hse demo"
+  fi
+
+  if command -v dsh >/dev/null 2>&1; then
+    echo "[ok] DSH CLI: $(dsh --version)"
+  else
+    echo "[ok] DSH CLI will run on demand through pinned pnpm dlx"
+  fi
+
+  if [[ "$failed" -ne 0 ]]; then
+    echo "Doctor found missing prerequisites." >&2
+    return 1
+  fi
+  echo "Ready to run ./hse demo"
+}
+
+command_name="${1:-}"
+case "$command_name" in
+  demo)
+    if [[ ! -x "$harbor_bin" || ! -x "$harbor_dsh_bin" ]]; then
+      setup_python
+    fi
+    HARBOR_BIN="$harbor_bin" "$repo_dir/examples/deep-research/run-demo.sh"
+    ;;
+  setup)
+    setup_python
+    setup_node
+    ;;
+  doctor)
+    doctor
+    ;;
+  test)
+    setup_python
+    setup_node
+    (cd "$python_package" && uv run pytest && uv build)
+    (cd "$dsh_package" && npm run check && npm pack --dry-run)
+    bash -n "$repo_dir/hse" "$repo_dir/examples/deep-research/run-demo.sh" \
+      "$repo_dir/examples/shell-minimal/run-demo.sh"
+    echo "All local checks passed."
+    ;;
+  context)
+    dataset_path="${2:-}"
+    if [[ -z "$dataset_path" ]]; then
+      echo "context requires a dataset path" >&2
+      exit 2
+    fi
+    if [[ ! -x "$harbor_dsh_bin" ]]; then
+      setup_python
+    fi
+    "$harbor_dsh_bin" context "$dataset_path"
+    ;;
+  dsh-install)
+    profile="${2:-headless}"
+    setup_python
+    setup_node
+    require_command pnpm "DeepSeek Harness uses pnpm to manage profile plugins."
+    pnpm --silent dlx @deepseek-ai/dsh@0.1.0-rc.6 \
+      plugin --profile "$profile" add -w "$dsh_package"
+    echo "Installed dsh-harbor-evolution into DSH profile: $profile"
+    ;;
+  -h|--help|help)
+    usage
+    ;;
+  "")
+    usage
+    exit 2
+    ;;
+  *)
+    echo "Unknown command: $command_name" >&2
+    usage >&2
+    exit 2
+    ;;
+esac
