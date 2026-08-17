@@ -28,6 +28,16 @@ def test_snapshot_is_stable_and_ignores_manifest(tmp_path: Path):
     assert verify_candidate(candidate).digest == first.digest
 
 
+def test_snapshot_derives_identity_from_package_json(tmp_path: Path):
+    candidate = make_candidate(tmp_path)
+    (candidate / "package.json").write_text(
+        '{"name":"business-agent","version":"2.1.0"}\n'
+    )
+    manifest = snapshot_candidate(candidate)
+    assert manifest.candidate_id == "business-agent"
+    assert manifest.version == "2.1.0"
+
+
 def test_verify_detects_candidate_mutation(tmp_path: Path):
     candidate = make_candidate(tmp_path)
     snapshot_candidate(candidate, candidate_id="demo", version="1.0.0")

@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from harbor_dsh_evolution.candidate import snapshot_candidate, verify_candidate
+from harbor_dsh_evolution.context import build_evaluation_context
 from harbor_dsh_evolution.promotion import compare_jobs, write_report
 from harbor_dsh_evolution.summary import load_or_create_summary
 
@@ -15,8 +16,8 @@ def _parser() -> argparse.ArgumentParser:
 
     snapshot = commands.add_parser("snapshot", help="Freeze a Candidate directory")
     snapshot.add_argument("candidate_dir", type=Path)
-    snapshot.add_argument("--id", required=True, dest="candidate_id")
-    snapshot.add_argument("--version", required=True)
+    snapshot.add_argument("--id", dest="candidate_id")
+    snapshot.add_argument("--version")
     snapshot.add_argument("--runtime-version", default="0.1.0-rc.6")
 
     verify = commands.add_parser("verify", help="Verify a Candidate digest")
@@ -25,6 +26,9 @@ def _parser() -> argparse.ArgumentParser:
 
     summary = commands.add_parser("summarize", help="Summarize a Harbor Job")
     summary.add_argument("job_dir", type=Path)
+
+    context = commands.add_parser("context", help="Fingerprint a Harbor dataset")
+    context.add_argument("dataset_dir", type=Path)
 
     promote = commands.add_parser("promote", help="Apply a Promotion Gate")
     promote.add_argument("baseline_job", type=Path)
@@ -49,6 +53,8 @@ def main() -> int:
         ).to_dict()
     elif args.command == "summarize":
         result = load_or_create_summary(args.job_dir)
+    elif args.command == "context":
+        result = build_evaluation_context(args.dataset_dir).to_dict()
     else:
         report = compare_jobs(args.baseline_job, args.candidate_job, args.policy)
         output = args.output or args.candidate_job / "promotion-report.json"

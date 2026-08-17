@@ -6,6 +6,8 @@ from pathlib import Path
 from statistics import mean
 from typing import Any, Iterable
 
+from harbor_dsh_evolution.context import CONTEXT_NAME
+
 SUMMARY_NAME = "evaluation-summary.json"
 
 
@@ -23,6 +25,7 @@ def summarize_payloads(
     *,
     job_name: str,
     candidate: dict[str, Any] | None = None,
+    evaluation_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     values: dict[str, list[float]] = defaultdict(list)
     exceptions: list[dict[str, str]] = []
@@ -32,7 +35,7 @@ def summarize_payloads(
         numeric_rewards = {
             key: float(value)
             for key, value in rewards.items()
-            if isinstance(value, int | float)
+            if isinstance(value, int | float) and not isinstance(value, bool)
         }
         for key, value in numeric_rewards.items():
             values[key].append(value)
@@ -57,6 +60,7 @@ def summarize_payloads(
         "schema_version": 1,
         "job": job_name,
         "candidate": candidate,
+        "evaluation_context": evaluation_context,
         "n_trials": len(trials),
         "n_exceptions": len(exceptions),
         "metrics": {key: mean(items) for key, items in sorted(values.items())},
@@ -69,8 +73,15 @@ def summarize_job(job_dir: Path) -> dict[str, Any]:
     job_dir = job_dir.expanduser().resolve(strict=True)
     candidate_path = job_dir / "candidate-manifest.json"
     candidate = json.loads(candidate_path.read_text()) if candidate_path.exists() else None
+    context_path = job_dir / CONTEXT_NAME
+    evaluation_context = (
+        json.loads(context_path.read_text()) if context_path.exists() else None
+    )
     return summarize_payloads(
-        _trial_payloads(job_dir), job_name=job_dir.name, candidate=candidate
+        _trial_payloads(job_dir),
+        job_name=job_dir.name,
+        candidate=candidate,
+        evaluation_context=evaluation_context,
     )
 
 

@@ -51,7 +51,6 @@ printf 'Version:   %s\n' "$candidate_version"
 printf 'Digest:    %s\n' "$candidate_digest"
 printf 'Job:       %s\n' "$job_name"
 
-DOCKER_CONFIG="$repo_dir/.runtime/docker" \
 BUILDX_CONFIG="${TMPDIR:-/tmp}/harbor-minimal-demo-buildx" \
 PYTHONDONTWRITEBYTECODE=1 \
 PYTHONPATH="$script_dir${PYTHONPATH:+:$PYTHONPATH}" \

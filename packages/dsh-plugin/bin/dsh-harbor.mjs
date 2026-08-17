@@ -5,7 +5,7 @@ import { snapshotCandidate } from '../lib/candidate.js'
 import { runProcess } from '../lib/process.js'
 
 function usage() {
-  console.error('Usage: dsh-harbor snapshot <candidate-dir> --id <id> --version <version>')
+  console.error('Usage: dsh-harbor snapshot <candidate-dir> [--id <id>] [--version <version>]')
   console.error('       dsh-harbor doctor')
 }
 
@@ -21,10 +21,10 @@ async function main() {
     const candidateDir = args.shift()
     const idIndex = args.indexOf('--id')
     const versionIndex = args.indexOf('--version')
-    if (!candidateDir || idIndex < 0 || versionIndex < 0) throw new Error('snapshot requires candidate-dir, --id, and --version')
+    if (!candidateDir) throw new Error('snapshot requires candidate-dir')
     const manifest = await snapshotCandidate(candidateDir, {
-      candidateId: args[idIndex + 1],
-      version: args[versionIndex + 1],
+      candidateId: idIndex < 0 ? undefined : args[idIndex + 1],
+      version: versionIndex < 0 ? undefined : args[versionIndex + 1],
     })
     console.log(JSON.stringify(manifest, null, 2))
     return

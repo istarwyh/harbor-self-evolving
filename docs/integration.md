@@ -14,7 +14,7 @@ candidate/
 
 不要把密钥写入 Candidate。运行时凭证应由受控环境注入，并在不同 Candidate 之间保持相同权限。
 
-执行 snapshot 后，任何文件变化都会改变 digest；旧 manifest 与新内容不一致时，Harbor Agent 会拒绝运行。
+执行 snapshot 后，任何文件变化都会改变 digest；旧 manifest 与新内容不一致时，Harbor Agent 会拒绝运行。CLI 与 DSH 工具默认使用 `package.json` 的 `name` / `version`，也允许显式覆盖。
 `candidate_id` 表示同一个 Agent 产品线，通常在 v1/v2 间保持稳定；`version` 与 `digest` 标识具体 Candidate。
 
 ## 2. 定义 Harbor Dataset
@@ -38,7 +38,7 @@ harbor_candidate_snapshot
 → harbor_candidate_compare
 ```
 
-`harbor_eval_run` 会再次 snapshot，因此无法用旧 digest 冒充已修改的 Candidate。
+`harbor_eval_run` 会再次 snapshot，因此无法用旧 digest 冒充已修改的 Candidate。只需提供 `candidatePath` 和 `datasetPath`；`candidateId`、`version` 与 `jobName` 均可省略。运行完成后会直接返回 Job 路径、Candidate manifest 和 evaluation summary，只有需要稍后重新读取时才调用 `harbor_eval_result`。
 
 ## 4. 接入 CI/CD
 
@@ -60,6 +60,7 @@ Optimizer branch / PR
 ## 5. 稳定衡量进步
 
 - 固定评测集和环境镜像 digest。
+- 每个 Job 保存 `evaluation-context.json`；Gate 强制 baseline 与 candidate 的 context digest 相同。
 - 固定 Candidate 的直接与传递依赖，提交 lockfile。
 - 同时保存总 reward、分项指标、异常和轨迹。
 - 对随机 Agent 做多次 Trial，并比较置信区间，而非只看一次均值。

@@ -46,7 +46,7 @@ export async function computeCandidate(candidateDir) {
   return { digest: `sha256:${digest.digest('hex')}`, files }
 }
 
-export async function snapshotCandidate(candidateDir, options) {
+export async function snapshotCandidate(candidateDir, options = {}) {
   const root = path.resolve(candidateDir)
   for (const required of ['cordis.yml', 'package.json']) {
     try {
@@ -55,16 +55,28 @@ export async function snapshotCandidate(candidateDir, options) {
       throw new Error(`Candidate is missing required file: ${required}`)
     }
   }
+  let packageJson
+  try {
+    packageJson = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'))
+  } catch (error) {
+    throw new Error(`Candidate package.json is not valid JSON: ${error.message}`)
+  }
+  const candidateId = options.candidateId ?? packageJson.name
+  const version = options.version ?? packageJson.version
+  const runtimeVersion = options.runtimeVersion ?? '0.1.0-rc.6'
+  if (!candidateId || !version || !runtimeVersion) {
+    throw new Error('Candidate id, version, and runtime version must not be empty; set package.json name/version or pass explicit values')
+  }
   const computed = await computeCandidate(root)
   const manifest = {
     schema_version: 1,
-    candidate_id: options.candidateId,
-    version: options.version,
+    candidate_id: String(candidateId),
+    version: String(version),
     digest: computed.digest,
     created_at: new Date().toISOString(),
     runtime: {
       kind: 'deepseek-harness',
-      version: options.runtimeVersion ?? '0.1.0-rc.6',
+      version: String(runtimeVersion),
       transport: 'acp',
     },
     files: computed.files,

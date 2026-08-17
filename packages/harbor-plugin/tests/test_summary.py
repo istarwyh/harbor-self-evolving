@@ -8,6 +8,9 @@ def test_summarize_job_aggregates_rewards_and_exceptions(tmp_path: Path):
     (tmp_path / "candidate-manifest.json").write_text(
         json.dumps({"candidate_id": "demo", "digest": "sha256:" + "0" * 64})
     )
+    (tmp_path / "evaluation-context.json").write_text(
+        json.dumps({"digest": "sha256:" + "c" * 64})
+    )
     first = tmp_path / "trial-a"
     second = tmp_path / "trial-b"
     first.mkdir()
@@ -40,3 +43,4 @@ def test_summarize_job_aggregates_rewards_and_exceptions(tmp_path: Path):
     assert summary["n_trials"] == 2
     assert summary["n_exceptions"] == 1
     assert summary["metrics"] == {"reward": 0.7, "search": 0.5}
+    assert summary["evaluation_context"]["digest"] == "sha256:" + "c" * 64

@@ -22,12 +22,27 @@ export async function snapshot(config, args) {
   })
 }
 
+function slug(value) {
+  return String(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/^[._-]+|[._-]+$/g, '') || 'candidate'
+}
+
+export function makeJobName(manifest, now = new Date()) {
+  const timestamp = now.toISOString().replace(/\.\d{3}Z$/, 'Z').replace(/[-:]/g, '')
+  const suffix = `${timestamp}-${manifest.digest.slice(7, 15)}`
+  const available = 100 - suffix.length - 1
+  const identity = `${slug(manifest.candidate_id)}-${slug(manifest.version)}`.slice(0, available)
+  return `${identity}-${suffix}`
+}
+
 export async function runEvaluation(config, args) {
   const manifest = await snapshot(config, args)
   const candidateDir = resolveWithin(config.projectRoot, args.candidatePath, 'candidatePath')
   const dataset = resolveWithin(config.projectRoot, args.datasetPath, 'datasetPath')
   const jobsDir = resolveWithin(config.projectRoot, config.jobsDir, 'jobsDir')
-  const jobName = args.jobName
+  const jobName = args.jobName ?? makeJobName(manifest)
   if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(jobName)) throw new Error('jobName contains unsupported characters')
 
   const harborArgs = [
@@ -46,7 +61,9 @@ export async function runEvaluation(config, args) {
     timeoutMs: config.timeoutMs,
     env: { ...process.env, ...(config.pythonPath ? { PYTHONPATH: config.pythonPath } : {}) },
   })
-  return { manifest, jobDir: path.join(jobsDir, jobName), process: result }
+  const jobDir = path.join(jobsDir, jobName)
+  const summary = JSON.parse(await readFile(path.join(jobDir, 'evaluation-summary.json'), 'utf8'))
+  return { manifest, jobDir, summary, process: { code: result.code } }
 }
 
 export async function readEvaluation(config, args) {

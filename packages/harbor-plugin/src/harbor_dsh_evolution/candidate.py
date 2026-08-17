@@ -102,18 +102,30 @@ def compute_candidate(candidate_dir: Path) -> tuple[str, list[CandidateFile]]:
 def snapshot_candidate(
     candidate_dir: Path,
     *,
-    candidate_id: str,
-    version: str,
+    candidate_id: str | None = None,
+    version: str | None = None,
     runtime_version: str = "0.1.0-rc.6",
     metadata: dict[str, Any] | None = None,
 ) -> CandidateManifest:
     candidate_dir = candidate_dir.expanduser().resolve(strict=True)
-    if not candidate_id or not version or not runtime_version:
-        raise ValueError("Candidate id, version, and runtime version must not be empty")
     required = [candidate_dir / "cordis.yml", candidate_dir / "package.json"]
     missing = [path.name for path in required if not path.is_file()]
     if missing:
         raise ValueError(f"Candidate is missing required files: {', '.join(missing)}")
+
+    try:
+        package = json.loads((candidate_dir / "package.json").read_text())
+    except json.JSONDecodeError as error:
+        raise ValueError("Candidate package.json is not valid JSON") from error
+    if candidate_id is None:
+        candidate_id = str(package.get("name") or "")
+    if version is None:
+        version = str(package.get("version") or "")
+    if not candidate_id or not version or not runtime_version:
+        raise ValueError(
+            "Candidate id, version, and runtime version must not be empty; "
+            "set package.json name/version or pass explicit values"
+        )
 
     digest, files = compute_candidate(candidate_dir)
     manifest = CandidateManifest(

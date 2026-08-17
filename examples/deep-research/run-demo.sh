@@ -43,7 +43,6 @@ run_candidate() {
     'import json,sys; print(json.load(open(sys.argv[1]))["digest"])' \
     "$candidate_dir/candidate-manifest.json")"
 
-  DOCKER_CONFIG="$repo_dir/.runtime/docker" \
   BUILDX_CONFIG="${TMPDIR:-/tmp}/harbor-self-evolving-buildx" \
   PYTHONDONTWRITEBYTECODE=1 \
   PYTHONPATH="$python_src${PYTHONPATH:+:$PYTHONPATH}" \

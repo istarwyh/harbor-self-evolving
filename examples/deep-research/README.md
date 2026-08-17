@@ -7,6 +7,7 @@ v1 模拟三个常见失败：工具报错、空搜索、引用不存在的 sour
 从仓库根目录运行：
 
 ```bash
-HARBOR_BIN="$(pwd)/packages/harbor-plugin/.venv/bin/harbor" \
-  ./examples/deep-research/run-demo.sh
+./hse demo
 ```
+
+两个 Job 会保存相同的 `evaluation-context.json`。Gate 先验证该 digest，再比较 reward，因此这个例子证明的是“同一把尺子下 v2 优于 v1”。

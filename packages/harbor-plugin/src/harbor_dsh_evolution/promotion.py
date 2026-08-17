@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
 
 from harbor_dsh_evolution.summary import load_or_create_summary
+
+
+def _is_number(value: Any) -> bool:
+    return isinstance(value, int | float) and not isinstance(value, bool)
 
 
 def load_policy(path: Path) -> dict[str, Any]:
@@ -25,6 +30,36 @@ def evaluate_promotion(
     candidate_metrics = candidate.get("metrics") or {}
     reasons: list[str] = []
 
+    baseline_candidate = baseline.get("candidate") or {}
+    candidate_identity = candidate.get("candidate") or {}
+    baseline_candidate_id = baseline_candidate.get("candidate_id")
+    candidate_id = candidate_identity.get("candidate_id")
+    baseline_candidate_digest = baseline_candidate.get("digest")
+    candidate_digest = candidate_identity.get("digest")
+    if not baseline_candidate_id or not candidate_id:
+        reasons.append("candidate identity is missing")
+    elif baseline_candidate_id != candidate_id:
+        reasons.append(
+            "candidate product line mismatch: "
+            f"baseline={baseline_candidate_id}, candidate={candidate_id}"
+        )
+    if not baseline_candidate_digest or not candidate_digest:
+        reasons.append("candidate digest is missing")
+    elif baseline_candidate_digest == candidate_digest:
+        reasons.append("candidate digest is unchanged")
+
+    baseline_context = baseline.get("evaluation_context") or {}
+    candidate_context = candidate.get("evaluation_context") or {}
+    baseline_context_digest = baseline_context.get("digest")
+    candidate_context_digest = candidate_context.get("digest")
+    if not baseline_context_digest or not candidate_context_digest:
+        reasons.append("evaluation context digest is missing")
+    elif baseline_context_digest != candidate_context_digest:
+        reasons.append(
+            "evaluation context mismatch: "
+            f"baseline={baseline_context_digest}, candidate={candidate_context_digest}"
+        )
+
     if baseline.get("n_exceptions", 0):
         reasons.append("baseline contains exceptions")
     if candidate.get("n_exceptions", 0):
@@ -33,9 +68,7 @@ def evaluate_promotion(
     primary = policy["primary_metric"]
     baseline_primary = baseline_metrics.get(primary)
     candidate_primary = candidate_metrics.get(primary)
-    if not isinstance(baseline_primary, int | float) or not isinstance(
-        candidate_primary, int | float
-    ):
+    if not _is_number(baseline_primary) or not _is_number(candidate_primary):
         reasons.append(f"primary metric {primary!r} is missing")
     else:
         improvement = candidate_primary - baseline_primary
@@ -47,26 +80,32 @@ def evaluate_promotion(
 
     for metric, minimum in (policy.get("minimums") or {}).items():
         value = candidate_metrics.get(metric)
-        if not isinstance(value, int | float) or value < float(minimum):
+        if not _is_number(value) or value < float(minimum):
             reasons.append(f"{metric}={value!r} is below minimum {minimum}")
 
     tolerance = float(policy.get("non_regression_tolerance", 0.0))
     for metric in policy.get("non_regression") or []:
         old = baseline_metrics.get(metric)
         new = candidate_metrics.get(metric)
-        if not isinstance(old, int | float) or not isinstance(new, int | float):
+        if not _is_number(old) or not _is_number(new):
             reasons.append(f"non-regression metric {metric!r} is missing")
         elif new + tolerance < old:
             reasons.append(f"{metric} regressed from {old:.6g} to {new:.6g}")
 
+    policy_digest = "sha256:" + hashlib.sha256(
+        json.dumps(policy, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
     return {
         "schema_version": 1,
         "decision": "PROMOTE" if not reasons else "REJECT",
         "baseline_job": baseline.get("job"),
         "candidate_job": candidate.get("job"),
-        "baseline_candidate": baseline.get("candidate"),
-        "candidate": candidate.get("candidate"),
+        "baseline_candidate": baseline_candidate,
+        "candidate": candidate_identity,
+        "baseline_evaluation_context": baseline_context,
+        "candidate_evaluation_context": candidate_context,
         "policy": policy,
+        "policy_digest": policy_digest,
         "baseline_metrics": baseline_metrics,
         "candidate_metrics": candidate_metrics,
         "reasons": reasons,

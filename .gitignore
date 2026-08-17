@@ -9,9 +9,8 @@ dist/
 jobs/*
 !jobs/.gitkeep
 
-# Local Docker/Buildx state; keep only the portable config file.
-.runtime/docker/buildx/
-.runtime/docker/contexts/
+# Local Docker/Buildx state.
+.runtime/
 
 # Generated Candidate snapshots and local package installs.
 examples/**/candidate-manifest.json

@@ -16,6 +16,15 @@ test('candidate digest is stable and excludes its manifest', async () => {
   assert.equal((await computeCandidate(candidate)).digest, first.digest)
 })
 
+test('candidate identity defaults to package.json', async () => {
+  const candidate = await mkdtemp(path.join(os.tmpdir(), 'dsh-candidate-identity-'))
+  await writeFile(path.join(candidate, 'cordis.yml'), '- name: demo\n')
+  await writeFile(path.join(candidate, 'package.json'), '{"name":"business-agent","version":"2.1.0"}\n')
+  const manifest = await snapshotCandidate(candidate)
+  assert.equal(manifest.candidate_id, 'business-agent')
+  assert.equal(manifest.version, '2.1.0')
+})
+
 test('candidate digest matches the Python cross-language vector', async () => {
   const candidate = await mkdtemp(path.join(os.tmpdir(), 'dsh-candidate-vector-'))
   await writeFile(path.join(candidate, 'cordis.yml'), '- name: example\n')

@@ -5,8 +5,7 @@ Cordis bundle for evaluating immutable DeepSeek Harness Candidates with Harbor.
 ## Install from this checkout
 
 ```bash
-npx @deepseek-ai/dsh@0.1.0-rc.6 plugin \
-  --profile headless add -w ./packages/dsh-plugin
+./hse dsh-install headless
 ```
 
 `-w` is required by pnpm when the DSH profile directory is its workspace root.
@@ -18,7 +17,9 @@ The bundle inserts one `harbor-evolution` entry and registers four model-facing 
 - `harbor_eval_result`
 - `harbor_candidate_compare`
 
-Default config assumes `harbor` and `harbor-dsh` are on `PATH`. Override the inserted entry in the profile's `cordis.patch.yml` when the binaries or Python source live elsewhere:
+The shortest evaluation call needs only `candidatePath` and `datasetPath`. Candidate identity defaults to `package.json`, the Job name is generated automatically, and `harbor_eval_run` returns the completed evaluation summary directly.
+
+The helper launches a fixed DSH version through `pnpm dlx`, so it does not conflict with a long-running `npx` DSH process. When installed from this monorepo, the bundle automatically discovers the sibling Python virtual environment created by `./hse dsh-install`. Otherwise it uses `HARBOR_BIN` / `HARBOR_DSH_BIN`, then falls back to `PATH`. Override the inserted entry in the profile's `cordis.patch.yml` when the binaries or Python source live elsewhere:
 
 ```yaml
 - id: harbor-evolution

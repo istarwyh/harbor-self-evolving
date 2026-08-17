@@ -12,7 +12,7 @@
 这里的 checkpoint 不是一份随时变化的工作目录，而是两个相互关联的不可变记录：
 
 1. Candidate checkpoint：版本、文件清单、运行时和 SHA-256 digest。
-2. Evaluation checkpoint：Harbor Job 配置、Trial 结果、ACP 轨迹、指标汇总和 Gate 报告。
+2. Evaluation checkpoint：评测上下文指纹、Harbor Job 配置、Trial 结果、ACP 轨迹、指标汇总和 Gate 报告。
 
 因此可以回答三个关键问题：评测的是谁、在什么环境评测、为什么晋级。
 
@@ -23,7 +23,7 @@ Cordis composition
   └─ snapshot → candidate-manifest.json
                      ↓ digest lock
 Harbor Dataset → Job → Trial(s) → Verifier rewards
-                     ↓
+       ↓ context digest       ↓
               evaluation-summary.json
                      ↓
 baseline summary + candidate summary + promotion-policy.json
@@ -31,7 +31,9 @@ baseline summary + candidate summary + promotion-policy.json
               PROMOTE / REJECT
 ```
 
-一个 Candidate 可以对应多个 Job；一个 Job 只允许绑定一个 Candidate digest。不同 Candidate 的比较必须使用同一评测集版本、环境版本和 Gate policy，生产系统还应把这些版本写进外层实验记录。
+一个 Candidate 可以对应多个 Job；一个 Job 只允许绑定一个 Candidate digest。Job 启动时会对 Dataset 文件树生成 `evaluation-context.json`，其中包含 Task 身份、Harbor 版本、本集成版本及集成源码 digest。Gate 默认拒绝 context digest 缺失或不一致的两个 Job，也拒绝产品线不同或 digest 未变化的 Candidate，因此不能靠换题、换 Verifier、换环境源码或重复提交同一 Candidate 制造“进步”。
+
+Context 固定的是输入源码和工具版本；容器基础镜像仍应使用 digest、远程模型也应固定版本或 deployment id。Gate 同时记录 policy digest，便于审计本次晋级到底使用了哪套规则。
 
 ## reward 如何承载业务失败
 
