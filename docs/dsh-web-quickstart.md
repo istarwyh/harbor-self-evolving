@@ -5,8 +5,8 @@
 版本组合：
 
 - DSH：`@deepseek-ai/dsh@0.1.0-rc.6`
-- DSH Plugin + Skill：`dsh-harbor-evolution@0.3.1`
-- Harbor Adapter：`harbor-dsh-evolution==0.3.1`
+- DSH Plugin + Skill：`dsh-harbor-evolution@0.4.0`
+- Harbor Adapter：`harbor-dsh-evolution==0.4.0`
 
 Skill 由本项目维护并通过 DSH 官方 Skill Registry 加载，不表示 DeepSeek 官方背书。
 
@@ -28,7 +28,7 @@ cd /absolute/path/to/your-agent-workspace
 npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 ```
 
-即使安装入口是 GitHub 链接，也应执行这条注册表安装命令；不要让 Agent clone 仓库后直接 link `packages/dsh-plugin`。需要复现部署时，可把 `latest` 固定为 `0.3.1`。
+即使安装入口是 GitHub 链接，也应执行这条注册表安装命令；不要让 Agent clone 仓库后直接 link `packages/dsh-plugin`。需要复现部署时，可把 `latest` 固定为 `0.4.0`。
 
 默认安装到 `web` profile。安装器会：
 
@@ -65,6 +65,14 @@ DSH_HOME="$HOME/.dsh" pnpm dlx @deepseek-ai/dsh@0.1.0-rc.6 web
 ```text
 harbor-evolution
 ```
+
+安装成功后，Web 中会出现：
+
+1. 对话视图顶部的 `Harbor` Tab。这里展示最近 50 个 Job、Candidate identity、evaluation-context digest、Trials、Exceptions 和指标。
+2. “设置 → Harbor 自进化”。这里应看到 `projectRoot`、`jobsDir`、`harbor` 和 `harbor-dsh` 四项检查。
+3. 当 Agent 调用 Harbor 工具时，对话中显示专用结果卡片，而不是一整段难读的 JSON。
+
+首次安装时 Jobs 目录可以尚不存在，诊断页会显示提醒而非故障；运行第一个 Job 后目录会自动出现。Harbor Tab 每 5 秒刷新只读快照，不会启动 Job，也不会修改 profile。
 
 Agent 工具目录应包含：
 
@@ -161,13 +169,15 @@ jobs/<job-name>/*/result.json
 | 现象 | 原因与处理 |
 | --- | --- |
 | Web 插件列表找不到 `harbor-evolution` | 很可能装进了其他 profile；重新使用 `--profile web` 安装并重启 DSH |
+| 插件已启用但没有 `Harbor` Tab | 确认安装的是带 `./client` 导出的新版本，停止旧进程并用相同 `web` profile 重启；源码模式需重新运行 `./hse dsh-install-source web` 以构建 client bundle |
+| Harbor Tab 显示“无法读取 Harbor 状态” | 打开“设置 → Harbor 自进化”检查 `projectRoot`、Jobs 路径及两个 CLI；该接口只接受同源 GET |
 | 安装时报 `ERR_PNPM_ADDING_TO_ROOT` | 请使用一键 `setup`；它会为 DSH profile 正确传入 workspace-root 参数 |
 | 调用时报 `spawn harbor ENOENT` | profile 没有保存 Harbor 绝对路径；重新运行 `setup` |
 | `harbor plugins list` 没有 `dsh-evolution` | Python Adapter 与 Harbor 不在同一环境；重新运行 `setup` |
 | 提示路径必须位于 `projectRoot` 内 | 调整 `projectRoot`，或把 Candidate、Dataset、Job、Policy 移入工作区 |
 | Harbor 无法启动 Environment | 启动 Docker daemon，并检查 Task 的 `environment/Dockerfile` |
 | 修改配置后工具仍未出现 | 停止旧 DSH 进程，并以相同 `web` profile 重新启动 |
-| 工具有但 Skill 不出现 | 确认 `harbor-evolution` 已启用，版本为 `0.3.1`，然后重启 DSH |
+| 工具有但 Skill 不出现 | 确认 `harbor-evolution` 已启用，版本为 `0.4.0`，然后重启 DSH |
 | `link:` 插件报找不到 `@deepseek-ai/schemastery` | 正式用户应重新运行 `npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"`，让 profile 改用 npm 版本；源码开发请运行 `./hse dsh-install-source web`，不要直接 link 全新 checkout |
 
 ## 7. 源码开发模式
@@ -178,6 +188,6 @@ jobs/<job-name>/*/result.json
 ./hse dsh-install-source web
 ```
 
-它等价于给 `setup` 传入本地 `--plugin-spec` 和 `--python-spec`，会先执行插件目录的锁定依赖安装，再将 `projectRoot` 指向仓库根目录。正式注册表安装不依赖源码路径，也不会在 profile 中留下 `link:`。
+它等价于给 `setup` 传入本地 `--plugin-spec` 和 `--python-spec`，会先执行插件目录的锁定依赖安装并构建 Web client，再将 `projectRoot` 指向仓库根目录。正式注册表安装不依赖源码路径，也不会在 profile 中留下 `link:`。
 
 如果需要完全手工排查，两端包必须安装到不同位置：Python Adapter 与 Harbor 位于同一 venv，npm Plugin 位于实际运行的 DSH profile。只安装其中一端都无法从 DSH 完成评测闭环。

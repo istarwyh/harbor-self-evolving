@@ -68,7 +68,7 @@ test('local plugin specs are distinguished from registry and GitHub specs', asyn
 
   assert.equal(await resolveLocalPluginDirectory(pluginDir), pluginDir)
   assert.equal(await resolveLocalPluginDirectory(`file://${pluginDir}`), pluginDir)
-  assert.equal(await resolveLocalPluginDirectory('dsh-harbor-evolution@0.3.1'), undefined)
+  assert.equal(await resolveLocalPluginDirectory('dsh-harbor-evolution@0.4.0'), undefined)
   assert.equal(await resolveLocalPluginDirectory('github:istarwyh/harbor-self-evolving'), undefined)
 })
 
@@ -123,4 +123,7 @@ test('setup installs both runtimes, writes an idempotent profile patch, and veri
   const sourceInstallCalls = calls.filter(call => call.command === 'npm' && call.args[0] === 'ci')
   assert.equal(sourceInstallCalls.length, 2)
   assert.equal(sourceInstallCalls[0].options.cwd, pluginSource)
+  const sourceBuildCalls = calls.filter(call => call.command === 'npm' && call.args[0] === 'run' && call.args[1] === 'build')
+  assert.equal(sourceBuildCalls.length, 2)
+  assert.equal(sourceBuildCalls[0].options.cwd, pluginSource)
 })

@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.4.0 - 2026-08-19
+
+- Add a native Harbor conversation tab for Job status, Candidate identity, evaluation-context digests, metrics, exceptions, and Promotion decisions.
+- Add dedicated DSH Tool cards for Candidate snapshots, evaluations, results, and Promotion Gate reports.
+- Add a Harbor Evolution Settings section that diagnoses project paths and both Harbor CLIs without rewriting Cordis configuration.
+- Serve a same-origin, read-only, non-cacheable Host snapshot and cap the dashboard at the 50 most recent Jobs.
+- Ship an original embedded ocean-and-whale visual, responsive layouts, bilingual copy, and a portable Web client bundle.
+- Build the Web client automatically for registry packages and linked source-development installations.
+
 ## 0.3.1 - 2026-08-18
 
 - Direct Agents that receive the GitHub URL to the registry-backed one-command installer instead of a machine-local `link:` dependency.

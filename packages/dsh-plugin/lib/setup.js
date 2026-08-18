@@ -247,6 +247,10 @@ export async function setupIntegration(raw = {}, dependencies = {}) {
     // the complete locked graph there so runtime dependencies and host peers
     // do not disappear behind the profile's `link:` entry.
     await run('npm', ['ci', '--ignore-scripts'], { cwd: localPluginDir })
+    // The browser half is generated from source and embeds its visual asset.
+    // Build explicitly because the locked install above intentionally skips
+    // lifecycle scripts for deterministic source-checkout setup.
+    await run('npm', ['run', 'build'], { cwd: localPluginDir })
   }
 
   progress('2/4 Installing the Harbor Python runtime...')
@@ -310,7 +314,9 @@ export function renderSetupResult(result) {
     `cd ${shellQuote(result.projectRoot)}`,
     startCommand,
     '',
-    'Then invoke: /evolve-agent-with-harbor',
+    result.profile === 'web'
+      ? 'Open the Harbor tab, or invoke: /evolve-agent-with-harbor'
+      : 'Then invoke: /evolve-agent-with-harbor',
   )
   return lines.join('\n')
 }
