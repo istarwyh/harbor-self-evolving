@@ -1,17 +1,19 @@
 import Schema from '@deepseek-ai/schemastery'
 import { defineTool } from '@deepseek-ai/dsh-tools'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { compareCandidates, readEvaluation, runEvaluation, snapshot } from './lib/evolution.js'
 import { loadBundledSkill } from './lib/official-skill.js'
+import { EvolutionService } from './lib/service.js'
+import { installDashboardWeb } from './lib/web.js'
 
 export const name = 'harbor-evolution'
 export const inject = ['tools', 'skills']
 
 const packageDir = path.dirname(fileURLToPath(import.meta.url))
 const checkoutPythonPackage = path.resolve(packageDir, '../harbor-plugin')
+const packageJson = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'))
 
 function checkoutExecutable(name) {
   const candidate = path.join(checkoutPythonPackage, '.venv', 'bin', name)
@@ -55,8 +57,10 @@ export function apply(ctx, config) {
         : ''
     ),
   }
+  const service = new EvolutionService(resolved, { pluginVersion: packageJson.version })
 
   ctx.skills.register(loadBundledSkill())
+  installDashboardWeb(ctx, service)
 
   ctx.tools.register(jsonTool({
     name: 'harbor_candidate_snapshot',
@@ -66,7 +70,7 @@ export function apply(ctx, config) {
       candidateId: { type: 'string' },
       version: { type: 'string' },
     },
-  }, args => snapshot(resolved, args)))
+  }, args => service.snapshot(args)))
 
   ctx.tools.register(jsonTool({
     name: 'harbor_eval_run',
@@ -78,7 +82,7 @@ export function apply(ctx, config) {
       datasetPath: { type: 'string', required: true },
       jobName: { type: 'string' },
     },
-  }, args => runEvaluation(resolved, args)))
+  }, args => service.run(args)))
 
   ctx.tools.register(jsonTool({
     name: 'harbor_eval_result',
@@ -86,7 +90,7 @@ export function apply(ctx, config) {
     parameters: {
       jobPath: { type: 'string', required: true },
     },
-  }, args => readEvaluation(resolved, args)))
+  }, args => service.result(args)))
 
   ctx.tools.register(jsonTool({
     name: 'harbor_candidate_compare',
@@ -96,5 +100,5 @@ export function apply(ctx, config) {
       candidateJob: { type: 'string', required: true },
       policyPath: { type: 'string', required: true },
     },
-  }, args => compareCandidates(resolved, args)))
+  }, args => service.compare(args)))
 }

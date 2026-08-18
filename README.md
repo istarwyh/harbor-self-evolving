@@ -6,7 +6,7 @@
 
 | 交付物 | 用户得到什么 |
 | --- | --- |
-| DSH Plugin：`dsh-harbor-evolution` | 在自己的 DSH 中直接获得四个 Harbor 评测工具 |
+| DSH Plugin：`dsh-harbor-evolution` | 在自己的 DSH 中获得 Harbor 仪表盘、四个结果卡片和四个评测工具 |
 | 本项目官方 Skill：`evolve-agent-with-harbor` | Agent 知道如何澄清需求、初始化、建立 baseline、诊断、回归和提出晋级建议 |
 | Harbor Adapter：`harbor-dsh-evolution` | 在隔离的 Python 环境中执行 Candidate、Job、证据汇总和 Promotion Gate |
 
@@ -23,7 +23,7 @@ cd /absolute/path/to/your-agent-workspace
 npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 ```
 
-安装器会让 npm Plugin 与 Python Adapter 使用同一个正式版本；需要完全固定版本时，把 `latest` 改为 `0.3.1`。
+安装器会让 npm Plugin 与 Python Adapter 使用同一个正式版本；需要完全固定版本时，把 `latest` 改为 `0.4.0`。
 
 默认安装到 DSH 的 `web` profile。`setup` 会一次完成：
 
@@ -47,6 +47,14 @@ DSH_HOME="$HOME/.dsh" pnpm dlx @deepseek-ai/dsh@0.1.0-rc.6 web
 /evolve-agent-with-harbor
 请检查当前工作区，先帮我澄清成功指标、baseline、允许改动范围和晋级规则，再初始化 Harbor 自进化流程。
 ```
+
+在 Web profile 中还会出现三个可见入口：
+
+- 对话页的 `Harbor` Tab：观察最近 Jobs、Candidate、context digest、指标和异常。
+- 工具调用中的 Harbor 专属卡片：直接理解 snapshot、evaluation、result 和 Promotion Gate。
+- “设置 → Harbor 自进化”：检查项目目录、Jobs 目录和两个 Harbor CLI 是否就绪。
+
+GUI 当前是观察与诊断面，评测、比较等高成本动作仍由官方 Skill 在澄清需求后调用工具执行；它不会在浏览器后台静默启动 Job。
 
 常用安装选项：
 
@@ -126,7 +134,7 @@ cd harbor-self-evolving
 ./hse dsh-install-source web
 ```
 
-源码安装器会先在 `packages/dsh-plugin/` 执行锁定的 `npm ci`，再创建 `link:`；不要直接对一个全新 checkout 执行 `dsh plugin add ./packages/dsh-plugin`。
+源码安装器会先在 `packages/dsh-plugin/` 执行锁定的 `npm ci` 并构建 Web client，再创建 `link:`；不要直接对一个全新 checkout 执行 `dsh plugin add ./packages/dsh-plugin`。
 
 运行两端测试、构建和 shell 检查：
 
@@ -137,7 +145,7 @@ cd harbor-self-evolving
 仓库结构：
 
 ```text
-packages/dsh-plugin/       # npm Plugin、Skill、工具与一键安装器
+packages/dsh-plugin/       # npm Plugin、Skill、Web GUI、工具与一键安装器
 packages/harbor-plugin/    # Python Adapter、Job Plugin、summary 与 Gate
 examples/deep-research/    # DSH ACP → Harbor → Promotion 参考实现
 examples/shell-minimal/    # 最小 Harbor Candidate 参考实现

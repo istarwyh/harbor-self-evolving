@@ -12,7 +12,7 @@ npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 
 Follow the restart command printed by setup. Verify that:
 
-- the selected DSH profile depends on an exact registry version such as `"dsh-harbor-evolution": "0.3.1"`, not `link:...`;
+- the selected DSH profile depends on an exact registry version such as `"dsh-harbor-evolution": "0.4.0"`, not `link:...`;
 - `harbor plugins list` contains `dsh-evolution`;
 - the bundled `evolve-agent-with-harbor` Skill is present.
 
