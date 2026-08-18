@@ -12,14 +12,18 @@
 
 `examples/` 是帮助理解和二次开发的参考实现，不是使用插件的前提。这里的“本项目官方 Skill”表示由本项目维护，并不表示 DeepSeek 官方背书。
 
+> 如果你把这个 GitHub 链接交给 DSH 或其他 Coding Agent，请让它按照根目录的 [`AGENTS.md`](AGENTS.md) 安装。GitHub URL 是产品说明和源码入口，不是 npm 包地址；正式安装不要 clone 后执行 `dsh plugin add ./packages/dsh-plugin`，否则 profile 会绑定机器本地的 `link:` 路径。
+
 ## 一条命令安装
 
 要求：Docker、Node.js 22+、pnpm 和 [uv](https://docs.astral.sh/uv/)。进入你的业务 Agent 工作区后执行：
 
 ```bash
 cd /absolute/path/to/your-agent-workspace
-npx dsh-harbor-evolution@0.3.0 setup --project-root "$PWD"
+npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 ```
+
+安装器会让 npm Plugin 与 Python Adapter 使用同一个正式版本；需要完全固定版本时，把 `latest` 改为 `0.3.1`。
 
 默认安装到 DSH 的 `web` profile。`setup` 会一次完成：
 
@@ -110,11 +114,19 @@ cd harbor-self-evolving
 
 它会真实评测 v1、v2，并展示工具调用失败、无效搜索和错误引用如何进入 reward，最终由 Gate 决定是否 `PROMOTE`。不依赖 DSH 的最小例子位于 `examples/shell-minimal/`。
 
-从源码把当前 Plugin + Skill 安装进本地 Web profile：
+安装正式发布的 Plugin + Skill：
 
 ```bash
 ./hse dsh-install web
 ```
+
+只有要修改或调试本仓库源码时，才使用本地 link 模式：
+
+```bash
+./hse dsh-install-source web
+```
+
+源码安装器会先在 `packages/dsh-plugin/` 执行锁定的 `npm ci`，再创建 `link:`；不要直接对一个全新 checkout 执行 `dsh plugin add ./packages/dsh-plugin`。
 
 运行两端测试、构建和 shell 检查：
 

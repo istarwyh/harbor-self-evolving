@@ -9,7 +9,7 @@ The package gives DSH four deterministic Harbor tools and bundles the model- and
 Requirements: Docker, Node.js 22+, pnpm, and [uv](https://docs.astral.sh/uv/). Run this from the business Agent workspace:
 
 ```bash
-npx dsh-harbor-evolution@0.3.0 setup --project-root "$PWD"
+npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 ```
 
 The setup command installs both required runtimes:
@@ -22,7 +22,7 @@ It then stores the absolute Harbor executable paths and `projectRoot` in the pro
 The default profile is `web`. Use `--profile headless` only when that is the profile you actually run. See all options with:
 
 ```bash
-npx dsh-harbor-evolution@0.3.0 setup --help
+npx --yes dsh-harbor-evolution@latest setup --help
 ```
 
 Stop any old DSH process and run the exact restart command printed by setup. Then invoke:
@@ -60,8 +60,10 @@ Keep `pythonPath` empty for the published Python package. `candidatePath`, `data
 For source development from the repository:
 
 ```bash
-./hse dsh-install web
+./hse dsh-install-source web
 ```
+
+Do not use `dsh plugin add ./packages/dsh-plugin` directly from a fresh checkout. pnpm records a `link:` dependency, and Node resolves imports from the real checkout path. The source installer first runs the package's locked `npm ci`, then links it and installs the local Python Adapter. Normal users should always use the registry-backed setup command above.
 
 See the [complete DSH Web quickstart](https://github.com/istarwyh/harbor-self-evolving/blob/main/docs/dsh-web-quickstart.md) for UI verification, first evaluation, Candidate comparison, and troubleshooting.
 

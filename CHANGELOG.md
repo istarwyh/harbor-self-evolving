@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.3.1 - 2026-08-18
+
+- Direct Agents that receive the GitHub URL to the registry-backed one-command installer instead of a machine-local `link:` dependency.
+- Prepare locked Node.js dependencies before linking an explicit source checkout, preventing missing `@deepseek-ai/schemastery` and host peer imports.
+- Separate released installation (`dsh-install`) from source-development installation (`dsh-install-source`).
+- Save registry-backed DSH profile dependencies as exact versions instead of floating caret ranges.
+
 ## 0.3.0 - 2026-08-17
 
 - Position the project primarily as an installable DSH Plugin + Skill; keep the templates as reference implementations.
