@@ -6,6 +6,7 @@ import test from 'node:test'
 
 import {
   parseSetupArgs,
+  resolveLocalPluginDirectory,
   resolveSetupOptions,
   setupIntegration,
   upsertHarborProfileEntry,
@@ -57,13 +58,32 @@ test('profile patch replaces only harbor-evolution and preserves other entries',
   assert.equal((updated.match(/- id: harbor-evolution/g) ?? []).length, 1)
 })
 
+test('local plugin specs are distinguished from registry and GitHub specs', async () => {
+  const temporary = await mkdtemp(path.join(os.tmpdir(), 'dsh-harbor-plugin-spec-'))
+  const pluginDir = path.join(temporary, 'plugin')
+  await mkdir(pluginDir)
+  await writeFile(path.join(pluginDir, 'package.json'), JSON.stringify({
+    name: 'dsh-harbor-evolution',
+  }), 'utf8')
+
+  assert.equal(await resolveLocalPluginDirectory(pluginDir), pluginDir)
+  assert.equal(await resolveLocalPluginDirectory(`file://${pluginDir}`), pluginDir)
+  assert.equal(await resolveLocalPluginDirectory('dsh-harbor-evolution@0.3.1'), undefined)
+  assert.equal(await resolveLocalPluginDirectory('github:istarwyh/harbor-self-evolving'), undefined)
+})
+
 test('setup installs both runtimes, writes an idempotent profile patch, and verifies Harbor', async () => {
   const temporary = await mkdtemp(path.join(os.tmpdir(), 'dsh-harbor-setup-'))
   const projectRoot = path.join(temporary, 'agent')
   const dshHome = path.join(temporary, 'dsh')
   const runtimeDir = path.join(temporary, 'runtime')
+  const pluginSource = path.join(temporary, 'dsh-plugin')
   const patchFile = path.join(dshHome, 'profiles', 'web', 'cordis.patch.yml')
   await mkdir(projectRoot)
+  await mkdir(pluginSource)
+  await writeFile(path.join(pluginSource, 'package.json'), JSON.stringify({
+    name: 'dsh-harbor-evolution',
+  }), 'utf8')
   await mkdir(path.dirname(patchFile), { recursive: true })
   await writeFile(patchFile, '# keep me\n[]\n', 'utf8')
 
@@ -79,14 +99,14 @@ test('setup installs both runtimes, writes an idempotent profile patch, and veri
     projectRoot,
     dshHome,
     runtimeDir,
-    pluginSpec: '/source/dsh-plugin',
+    pluginSpec: pluginSource,
     pythonSpec: '/source/harbor-plugin',
   }, { run, env: {}, platform: 'linux' })
   const second = await setupIntegration({
     projectRoot,
     dshHome,
     runtimeDir,
-    pluginSpec: '/source/dsh-plugin',
+    pluginSpec: pluginSource,
     pythonSpec: '/source/harbor-plugin',
   }, { run, env: {}, platform: 'linux' })
 
@@ -98,5 +118,9 @@ test('setup installs both runtimes, writes an idempotent profile patch, and veri
   assert.equal((patch.match(/- id: harbor-evolution/g) ?? []).length, 1)
   const pluginCall = calls.find(call => call.command === 'pnpm' && call.args.includes('plugin'))
   assert.equal(pluginCall.options.env.DSH_HOME, dshHome)
+  assert.ok(pluginCall.args.includes('--save-exact'))
   assert.ok(calls.some(call => call.command === 'uv' && call.args.includes('/source/harbor-plugin')))
+  const sourceInstallCalls = calls.filter(call => call.command === 'npm' && call.args[0] === 'ci')
+  assert.equal(sourceInstallCalls.length, 2)
+  assert.equal(sourceInstallCalls[0].options.cwd, pluginSource)
 })

@@ -2,6 +2,7 @@ import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
+import { fileURLToPath } from 'node:url'
 
 import { runProcess } from './process.js'
 
@@ -91,6 +92,26 @@ export function resolveSetupOptions(raw = {}, environment = {}) {
     patchFile: path.join(dshHome, 'profiles', profile, 'cordis.patch.yml'),
     pluginSpec: raw.pluginSpec ?? `dsh-harbor-evolution@${INTEGRATION_VERSION}`,
     pythonSpec: raw.pythonSpec ?? `harbor-dsh-evolution==${INTEGRATION_VERSION}`,
+  }
+}
+
+export async function resolveLocalPluginDirectory(pluginSpec, cwd = process.cwd()) {
+  let candidate
+  if (pluginSpec.startsWith('file://')) candidate = fileURLToPath(pluginSpec)
+  else if (pluginSpec.startsWith('file:')) candidate = path.resolve(cwd, pluginSpec.slice(5))
+  else if (!pluginSpec.startsWith('github:') && !pluginSpec.startsWith('git+')) {
+    candidate = path.resolve(cwd, pluginSpec)
+  }
+  if (!candidate) return undefined
+
+  try {
+    const details = await stat(candidate)
+    if (!details.isDirectory()) return undefined
+    const manifest = JSON.parse(await readFile(path.join(candidate, 'package.json'), 'utf8'))
+    return manifest.name === 'dsh-harbor-evolution' ? candidate : undefined
+  } catch (error) {
+    if (error.code === 'ENOENT' || error instanceof SyntaxError) return undefined
+    throw error
   }
 }
 
@@ -215,6 +236,19 @@ export async function setupIntegration(raw = {}, dependencies = {}) {
     warnings.push(`Docker is not ready; installation can finish, but Harbor Jobs will fail until it is available. ${processFailure(error)}`)
   }
 
+  const localPluginDir = await resolveLocalPluginDirectory(
+    config.pluginSpec,
+    dependencies.cwd ?? process.cwd(),
+  )
+  if (localPluginDir) {
+    progress('Preparing dependencies for the linked DSH plugin checkout...')
+    await requireCommand(run, 'npm')
+    // Node resolves a symlinked package from its real checkout path. Install
+    // the complete locked graph there so runtime dependencies and host peers
+    // do not disappear behind the profile's `link:` entry.
+    await run('npm', ['ci', '--ignore-scripts'], { cwd: localPluginDir })
+  }
+
   progress('2/4 Installing the Harbor Python runtime...')
   await mkdir(config.runtimeDir, { recursive: true })
   await run('uv', ['venv', '--python', '3.12', '--allow-existing', config.venvDir])
@@ -229,7 +263,7 @@ export async function setupIntegration(raw = {}, dependencies = {}) {
   try {
     await run('pnpm', [
       '--silent', 'dlx', `@deepseek-ai/dsh@${DSH_VERSION}`,
-      'plugin', '--profile', config.profile, 'add', '-w', config.pluginSpec,
+      'plugin', '--profile', config.profile, 'add', '-w', '--save-exact', config.pluginSpec,
     ], { env: { ...env, DSH_HOME: config.dshHome } })
   } catch (error) {
     throw new Error(processFailure(error))
@@ -246,6 +280,7 @@ export async function setupIntegration(raw = {}, dependencies = {}) {
 
   return {
     ...config,
+    localPluginDir,
     patchChanged,
     harborVersion: harborVersion.stdout.trim() || harborVersion.stderr.trim(),
     warnings,

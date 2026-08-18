@@ -5,8 +5,8 @@
 版本组合：
 
 - DSH：`@deepseek-ai/dsh@0.1.0-rc.6`
-- DSH Plugin + Skill：`dsh-harbor-evolution@0.3.0`
-- Harbor Adapter：`harbor-dsh-evolution==0.3.0`
+- DSH Plugin + Skill：`dsh-harbor-evolution@0.3.1`
+- Harbor Adapter：`harbor-dsh-evolution==0.3.1`
 
 Skill 由本项目维护并通过 DSH 官方 Skill Registry 加载，不表示 DeepSeek 官方背书。
 
@@ -25,8 +25,10 @@ uv --version
 
 ```bash
 cd /absolute/path/to/your-agent-workspace
-npx dsh-harbor-evolution@0.3.0 setup --project-root "$PWD"
+npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 ```
+
+即使安装入口是 GitHub 链接，也应执行这条注册表安装命令；不要让 Agent clone 仓库后直接 link `packages/dsh-plugin`。需要复现部署时，可把 `latest` 固定为 `0.3.1`。
 
 默认安装到 `web` profile。安装器会：
 
@@ -41,7 +43,7 @@ npx dsh-harbor-evolution@0.3.0 setup --project-root "$PWD"
 使用隔离的 DSH home 或其他 profile：
 
 ```bash
-npx dsh-harbor-evolution@0.3.0 setup \
+npx --yes dsh-harbor-evolution@latest setup \
   --project-root "$PWD" \
   --dsh-home /absolute/path/to/dsh-home \
   --profile web
@@ -165,16 +167,17 @@ jobs/<job-name>/*/result.json
 | 提示路径必须位于 `projectRoot` 内 | 调整 `projectRoot`，或把 Candidate、Dataset、Job、Policy 移入工作区 |
 | Harbor 无法启动 Environment | 启动 Docker daemon，并检查 Task 的 `environment/Dockerfile` |
 | 修改配置后工具仍未出现 | 停止旧 DSH 进程，并以相同 `web` profile 重新启动 |
-| 工具有但 Skill 不出现 | 确认 `harbor-evolution` 已启用，版本为 `0.3.0`，然后重启 DSH |
+| 工具有但 Skill 不出现 | 确认 `harbor-evolution` 已启用，版本为 `0.3.1`，然后重启 DSH |
+| `link:` 插件报找不到 `@deepseek-ai/schemastery` | 正式用户应重新运行 `npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"`，让 profile 改用 npm 版本；源码开发请运行 `./hse dsh-install-source web`，不要直接 link 全新 checkout |
 
 ## 7. 源码开发模式
 
 在本仓库开发时，使用相同安装流程把本地两端源码装进 Web profile：
 
 ```bash
-./hse dsh-install web
+./hse dsh-install-source web
 ```
 
-它等价于给 `setup` 传入本地 `--plugin-spec` 和 `--python-spec`，并将 `projectRoot` 指向仓库根目录。正式注册表安装不依赖源码路径。
+它等价于给 `setup` 传入本地 `--plugin-spec` 和 `--python-spec`，会先执行插件目录的锁定依赖安装，再将 `projectRoot` 指向仓库根目录。正式注册表安装不依赖源码路径，也不会在 profile 中留下 `link:`。
 
 如果需要完全手工排查，两端包必须安装到不同位置：Python Adapter 与 Harbor 位于同一 venv，npm Plugin 位于实际运行的 DSH profile。只安装其中一端都无法从 DSH 完成评测闭环。
