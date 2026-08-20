@@ -1,40 +1,16 @@
 from __future__ import annotations
 
-import hashlib
 import json
-import tomllib
-from dataclasses import asdict, dataclass
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
 
+from harbor_dsh_evolution.candidate import CandidateManifest
+from harbor_dsh_evolution.dataset import load_validated_dataset
+from harbor_dsh_evolution.identity import canonical_digest, tree_digest
+from harbor_dsh_evolution.stack import snapshot_stack
+
 CONTEXT_NAME = "evaluation-context.json"
-_TREE_PREFIX = b"harbor-dsh-evaluation-tree-v1\0"
-_CONTEXT_PREFIX = b"harbor-dsh-evaluation-context-v1\0"
-_EXCLUDED_DIRS = {".git", "node_modules", "__pycache__"}
-_EXCLUDED_FILES = {".DS_Store"}
-
-
-@dataclass(frozen=True)
-class TaskIdentity:
-    path: str
-    name: str
-    version: str
-
-
-@dataclass(frozen=True)
-class EvaluationContext:
-    schema_version: int
-    digest: str
-    dataset_digest: str
-    file_count: int
-    tasks: list[TaskIdentity]
-    harbor_version: str
-    integration_version: str
-    integration_digest: str
-
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
 
 
 def _package_version(package: str) -> str:
@@ -44,85 +20,124 @@ def _package_version(package: str) -> str:
         return "unknown"
 
 
-def _dataset_files(dataset_dir: Path) -> list[Path]:
-    paths: list[Path] = []
-    for path in dataset_dir.rglob("*"):
-        relative = path.relative_to(dataset_dir)
-        if any(part in _EXCLUDED_DIRS for part in relative.parts):
-            continue
-        if path.name in _EXCLUDED_FILES:
-            continue
-        if path.is_symlink():
-            raise ValueError(f"Evaluation dataset must not contain symlinks: {relative}")
-        if path.is_file():
-            paths.append(path)
-    return sorted(paths, key=lambda item: item.relative_to(dataset_dir).as_posix())
-
-
-def _compute_tree(dataset_dir: Path) -> tuple[str, list[Path]]:
-    files = _dataset_files(dataset_dir)
-    digest = hashlib.sha256()
-    digest.update(_TREE_PREFIX)
-    for path in files:
-        relative = path.relative_to(dataset_dir).as_posix()
-        content = path.read_bytes()
-        digest.update(relative.encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(str(len(content)).encode("ascii"))
-        digest.update(b"\0")
-        digest.update(content)
-        digest.update(b"\0")
-    return f"sha256:{digest.hexdigest()}", files
-
-
-def _task_identities(dataset_dir: Path, files: list[Path]) -> list[TaskIdentity]:
-    tasks: list[TaskIdentity] = []
-    for path in files:
-        if path.name != "task.toml":
-            continue
-        payload = tomllib.loads(path.read_text())
-        task = payload.get("task") or {}
-        tasks.append(
-            TaskIdentity(
-                path=path.parent.relative_to(dataset_dir).as_posix() or ".",
-                name=str(task.get("name") or path.parent.name),
-                version=str(task.get("version") or "unknown"),
-            )
-        )
-    return tasks
-
-
-def build_evaluation_context(dataset_dir: Path) -> EvaluationContext:
-    dataset_dir = dataset_dir.expanduser().resolve(strict=True)
-    if not dataset_dir.is_dir():
-        raise ValueError(f"Evaluation dataset is not a directory: {dataset_dir}")
-
-    dataset_digest, files = _compute_tree(dataset_dir)
-    tasks = _task_identities(dataset_dir, files)
-    harbor_version = _package_version("harbor")
-    integration_version = _package_version("harbor-dsh-evolution")
-    integration_digest, _ = _compute_tree(Path(__file__).parent)
-    identity = {
-        "schema_version": 1,
-        "dataset_digest": dataset_digest,
-        "tasks": [asdict(task) for task in tasks],
-        "harbor_version": harbor_version,
-        "integration_version": integration_version,
+def build_evaluation_context(
+    dataset_dir: Path,
+    *,
+    candidate: CandidateManifest,
+    stack_path: Path,
+    project_root: Path,
+    mode: str,
+) -> dict[str, Any]:
+    if mode not in {"diagnostic", "promotion-eligible"}:
+        raise ValueError("mode must be diagnostic or promotion-eligible")
+    project_root = project_root.expanduser().resolve(strict=True)
+    dataset = load_validated_dataset(dataset_dir, project_root=project_root)
+    stack = snapshot_stack(stack_path, project_root=project_root)
+    integration_digest, _ = tree_digest(
+        Path(__file__).parent,
+        namespace="harbor-dsh-integration-runtime-v2",
+    )
+    runtime = {
+        "harbor_version": _package_version("harbor"),
+        "integration_version": _package_version("harbor-dsh-evolution"),
         "integration_digest": integration_digest,
     }
-    digest = hashlib.sha256()
-    digest.update(_CONTEXT_PREFIX)
-    canonical_identity = json.dumps(
-        identity, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    candidate_identity = {
+        "candidate_id": candidate.candidate_id,
+        "version": candidate.version,
+        "digest": candidate.digest,
+        "runtime": candidate.runtime,
+    }
+    dataset_identity = {
+        "dataset_id": dataset["dataset_id"],
+        "version": dataset["version"],
+        "source_digest": dataset["source_digest"],
+        "task_count": dataset["task_count"],
+    }
+    stack_identity = {
+        "stack_id": stack["stack_id"],
+        "version": stack["version"],
+        "digest": stack["digest"],
+        "comparison_digest": stack["comparison_digest"],
+        "components": stack["components"],
+        "judge": stack["judge"],
+    }
+    comparison_identity = {
+        "dataset": dataset_identity,
+        "stack_comparison_digest": stack["comparison_digest"],
+        "runtime": runtime,
+    }
+    context = {
+        "schema_version": 2,
+        "digest": canonical_digest(
+            comparison_identity,
+            namespace="harbor-dsh-evaluation-context-v2",
+        ),
+        "full_digest": canonical_digest(
+            {
+                "candidate": candidate_identity,
+                "dataset": dataset_identity,
+                "stack": stack_identity,
+                "runtime": runtime,
+                "mode": mode,
+            },
+            namespace="harbor-dsh-evaluation-audit-v2",
+        ),
+        "mode": mode,
+        "candidate": candidate_identity,
+        "dataset": dataset_identity,
+        "evaluation_stack": stack_identity,
+        "runtime": runtime,
+    }
+    return context
+
+
+def context_preview(
+    *,
+    project_root: Path,
+    candidate: CandidateManifest,
+    dataset_dir: Path,
+    stack_path: Path,
+    jobs_dir: Path,
+    mode: str,
+) -> dict[str, Any]:
+    expected = build_evaluation_context(
+        dataset_dir,
+        candidate=candidate,
+        stack_path=stack_path,
+        project_root=project_root,
+        mode=mode,
     )
-    digest.update(canonical_identity.encode("utf-8"))
-    return EvaluationContext(
-        schema_version=1,
-        digest=f"sha256:{digest.hexdigest()}",
-        dataset_digest=dataset_digest,
-        file_count=len(files),
-        tasks=tasks,
-        harbor_version=harbor_version,
-        integration_version=integration_version,
-        integration_digest=integration_digest,
-    )
+    compatible: list[dict[str, Any]] = []
+    incompatible: list[dict[str, Any]] = []
+    jobs_dir = jobs_dir.expanduser().resolve()
+    if jobs_dir.is_dir():
+        for context_file in sorted(jobs_dir.glob(f"*/{CONTEXT_NAME}")):
+            try:
+                value = json.loads(context_file.read_text())
+            except (OSError, json.JSONDecodeError):
+                continue
+            job = context_file.parent.name
+            if value.get("schema_version") != 2:
+                incompatible.append({"job": job, "reason": "CONTEXT_SCHEMA_UNSUPPORTED"})
+            elif value.get("mode") != mode:
+                incompatible.append({"job": job, "reason": "JOB_MODE_MISMATCH"})
+            elif value.get("digest") != expected["digest"]:
+                incompatible.append({"job": job, "reason": "EVALUATION_CONTEXT_MISMATCH"})
+            elif (value.get("candidate") or {}).get("digest") == candidate.digest:
+                incompatible.append({"job": job, "reason": "CANDIDATE_DIGEST_UNCHANGED"})
+            else:
+                compatible.append(
+                    {
+                        "job": job,
+                        "candidate": value.get("candidate"),
+                        "context_digest": value.get("digest"),
+                    }
+                )
+    return {
+        "schema_version": 1,
+        "expected_context": expected,
+        "comparable_baselines": compatible,
+        "incompatible_baselines": incompatible,
+        "fresh_baseline_required": not compatible,
+    }

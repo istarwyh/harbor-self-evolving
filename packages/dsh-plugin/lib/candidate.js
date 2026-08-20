@@ -6,6 +6,16 @@ export const MANIFEST_NAME = 'candidate-manifest.json'
 const DIGEST_PREFIX = Buffer.from('harbor-dsh-candidate-v1\0')
 const EXCLUDED_DIRS = new Set(['.git', 'node_modules', '__pycache__'])
 const EXCLUDED_FILES = new Set([MANIFEST_NAME, '.DS_Store'])
+const LOCKFILES = ['package-lock.json', 'pnpm-lock.yaml', 'yarn.lock', 'bun.lock', 'bun.lockb']
+const CREDENTIAL_FILES = new Set([
+  'credentials.json',
+  'service-account.json',
+  'secrets.json',
+  'secrets.yaml',
+  'secrets.yml',
+  'id_rsa',
+  'id_ed25519',
+])
 
 async function walk(root, current = root) {
   const entries = await readdir(current, { withFileTypes: true })
@@ -46,8 +56,7 @@ export async function computeCandidate(candidateDir) {
   return { digest: `sha256:${digest.digest('hex')}`, files }
 }
 
-export async function snapshotCandidate(candidateDir, options = {}) {
-  const root = path.resolve(candidateDir)
+async function validateCandidateContract(root) {
   for (const required of ['cordis.yml', 'package.json']) {
     try {
       if (!(await stat(path.join(root, required))).isFile()) throw new Error()
@@ -55,6 +64,24 @@ export async function snapshotCandidate(candidateDir, options = {}) {
       throw new Error(`Candidate is missing required file: ${required}`)
     }
   }
+  const files = await walk(root)
+  if (!files.some(item => LOCKFILES.includes(item.relative))) {
+    throw new Error(`Candidate requires a JavaScript lockfile: ${LOCKFILES.join(', ')}`)
+  }
+  const credentialPaths = files
+    .map(item => item.relative)
+    .filter((relative) => {
+      const name = path.basename(relative).toLowerCase()
+      return name.startsWith('.env') || CREDENTIAL_FILES.has(name)
+    })
+  if (credentialPaths.length > 0) {
+    throw new Error(`Candidate contains credential-bearing files: ${credentialPaths.join(', ')}; inject credentials at runtime instead`)
+  }
+}
+
+export async function snapshotCandidate(candidateDir, options = {}) {
+  const root = path.resolve(candidateDir)
+  await validateCandidateContract(root)
   let packageJson
   try {
     packageJson = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'))

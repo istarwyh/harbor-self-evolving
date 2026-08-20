@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict'
 import { existsSync } from 'node:fs'
+import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 
 import { apply } from '../index.js'
 
-test('Cordis plugin registers the bundled evolution Skill and four tools', () => {
+test('Cordis plugin registers the bundled evolution Skill and strict architecture tools', () => {
   const tools = []
   const skills = []
   const ctx = {
@@ -24,6 +25,10 @@ test('Cordis plugin registers the bundled evolution Skill and four tools', () =>
   })
   assert.deepEqual(tools.map(tool => tool.name), [
     'harbor_candidate_snapshot',
+    'harbor_evolution_init',
+    'harbor_evolution_doctor',
+    'harbor_dataset_validate',
+    'harbor_context_preview',
     'harbor_eval_run',
     'harbor_eval_result',
     'harbor_candidate_compare',
@@ -36,6 +41,15 @@ test('Cordis plugin registers the bundled evolution Skill and four tools', () =>
   assert.equal(existsSync(skills[0].path), true)
   assert.match(skills[0].description, /self-evolution/)
   assert.match(skills[0].content, /harbor_candidate_snapshot/)
-  assert.match(skills[0].content, /Clarify the evaluation contract/)
+  assert.match(skills[0].content, /Evaluation Stack/)
   assert.doesNotMatch(skills[0].content, /^---/)
+})
+
+test('published package exposes the DSH bundle patch', async () => {
+  const packageJson = JSON.parse(
+    await readFile(new URL('../package.json', import.meta.url), 'utf8'),
+  )
+
+  assert.equal(packageJson.dsh.bundle.patch, './cordis.patch.yml')
+  assert.equal(packageJson.exports['./cordis.patch.yml'], './cordis.patch.yml')
 })

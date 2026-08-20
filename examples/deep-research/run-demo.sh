@@ -55,10 +55,19 @@ run_candidate() {
       --job-name "$job_name" \
       --jobs-dir "$repo_dir/jobs" \
       --plugin harbor_dsh_evolution.plugin:EvolutionPlugin \
-      --plugin-kwarg "candidate_manifest=$candidate_dir/candidate-manifest.json" >&2
+      --plugin-kwarg "candidate_manifest=$candidate_dir/candidate-manifest.json" \
+      --plugin-kwarg "dataset_path=$example_dir/task" \
+      --plugin-kwarg "stack_path=$example_dir/.harbor/evaluation-stack.yml" \
+      --plugin-kwarg "project_root=$repo_dir" \
+      --plugin-kwarg "mode=promotion-eligible" \
+      --plugin-kwarg "policy_path=$example_dir/promotion-policy.json" >&2
 
   printf '%s\n' "$repo_dir/jobs/$job_name"
 }
+
+PYTHONPATH="$python_src${PYTHONPATH:+:$PYTHONPATH}" \
+  "$python_bin" -m harbor_dsh_evolution.cli dataset snapshot \
+    "$example_dir/task" --id "deep-research-regression" --version "1.0.0" >/dev/null
 
 baseline_job="$(run_candidate v1 1.0.0 | tail -n 1)"
 candidate_job="$(run_candidate v2 2.0.0 | tail -n 1)"

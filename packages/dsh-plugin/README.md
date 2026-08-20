@@ -2,7 +2,7 @@
 
 Installable DeepSeek Harness Plugin + Skill for running stable Harbor evaluation and controlled Agent evolution loops, with a native DSH Web dashboard.
 
-The package gives DSH four deterministic Harbor tools, dedicated Tool cards, a Harbor conversation tab, an installation Doctor, and the model- and user-invocable `evolve-agent-with-harbor` Skill. The Skill clarifies the evaluation contract, initializes missing structures, establishes a baseline, diagnoses evidence, limits each iteration to one controlled Candidate change, runs regression evaluation, and produces a Promotion Gate recommendation.
+The package gives DSH eight strict Harbor tools, dedicated Tool cards, a paginated Evaluation Workbench, an installation Doctor, and the model- and user-invocable `evolve-agent-with-harbor` Skill. The Skill clarifies and initializes the Evaluation Stack, validates Dataset identity, runs Architecture Doctor and Context v2 preview, establishes a baseline, diagnoses evidence, limits each iteration to one controlled Candidate change, and applies the Promotion Gate.
 
 ## Install
 
@@ -14,8 +14,8 @@ npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 
 The setup command installs both required runtimes:
 
-- `harbor-dsh-evolution==0.4.0` in a managed Python environment.
-- `dsh-harbor-evolution@0.4.0` in the selected DSH profile.
+- `harbor-dsh-evolution==0.5.0` in a managed Python environment.
+- `dsh-harbor-evolution@0.5.0` in the selected DSH profile.
 
 It then stores the absolute Harbor executable paths and `projectRoot` in the profile's `harbor-evolution` block and verifies the integration. Existing unrelated profile entries are preserved, and rerunning setup updates the same block.
 
@@ -35,19 +35,23 @@ Inspect this workspace and help me clarify and initialize a stable Harbor self-e
 The Plugin registers:
 
 - `harbor_candidate_snapshot`
+- `harbor_evolution_init`
+- `harbor_evolution_doctor`
+- `harbor_dataset_validate`
+- `harbor_context_preview`
 - `harbor_eval_run`
 - `harbor_eval_result`
 - `harbor_candidate_compare`
 
 In the `web` profile, the same package also registers:
 
-- a `Harbor` conversation tab for recent Jobs, metrics, Candidate identity, and evaluation-context digests;
-- four compact result cards for the Harbor Tool calls;
-- a `Harbor Evolution` Settings section that checks the configured project, Jobs directory, and CLI paths.
+- a lightweight Harbor Job overview and on-demand Evaluation Workbench for Contract, Stack, Dataset, Doctor, paginated Trials, evidence, optimization, promotion, and audit artifacts;
+- compact result cards for all Harbor Tool calls;
+- a `Harbor Evolution` Settings section that checks the configured project, Evaluation Stack, Jobs directory, and CLI paths.
 
 The Web UI is intentionally read-only. Starting an evaluation or deciding promotion remains an explicit Agent + Skill workflow, so a page refresh can never launch an expensive Job.
 
-The shortest direct evaluation call needs `candidatePath` and `datasetPath`. Prefer the Skill for a new project because it will not run or compare Jobs until the material evaluation contract is resolved.
+A direct evaluation requires `candidatePath`, `datasetPath`, `stackPath`, and explicit `mode`; `promotion-eligible` additionally requires `policyPath`. Prefer the Skill because it will not run or compare Jobs until the material identities and evaluation contract are resolved.
 
 ## What setup writes
 

@@ -16,6 +16,9 @@ def make_candidate(tmp_path: Path) -> Path:
     candidate.mkdir()
     (candidate / "cordis.yml").write_text("- name: example\n")
     (candidate / "package.json").write_text('{"name":"candidate"}\n')
+    (candidate / "package-lock.json").write_text(
+        '{"name":"candidate","lockfileVersion":3}\n'
+    )
     (candidate / "plugin.mjs").write_text("export const name = 'example'\n")
     return candidate
 
@@ -52,6 +55,19 @@ def test_manifest_contains_no_secret_values(tmp_path: Path):
     payload = json.dumps(manifest.to_dict())
     assert "candidate-manifest.json" not in [item.path for item in manifest.files]
     assert str(candidate) not in payload
+
+
+def test_snapshot_requires_lockfile_and_rejects_credential_files(tmp_path: Path):
+    candidate = make_candidate(tmp_path)
+    (candidate / "package-lock.json").unlink()
+    with pytest.raises(ValueError, match="lockfile"):
+        snapshot_candidate(candidate, candidate_id="demo", version="1.0.0")
+    (candidate / "package-lock.json").write_text(
+        '{"name":"candidate","lockfileVersion":3}\n'
+    )
+    (candidate / ".env.production").write_text("TOKEN=do-not-store\n")
+    with pytest.raises(ValueError, match="credential-bearing"):
+        snapshot_candidate(candidate, candidate_id="demo", version="1.0.0")
 
 
 def test_digest_matches_cross_language_test_vector(tmp_path: Path):

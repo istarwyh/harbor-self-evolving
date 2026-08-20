@@ -1,114 +1,120 @@
-# Initialization Reference
+# Strict Project Initialization
 
-Load this reference only when the user needs a new Harbor self-evolution workspace or is missing one of the required contracts.
+Load this reference only when the project is missing the Evaluation Stack structure or the user asks to initialize it.
 
-## Readiness checklist
+## Readiness worksheet
 
-Confirm these prerequisites before the first Job:
+Resolve every value before calling `harbor_evolution_init`:
 
-- Docker is available to Harbor.
-- Node.js 22+, the selected DSH version, `harbor`, and `harbor-dsh` are available to the DSH process.
-- `projectRoot` is the intended workspace security boundary.
-- Candidate, Dataset, Job, and Promotion Policy paths stay within `projectRoot`.
-- Runtime credentials use evaluation accounts and are not stored in Candidate files.
+| Field | Required meaning |
+| --- | --- |
+| `datasetPath` | Existing Harbor Dataset inside `projectRoot` |
+| `stackId` / `stackVersion` | Stable identity of the complete evaluation architecture |
+| `datasetId` / `datasetVersion` | Stable identity of task population and GT boundary |
+| `contractId` / `contractVersion` | Stable metric semantics |
+| `primaryMetric` / `primaryDirection` | Exact reward key and `maximize` or `minimize` |
+| Judge provider/model/version | Reproducible Judge identity, never credentials |
+| Policy id/version | Stable Gate identity |
+| `minImprovement` | Accepted primary-metric delta |
 
-## Clarification worksheet
+Also establish diagnostic metrics, min/max thresholds, non-regression metrics, mutation surface, repeat policy, and promotion owner. The initializer creates a minimal Policy; update its explicit placeholders before a formal Gate.
 
-Use known repository evidence first. Ask the user only for unresolved choices.
-
-| Contract field | Example | Why it matters |
-| --- | --- | --- |
-| Target behavior | Produce cited research answers | Defines task success |
-| Candidate identity | `deep-research-agent` | Keeps v1/v2 in one product line |
-| Candidate path | `candidates/deep-research/v1` | Defines what is snapshotted |
-| Dataset path | `datasets/deep-research-regression` | Fixes tasks and Verifier |
-| Primary metric | `reward` | Ranks Candidates |
-| Minimums | completion and citation >= 0.95 | Prevents unsafe tradeoffs |
-| Non-regression | tool success, latency | Protects existing capability |
-| Mutation surface | prompt and search plugin only | Controls causal attribution |
-| Repeat policy | 5 fixed-seed runs | Controls stochastic variance |
-| Promotion owner | CI gate plus human approval | Keeps deployment external |
-
-## Recommended layout
+## Generated layout
 
 ```text
-agent-workspace/
+projectRoot/
+├── .harbor/
+│   ├── evolution.yml
+│   └── evaluation-stack.yml
 ├── candidates/
-│   └── <agent-id>/
-│       ├── v1/
-│       │   ├── cordis.yml
-│       │   ├── package.json
-│       │   ├── package-lock.json
-│       │   └── business plugins...
-│       └── v2/
 ├── datasets/
-│   └── <suite>/
-│       ├── task.toml
-│       ├── instruction.md
-│       ├── environment/Dockerfile
-│       └── tests/
-│           ├── test.sh
-│           └── verifier files...
-├── policies/
-│   └── <suite>.json
+├── integrations/default.py
+├── renderers/default.py
+├── evaluators/default.py
+├── rubrics/default.md
+├── diagnosers/default.py
+├── optimizers/default.py
+├── runners/harbor.py
+├── reporters/default.py
+├── policies/promotion.json
 └── jobs/
 ```
 
-Generate `candidate-manifest.json` with `harbor_candidate_snapshot`; do not hand-author it. One immutable Candidate may be evaluated by many Jobs.
+The initializer never overwrites existing files. `created` and `preserved` in its result are part of the audit. Placeholder components provide identities, not a finished business evaluator.
 
-## Candidate rules
+## Evaluation Stack shape
 
-A Candidate is the complete DSH/Cordis composition required to reproduce behavior:
+```yaml
+schema_version: 1
+stack_id: vertical-search
+version: 1.0.0
+components:
+  integration: { id: search-api, version: 1.0.0, entry: integrations/default.py }
+  renderer: { id: search-renderer, version: 1.0.0, entry: renderers/default.py }
+  evaluator: { id: search-evaluator, version: 1.0.0, entry: evaluators/default.py }
+  rubric: { id: search-rubric, version: 1.0.0, entry: rubrics/default.md }
+  diagnoser: { id: search-diagnoser, version: 1.0.0, entry: diagnosers/default.py }
+  optimizer: { id: search-optimizer, version: 1.0.0, entry: optimizers/default.py }
+  runner: { id: harbor-runner, version: 1.0.0, entry: runners/harbor.py, semantic: false }
+  reporter: { id: search-reporter, version: 1.0.0, entry: reporters/default.py }
+judge:
+  provider: accepted-provider
+  model: accepted-model
+  version: pinned-version
+  parameters: { temperature: 0 }
+evaluation_contract:
+  contract_id: vertical-search
+  version: 1.0.0
+  primary_metric: reward
+  metrics:
+    - { id: reward, label: Overall reward, direction: maximize }
+    - { id: valid_search_rate, label: Valid search rate, direction: maximize }
+    - { id: citation_accuracy, label: Citation accuracy, direction: maximize }
+```
 
-- `package.json` supplies the default Candidate id and version.
-- `cordis.yml` composes the model, tools, skills, loop, storage, and business plugins.
-- A lockfile pins transitive runtime dependencies.
-- Local plugin files and prompts belong in the Candidate and therefore affect its digest.
-- Secrets, mutable session state, Jobs, and production deployment configuration do not belong in the Candidate.
+Do not duplicate Evaluator logic inside each Task. Reference one Stack Evaluator from task metadata when task-specific routing is needed.
 
-Copy an existing known-good Candidate when possible. If none exists, create the smallest valid DSH composition for the actual business Agent; do not invent a model provider or credential scheme.
+## Dataset rules
 
-## Dataset and Verifier rules
+Keep `dataset-manifest.json` at Dataset root. Generate it through initialization or `harbor-dsh dataset snapshot`; do not hand-edit its digest. Validation rejects:
 
-A Harbor Dataset contains one or more fixed Tasks. Each Task should define:
+- Missing/duplicate Task ids or empty instructions.
+- Duplicate normalized queries.
+- Missing/out-of-root paths or symlinks.
+- Source/file counts that no longer match.
+- Secret-bearing metadata fields.
 
-- `task.toml`: Task identity, timeouts, environment, and Harbor contract.
-- `instruction.md`: the behavior requested from the Candidate.
-- `environment/Dockerfile`: a reproducible sandbox with required runtime dependencies.
-- `tests/test.sh`: the verifier entrypoint.
-- Verifier code that writes primary and diagnostic metrics to Harbor's reward output.
+Intentional Dataset changes require a new Dataset version, a new snapshot, and a fresh baseline.
 
-For a research Agent, useful diagnostic metrics include task completion, tool-call success, valid-search rate, citation correctness, latency, and cost. Keep their exact definitions in version control. Do not convert tool errors, empty searches, or invalid citations into prose-only observations; expose them as metrics or structured failure evidence.
-
-## Promotion Policy starter
-
-Create this only after the user accepts the metric names and thresholds:
+## Promotion Policy v2
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "policy_id": "vertical-search",
+  "version": "1.0.0",
   "primary_metric": "reward",
+  "primary_direction": "maximize",
   "min_improvement": 0.05,
-  "minimums": {
-    "task_completion": 0.95
-  },
-  "non_regression": [
-    "tool_call_success",
-    "citation_correctness"
-  ],
-  "non_regression_tolerance": 0.0
+  "minimums": { "citation_accuracy": 0.9 },
+  "maximums": { "latency_seconds": 20 },
+  "non_regression": ["valid_search_rate"],
+  "metric_directions": { "valid_search_rate": "maximize" },
+  "non_regression_tolerance": 0.0,
+  "hard_requirements": ["exception_free", "artifact_schema_valid", "doctor_error_free"]
 }
 ```
 
-This is a structural example, not a universal default. Thresholds must reflect business risk and sample size. Version the policy; changing it invalidates comparisons made under the old promotion contract.
+Use business-accepted thresholds. Do not assume all metrics are `/10`, maximized, or universal across domains.
 
-## First-cycle handoff
+## Handoff before the first Job
 
-Before calling an evaluation tool, show the user:
+Show the user:
 
-1. The resolved Candidate, Dataset, Job, and policy paths.
-2. The metric and promotion contract.
-3. The mutation and side-effect boundaries.
-4. Any assumptions still being used.
+1. Resolved Candidate, Dataset, Stack, Policy, and Jobs paths.
+2. Role identities and which ones affect reward comparability.
+3. Metric directions, thresholds, groups, and hard requirements.
+4. Holdout, mutation, side-effect, repeat, and deployment boundaries.
+5. Doctor findings and Context preview.
 
-Then snapshot and run the baseline. Do not initialize v2 until baseline evidence identifies a concrete hypothesis.
+Start with a baseline. Do not create Candidate v2 until baseline evidence supports one controlled hypothesis.

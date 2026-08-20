@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.5.0 - 2026-08-21
+
+- Replace the Dataset-tree Context v1 contract with strict Candidate + Dataset Manifest + Evaluation Stack + Context v2 identities; no legacy promotion path is retained.
+- Add first-class Integration, Renderer, Evaluator, Rubric, Diagnoser, Optimizer, Runner, Reporter, Judge, and Evaluation Contract manifests.
+- Add non-overwriting project initialization, Dataset validation, Architecture Doctor, Context preview, and structured Promotion Gate reason codes.
+- Separate comparison digest from full audit digest so non-reward Diagnoser/Optimizer/Reporter changes remain comparable while reward-affecting changes require a fresh baseline.
+- Generate and validate Evaluation Contract, Trial Assessment, Population, Summary, and Promotion artifacts with infrastructure exceptions kept separate from capability metrics.
+- Replace the Job list-only UI with an outcome-first Evaluation Workbench and server-side paginated Trial APIs.
+- Add mtime caching, same-origin read-only routes, path/symlink containment, artifact size limits, evidence truncation, and sensitive-field redaction.
+- Upgrade the bundled Skill with Architecture mode, strict initialization worksheet, Doctor-first promotion flow, evidence-linked optimization, and evaluator meta-evaluation guidance.
+
 ## 0.4.0 - 2026-08-19
 
 - Add a native Harbor conversation tab for Job status, Candidate identity, evaluation-context digests, metrics, exceptions, and Promotion decisions.

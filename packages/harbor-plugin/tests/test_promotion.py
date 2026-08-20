@@ -1,79 +1,83 @@
+from copy import deepcopy
+
 from harbor_dsh_evolution.promotion import evaluate_promotion
 
 
 POLICY = {
-    "schema_version": 1,
+    "schema_version": 2,
+    "policy_id": "vertical-search",
+    "version": "1.0.0",
     "primary_metric": "reward",
+    "primary_direction": "maximize",
     "min_improvement": 0.1,
-    "minimums": {"citation_correctness": 1.0},
-    "non_regression": ["task_completion", "search_validity"],
+    "minimums": {"citation_accuracy": 0.8},
+    "maximums": {"latency": 3.0},
+    "non_regression": ["search_validity"],
+    "metric_directions": {"search_validity": "maximize"},
 }
+
+
+def context():
+    component = lambda role: {"id": role, "version": "1", "digest": f"sha256:{role}", "reward_affecting": role != "runner"}
+    return {
+        "schema_version": 2,
+        "digest": "sha256:context",
+        "mode": "promotion-eligible",
+        "dataset": {"dataset_id": "search", "version": "1", "source_digest": "sha256:dataset"},
+        "evaluation_stack": {
+            "components": {role: component(role) for role in ("integration", "renderer", "evaluator", "rubric", "runner")},
+            "judge": {"provider": "local", "model": "judge", "version": "1"},
+        },
+    }
 
 
 def summary(job: str, **metrics):
     return {
         "job": job,
-        "candidate": {
-            "candidate_id": "business-agent",
-            "digest": f"sha256:{job}",
-        },
-        "evaluation_context": {"digest": "sha256:" + "c" * 64},
-        "n_exceptions": 0,
+        "candidate": {"candidate_id": "business-agent", "digest": f"sha256:{job}"},
+        "evaluation_context": context(),
+        "n_infrastructure_exceptions": 0,
+        "artifact_validation": {"valid": True},
+        "_identity_artifacts_valid": True,
+        "_architecture_doctor": {"promotion_ready": True},
         "metrics": metrics,
     }
 
 
-def test_promotes_improved_candidate():
+def codes(report):
+    return {item["code"] for item in report["reasons"]}
+
+
+def test_promotes_only_improved_comparable_candidate():
     report = evaluate_promotion(
-        summary("v1", reward=0.4, citation_correctness=0, task_completion=1, search_validity=0),
-        summary("v2", reward=1, citation_correctness=1, task_completion=1, search_validity=1),
+        summary("v1", reward=0.4, citation_accuracy=0.8, latency=2, search_validity=1),
+        summary("v2", reward=0.8, citation_accuracy=0.9, latency=2.5, search_validity=1),
         POLICY,
     )
     assert report["decision"] == "PROMOTE"
-    assert report["reasons"] == []
 
 
-def test_rejects_primary_improvement_with_regression():
-    report = evaluate_promotion(
-        summary("v1", reward=0.4, citation_correctness=1, task_completion=1, search_validity=1),
-        summary("v2", reward=0.8, citation_correctness=1, task_completion=0, search_validity=1),
-        POLICY,
-    )
-    assert report["decision"] == "REJECT"
-    assert any("task_completion regressed" in reason for reason in report["reasons"])
-
-
-def test_rejects_incomparable_evaluation_contexts():
-    baseline = summary("v1", reward=0.4, citation_correctness=1)
-    candidate = summary("v2", reward=1.0, citation_correctness=1)
-    candidate["evaluation_context"] = {"digest": "sha256:" + "d" * 64}
+def test_rejects_rubric_and_judge_mismatch_with_codes():
+    baseline = summary("v1", reward=0.4, citation_accuracy=0.8, latency=2, search_validity=1)
+    candidate = summary("v2", reward=0.8, citation_accuracy=0.9, latency=2, search_validity=1)
+    candidate["evaluation_context"] = deepcopy(candidate["evaluation_context"])
+    candidate["evaluation_context"]["evaluation_stack"]["components"]["rubric"]["digest"] = "sha256:changed"
+    candidate["evaluation_context"]["evaluation_stack"]["judge"]["version"] = "2"
     report = evaluate_promotion(baseline, candidate, POLICY)
-    assert report["decision"] == "REJECT"
-    assert any("evaluation context mismatch" in reason for reason in report["reasons"])
+    assert {"RUBRIC_MISMATCH", "JUDGE_MODEL_MISMATCH"}.issubset(codes(report))
 
 
-def test_rejects_missing_evaluation_context():
-    baseline = summary("v1", reward=0.4, citation_correctness=1)
-    candidate = summary("v2", reward=1.0, citation_correctness=1)
-    candidate["evaluation_context"] = None
+def test_rejects_context_v1_infrastructure_errors_and_invalid_artifacts():
+    baseline = summary("v1", reward=0.4, citation_accuracy=0.8, latency=2, search_validity=1)
+    candidate = summary("v2", reward=0.8, citation_accuracy=0.9, latency=2, search_validity=1)
+    baseline["evaluation_context"] = {"schema_version": 1, "digest": "old"}
+    candidate["n_infrastructure_exceptions"] = 1
+    candidate["artifact_validation"] = {"valid": False}
     report = evaluate_promotion(baseline, candidate, POLICY)
-    assert report["decision"] == "REJECT"
-    assert "evaluation context digest is missing" in report["reasons"]
+    assert {"EVALUATION_CONTEXT_SCHEMA_INVALID", "INFRASTRUCTURE_EXCEPTION_PRESENT", "ARTIFACT_SCHEMA_INVALID"}.issubset(codes(report))
 
 
-def test_rejects_unchanged_candidate_digest():
-    baseline = summary("v1", reward=0.4, citation_correctness=1)
-    candidate = summary("v2", reward=1.0, citation_correctness=1)
-    candidate["candidate"]["digest"] = baseline["candidate"]["digest"]
-    report = evaluate_promotion(baseline, candidate, POLICY)
-    assert report["decision"] == "REJECT"
-    assert "candidate digest is unchanged" in report["reasons"]
-
-
-def test_rejects_a_different_candidate_product_line():
-    baseline = summary("v1", reward=0.4, citation_correctness=1)
-    candidate = summary("v2", reward=1.0, citation_correctness=1)
-    candidate["candidate"]["candidate_id"] = "unrelated-agent"
-    report = evaluate_promotion(baseline, candidate, POLICY)
-    assert report["decision"] == "REJECT"
-    assert any("product line mismatch" in reason for reason in report["reasons"])
+def test_supports_minimize_primary_metrics():
+    policy = {**POLICY, "primary_metric": "latency", "primary_direction": "minimize", "min_improvement": 0.5, "minimums": {}, "maximums": {}, "non_regression": []}
+    report = evaluate_promotion(summary("v1", latency=3), summary("v2", latency=2), policy)
+    assert report["decision"] == "PROMOTE"

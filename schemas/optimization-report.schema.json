@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/istarwyh/harbor-self-evolving/schemas/optimization-report.schema.json",
+  "title": "Optimization Report",
+  "type": "object",
+  "required": ["schema_version", "hypotheses"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "hypotheses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "evidence_refs", "proposed_change", "mutation_surface"],
+        "properties": {
+          "id": { "type": "string" },
+          "evidence_refs": { "type": "array", "items": { "type": "string" } },
+          "proposed_change": { "type": "string" },
+          "mutation_surface": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

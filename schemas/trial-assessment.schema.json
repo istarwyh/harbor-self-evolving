@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/istarwyh/harbor-self-evolving/schemas/trial-assessment.schema.json",
+  "title": "Trial Assessment",
+  "type": "object",
+  "required": ["schema_version", "trial_id", "trial_name", "status", "rewards", "findings", "evidence", "process"],
+  "properties": {
+    "schema_version": { "const": 1 }, "trial_id": { "type": "string" }, "trial_name": { "type": "string" }, "status": { "enum": ["assessed", "infrastructure-error"] },
+    "rewards": { "type": "object", "additionalProperties": { "type": "number" } }, "findings": { "type": "array", "items": { "type": "object" } }, "evidence": { "type": "array", "items": { "type": "object" } }, "output": {}, "process": { "type": "array", "items": { "type": "object" } }
+  }
+}

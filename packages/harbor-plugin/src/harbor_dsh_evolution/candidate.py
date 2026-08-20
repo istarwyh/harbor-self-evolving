@@ -13,6 +13,16 @@ _DIGEST_PREFIX = b"harbor-dsh-candidate-v1\0"
 _EXCLUDED_DIRS = {".git", "node_modules", "__pycache__"}
 _EXCLUDED_FILES = {MANIFEST_NAME, ".DS_Store"}
 _DIGEST_PATTERN = re.compile(r"^sha256:[0-9a-f]{64}$")
+_LOCKFILES = ("package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lock", "bun.lockb")
+_CREDENTIAL_FILES = {
+    "credentials.json",
+    "service-account.json",
+    "secrets.json",
+    "secrets.yaml",
+    "secrets.yml",
+    "id_rsa",
+    "id_ed25519",
+}
 
 
 @dataclass(frozen=True)
@@ -99,6 +109,32 @@ def compute_candidate(candidate_dir: Path) -> tuple[str, list[CandidateFile]]:
     return f"sha256:{digest.hexdigest()}", files
 
 
+def _validate_candidate_contract(candidate_dir: Path) -> None:
+    missing = [
+        name
+        for name in ("cordis.yml", "package.json")
+        if not (candidate_dir / name).is_file()
+    ]
+    if missing:
+        raise ValueError(f"Candidate is missing required files: {', '.join(missing)}")
+    if not any((candidate_dir / name).is_file() for name in _LOCKFILES):
+        raise ValueError(
+            "Candidate requires a JavaScript lockfile: " + ", ".join(_LOCKFILES)
+        )
+    credential_paths = sorted(
+        path.relative_to(candidate_dir).as_posix()
+        for path in candidate_dir.rglob("*")
+        if path.is_file()
+        and (path.name.casefold().startswith(".env") or path.name.casefold() in _CREDENTIAL_FILES)
+    )
+    if credential_paths:
+        raise ValueError(
+            "Candidate contains credential-bearing files: "
+            + ", ".join(credential_paths)
+            + "; inject credentials at runtime instead"
+        )
+
+
 def snapshot_candidate(
     candidate_dir: Path,
     *,
@@ -108,10 +144,7 @@ def snapshot_candidate(
     metadata: dict[str, Any] | None = None,
 ) -> CandidateManifest:
     candidate_dir = candidate_dir.expanduser().resolve(strict=True)
-    required = [candidate_dir / "cordis.yml", candidate_dir / "package.json"]
-    missing = [path.name for path in required if not path.is_file()]
-    if missing:
-        raise ValueError(f"Candidate is missing required files: {', '.join(missing)}")
+    _validate_candidate_contract(candidate_dir)
 
     try:
         package = json.loads((candidate_dir / "package.json").read_text())
@@ -159,6 +192,7 @@ def verify_candidate(
     expected_digest: str | None = None,
 ) -> CandidateManifest:
     candidate_dir = candidate_dir.expanduser().resolve(strict=True)
+    _validate_candidate_contract(candidate_dir)
     manifest = load_manifest(candidate_dir)
     actual_digest, actual_files = compute_candidate(candidate_dir)
     if actual_digest != manifest.digest:

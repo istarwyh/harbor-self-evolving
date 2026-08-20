@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/istarwyh/harbor-self-evolving/schemas/promotion-report.schema.json",
+  "title": "Promotion Report v2",
+  "type": "object",
+  "required": ["schema_version", "decision", "baseline_job", "candidate_job", "policy_digest", "reasons"],
+  "properties": {
+    "schema_version": { "const": 2 },
+    "decision": { "enum": ["PROMOTE", "REJECT"] },
+    "baseline_job": { "type": ["string", "null"] },
+    "candidate_job": { "type": ["string", "null"] },
+    "policy_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "reasons": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["code", "message"],
+        "properties": {
+          "code": { "type": "string" },
+          "message": { "type": "string" }
+        }
+      }
+    }
+  }
+}

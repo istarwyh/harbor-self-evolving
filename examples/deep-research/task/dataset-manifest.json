@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "dataset_id": "deep-research-regression",
+  "version": "1.0.0",
+  "source_digest": "sha256:f54d8e857ea876f5912a0f7ccaa085b4304f6aaedea2276d018ba3f63cbddd5a",
+  "created_at": "2026-08-20T15:59:35.787609+00:00",
+  "task_count": 1,
+  "tasks": [
+    {
+      "id": "task-1",
+      "path": ".",
+      "instruction": "instruction.md",
+      "verifier": "tests/test.sh",
+      "environment": "environment/Dockerfile"
+    }
+  ],
+  "file_count": 6
+}

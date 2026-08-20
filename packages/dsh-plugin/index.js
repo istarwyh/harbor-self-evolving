@@ -73,13 +73,71 @@ export function apply(ctx, config) {
   }, args => service.snapshot(args)))
 
   ctx.tools.register(jsonTool({
-    name: 'harbor_eval_run',
-    description: 'Snapshot and run one DeepSeek Harness Candidate against a Harbor dataset, then return the completed evaluation summary.',
+    name: 'harbor_evolution_init',
+    description: 'Initialize a strict, non-overwriting Evaluation Stack project after the Skill has clarified identities, primary metric, judge, and promotion threshold.',
+    parameters: {
+      datasetPath: { type: 'string', required: true },
+      stackId: { type: 'string', required: true },
+      stackVersion: { type: 'string', required: true },
+      datasetId: { type: 'string', required: true },
+      datasetVersion: { type: 'string', required: true },
+      contractId: { type: 'string', required: true },
+      contractVersion: { type: 'string', required: true },
+      primaryMetric: { type: 'string', required: true },
+      primaryDirection: { type: 'string', required: true },
+      judgeProvider: { type: 'string', required: true },
+      judgeModel: { type: 'string', required: true },
+      judgeVersion: { type: 'string', required: true },
+      policyId: { type: 'string', required: true },
+      policyVersion: { type: 'string', required: true },
+      minImprovement: { type: 'number', required: true },
+    },
+  }, args => service.initialize(args)))
+
+  ctx.tools.register(jsonTool({
+    name: 'harbor_evolution_doctor',
+    description: 'Validate the Evaluation Stack architecture, Dataset manifest, Candidate, and optional Promotion Policy before an expensive Harbor Job.',
+    parameters: {
+      candidatePath: { type: 'string', required: true },
+      datasetPath: { type: 'string', required: true },
+      stackPath: { type: 'string', required: true },
+      policyPath: { type: 'string' },
+      mode: { type: 'string', required: true },
+    },
+  }, args => service.doctor(args)))
+
+  ctx.tools.register(jsonTool({
+    name: 'harbor_dataset_validate',
+    description: 'Validate dataset-manifest.json, task uniqueness, instructions, paths, sensitive metadata, and the immutable source digest.',
+    parameters: {
+      datasetPath: { type: 'string', required: true },
+    },
+  }, args => service.validateDataset(args)))
+
+  ctx.tools.register(jsonTool({
+    name: 'harbor_context_preview',
+    description: 'Preview Evaluation Context v2 and find comparable baselines before launching a Job.',
     parameters: {
       candidatePath: { type: 'string', required: true },
       candidateId: { type: 'string' },
       version: { type: 'string' },
       datasetPath: { type: 'string', required: true },
+      stackPath: { type: 'string', required: true },
+      mode: { type: 'string', required: true },
+    },
+  }, args => service.previewContext(args)))
+
+  ctx.tools.register(jsonTool({
+    name: 'harbor_eval_run',
+    description: 'Run a strict diagnostic or promotion-eligible Harbor Job bound to Candidate, Dataset Manifest, Evaluation Stack, and Context v2 identities.',
+    parameters: {
+      candidatePath: { type: 'string', required: true },
+      candidateId: { type: 'string' },
+      version: { type: 'string' },
+      datasetPath: { type: 'string', required: true },
+      stackPath: { type: 'string', required: true },
+      mode: { type: 'string', required: true },
+      policyPath: { type: 'string' },
       jobName: { type: 'string' },
     },
   }, args => service.run(args)))

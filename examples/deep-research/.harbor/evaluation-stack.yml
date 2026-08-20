@@ -1,0 +1,56 @@
+schema_version: 1
+stack_id: deep-research-evaluation
+version: 1.0.0
+components:
+  integration:
+    id: dsh-acp-integration
+    version: 1.0.0
+    entry: examples/deep-research/stack/integration.py
+  renderer:
+    id: research-result-renderer
+    version: 1.0.0
+    entry: examples/deep-research/stack/renderer.py
+  evaluator:
+    id: deep-research-verifier
+    version: 1.0.0
+    entry: examples/deep-research/task/tests/verify.py
+  rubric:
+    id: deep-research-rubric
+    version: 1.0.0
+    entry: examples/deep-research/stack/rubric.md
+  diagnoser:
+    id: deep-research-diagnoser
+    version: 1.0.0
+    entry: examples/deep-research/stack/diagnoser.py
+  optimizer:
+    id: deep-research-optimizer
+    version: 1.0.0
+    entry: examples/deep-research/stack/optimizer.py
+  runner:
+    id: harbor-runner
+    version: 1.0.0
+    entry: examples/deep-research/stack/runner.py
+    semantic: false
+  reporter:
+    id: deep-research-reporter
+    version: 1.0.0
+    entry: examples/deep-research/stack/reporter.py
+judge:
+  provider: deterministic
+  model: harbor-python-verifier
+  version: 1.0.0
+  parameters: {}
+evaluation_contract:
+  contract_id: deep-research-quality
+  version: 1.0.0
+  primary_metric: reward
+  metrics:
+    - { id: reward, label: Overall reward, direction: maximize }
+    - { id: task_completion, label: Task completion, direction: maximize }
+    - { id: tool_call_success, label: Tool call success, direction: maximize }
+    - { id: search_validity, label: Search validity, direction: maximize }
+    - { id: citation_correctness, label: Citation correctness, direction: maximize }
+  groups: []
+  hard_requirements:
+    - { id: infrastructure_exception_free }
+    - { id: artifact_schema_valid }
