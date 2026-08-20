@@ -1,5 +1,14 @@
-import { readDashboardSnapshot } from './dashboard.js'
-import { compareCandidates, readEvaluation, runEvaluation, snapshot } from './evolution.js'
+import { readDashboardSnapshot, readJobDetail, readTrialDetail, readTrialsPage } from './dashboard.js'
+import {
+  compareCandidates,
+  initializeProject,
+  previewContext,
+  readEvaluation,
+  runDoctor,
+  runEvaluation,
+  snapshot,
+  validateDataset,
+} from './evolution.js'
 
 /** One Host-side boundary shared by Agent tools and the Web dashboard. */
 export class EvolutionService {
@@ -10,6 +19,10 @@ export class EvolutionService {
 
   snapshot(args) {
     return snapshot(this.config, args)
+  }
+
+  initialize(args) {
+    return initializeProject(this.config, args)
   }
 
   run(args) {
@@ -24,7 +37,31 @@ export class EvolutionService {
     return compareCandidates(this.config, args)
   }
 
+  doctor(args) {
+    return runDoctor(this.config, args)
+  }
+
+  validateDataset(args) {
+    return validateDataset(this.config, args)
+  }
+
+  previewContext(args) {
+    return previewContext(this.config, args)
+  }
+
   dashboard() {
     return readDashboardSnapshot(this.config, this.metadata)
+  }
+
+  job(args) {
+    return readJobDetail(this.config, args)
+  }
+
+  trials(args) {
+    return readTrialsPage(this.config, args)
+  }
+
+  trial(args) {
+    return readTrialDetail(this.config, args)
   }
 }

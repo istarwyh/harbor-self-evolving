@@ -1,12 +1,13 @@
 {
   "name": "dsh-harbor-evolution",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "DeepSeek Harness plugin and bundled Skill for safely evolving Cordis Candidates with Harbor.",
   "type": "module",
   "main": "index.js",
   "exports": {
     ".": "./index.js",
     "./client": "./lib/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
     "./package.json": "./package.json"
   },
   "bin": {

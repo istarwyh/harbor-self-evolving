@@ -1,39 +1,59 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/istarwyh/harbor-self-evolving/schemas/evaluation-context.schema.json",
-  "title": "Harbor DSH Evaluation Context",
+  "title": "Harbor DSH Evaluation Context v2",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "schema_version",
-    "digest",
-    "dataset_digest",
-    "file_count",
-    "tasks",
-    "harbor_version",
-    "integration_version",
-    "integration_digest"
-  ],
+  "required": ["schema_version", "digest", "full_digest", "mode", "candidate", "dataset", "evaluation_stack", "runtime"],
   "properties": {
-    "schema_version": { "const": 1 },
-    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
-    "dataset_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
-    "file_count": { "type": "integer", "minimum": 0 },
-    "tasks": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["path", "name", "version"],
-        "properties": {
-          "path": { "type": "string" },
-          "name": { "type": "string", "minLength": 1 },
-          "version": { "type": "string", "minLength": 1 }
-        }
+    "schema_version": { "const": 2 },
+    "digest": { "$ref": "#/$defs/digest" },
+    "full_digest": { "$ref": "#/$defs/digest" },
+    "mode": { "enum": ["diagnostic", "promotion-eligible"] },
+    "candidate": {
+      "type": "object",
+      "required": ["candidate_id", "version", "digest", "runtime"],
+      "properties": {
+        "candidate_id": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 },
+        "digest": { "$ref": "#/$defs/digest" },
+        "runtime": { "type": "object" }
       }
     },
-    "harbor_version": { "type": "string", "minLength": 1 },
-    "integration_version": { "type": "string", "minLength": 1 },
-    "integration_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
-  }
+    "dataset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dataset_id", "version", "source_digest", "task_count"],
+      "properties": {
+        "dataset_id": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 },
+        "source_digest": { "$ref": "#/$defs/digest" },
+        "task_count": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "evaluation_stack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stack_id", "version", "digest", "comparison_digest", "components", "judge"],
+      "properties": {
+        "stack_id": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 },
+        "digest": { "$ref": "#/$defs/digest" },
+        "comparison_digest": { "$ref": "#/$defs/digest" },
+        "components": { "type": "object" },
+        "judge": { "type": "object" }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["harbor_version", "integration_version", "integration_digest"],
+      "properties": {
+        "harbor_version": { "type": "string", "minLength": 1 },
+        "integration_version": { "type": "string", "minLength": 1 },
+        "integration_digest": { "$ref": "#/$defs/digest" }
+      }
+    }
+  },
+  "$defs": { "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" } }
 }

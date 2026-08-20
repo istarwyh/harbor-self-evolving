@@ -1,127 +1,154 @@
 ---
 name: evolve-agent-with-harbor
-description: Initialize, evaluate, compare, and safely improve a DeepSeek Harness Agent with Harbor. Use when the user asks to set up Harbor evaluation or Agent self-evolution, clarify an evaluation contract, create a Candidate, Dataset, or Promotion Policy, investigate a failed Job, or decide whether a Candidate should replace a baseline.
+description: Architect, initialize, diagnose, evaluate, compare, and safely improve a DeepSeek Harness business Agent with Harbor Evaluation Stack, Dataset Manifest, Context v2, Architecture Doctor, and Promotion Gate. Use for Harbor setup, Agent self-evolution, vertical-search evaluation loops, evaluation architecture review, failed Job diagnosis, Candidate optimization, evaluator meta-evaluation, or promotion decisions.
 ---
 
 # Evolve Agent With Harbor
 
-Turn a vague improvement request into a reproducible evaluation contract, immutable Candidates, comparable Harbor Jobs, and an auditable promotion recommendation. Treat Harbor as the experiment boundary; deployment remains outside this workflow.
+Build a reproducible improvement loop around three boundaries:
 
-## Choose the operating mode
+- **Generator/Candidate**: the immutable DSH Agent composition being improved.
+- **Evaluator/Evaluation Stack**: Integration, Renderer, Evaluator, Rubric, Diagnoser, Optimizer, Runner, Reporter, and Judge identities.
+- **Optimizer**: proposes one evidence-linked Candidate change; it never controls the final Gate.
 
-Infer the narrowest mode that satisfies the request:
+Treat Harbor as the experiment boundary. Deployment, CI/CD, and Champion replacement remain external actions requiring separate authority.
 
-- **Clarify**: define what progress means and what may change.
-- **Initialize**: create the missing Candidate, Dataset, and Promotion Policy structure.
-- **Evaluate**: snapshot and run one Candidate.
-- **Compare**: compare an existing baseline Job with a new Candidate Job.
-- **Evolve**: run the complete baseline, diagnosis, controlled change, regression, and gate loop.
-- **Meta-evaluate**: optimize a Verifier or Judge against human ground truth rather than optimizing the business Agent.
+## Select the narrowest mode
 
-Do not expand an evaluate-only request into code mutation or deployment.
+- **Clarify**: define progress, identities, constraints, and promotion ownership.
+- **Architecture**: inspect role boundaries and run `harbor_evolution_doctor`.
+- **Initialize**: read `references/initialization.md`, obtain explicit values, then call `harbor_evolution_init`.
+- **Diagnostic**: investigate failures without making a promotion claim.
+- **Promotion**: run a `promotion-eligible` Job and apply the deterministic Gate.
+- **Evolve**: baseline → diagnose → one controlled change → regression Job → Gate.
+- **Meta-evaluate**: improve an Evaluator/Judge against independently maintained human GT.
 
-## Clarify the evaluation contract
+Do not turn an inspection or diagnostic request into Agent mutation or deployment.
 
-Inspect the workspace and existing configuration before asking questions. Summarize known values, then resolve only material gaps. Prefer no more than three grouped questions in one turn.
+## Clarify before initializing
 
-Establish these fields:
+Inspect the workspace first. Resolve only material gaps, preferably in no more than three grouped questions. Obtain:
 
-1. Business behavior and the failure being improved.
-2. Candidate path and stable Agent product identity.
-3. Harbor Dataset path, test population, and environment constraints.
-4. Primary metric, minimum metrics, non-regression metrics, and tolerances.
-5. Baseline Candidate or baseline Job.
-6. Allowed mutation surface, forbidden files, and side-effect boundaries.
-7. Run budget, repeat policy for stochastic Agents, and stopping condition.
-8. Promotion owner and external CI/CD boundary.
+1. Business behavior, failure pattern, and Candidate path/product identity.
+2. Dataset path/id/version, task population, holdout boundary, and side-effect sandbox.
+3. Evaluation Stack id/version and one entry for every required role.
+4. Judge provider/model/version/parameters without credentials.
+5. Evaluation Contract id/version, primary metric and direction, diagnostic metrics, groups, and hard requirements.
+6. Promotion Policy id/version, delta, minimums, maximums, non-regression metrics, and metric directions.
+7. Baseline Job/Candidate, repeat policy, run budget, stopping rule, allowed mutation surface, and forbidden files.
+8. Promotion owner and external CI/CD handoff.
 
-Candidate and Dataset paths are hard blockers for a run. Baseline and promotion criteria are hard blockers for a comparison. Do not invent ground truth, metrics, or deployment authority. Offer explicit draft defaults when helpful, but obtain acceptance before using them as the evaluation contract.
+Never invent GT, a Judge model, reward definitions, thresholds, credentials, or deployment authority. Offer draft values only when clearly labeled and accepted.
 
-## Initialize safely
+## Enforce the strict architecture
 
-When required files are missing, read `references/initialization.md` before creating them. Initialize only inside the configured `projectRoot` and preserve existing files.
+Require these before every Job:
 
-- Keep the baseline immutable; create a new versioned Candidate directory for every optimization attempt.
-- Keep secrets out of Candidate files. Inject equal credentials and permissions at runtime.
-- Pin direct and transitive dependencies with a lockfile.
-- Make the Verifier emit a primary reward plus diagnostic metrics and failure evidence.
-- Version the Promotion Policy. A policy or Verifier change requires a fresh baseline.
-- Use test accounts, mocks, or sandboxes for business side effects.
+- `candidate-manifest.json` verified against the Candidate files.
+- `dataset-manifest.json` with unique task ids, non-empty instructions, safe paths, and a matching source digest.
+- `.harbor/evaluation-stack.yml` with all eight roles, Judge identity, and Evaluation Contract.
+- Evaluation Context v2 preview.
 
-If file-editing capabilities are unavailable, produce the exact initialization plan and unresolved choices instead of pretending files were created.
+Before a formal Job, call in order:
 
-## Run the stable evolution loop
+1. `harbor_candidate_snapshot`
+2. `harbor_dataset_validate`
+3. `harbor_evolution_doctor`
+4. `harbor_context_preview`
 
-### 1. Establish the baseline
+Do not launch a `promotion-eligible` Job when Doctor reports an error, no comparable baseline exists, or `fresh_baseline_required` is true. A diagnostic Job may investigate architecture warnings, but still requires a valid Candidate, Dataset Manifest, Evaluation Stack, and Context v2.
 
-Call `harbor_candidate_snapshot` for the baseline Candidate. Then call `harbor_eval_run` with the accepted Candidate and Dataset paths. Record the Candidate id, version, digest, Job path, evaluation-context digest, metrics, exceptions, and failed trials.
+Keep Runner orchestration-only. Treat these as architecture errors:
 
-`harbor_eval_run` already snapshots again before execution. Treat a digest mismatch as a real Candidate change, not as noise.
+- Runner combines HTTP integration, rubric, and Judge logic.
+- Runner makes a promotion/Champion decision.
 
-### 2. Diagnose before changing
+## Initialize without overwriting
 
-Use the summary returned by `harbor_eval_run`; call `harbor_eval_result` only when reopening an existing Job or when the stable summary is needed again. Read failed samples and trajectories when available.
+Read `references/initialization.md` when required files are missing. After the user accepts all required identities and metric semantics, call `harbor_evolution_init`. It preserves existing files and creates explicit placeholders that still require business implementation.
 
-Classify each failure as one of:
+After initialization:
 
-- Agent capability or policy failure.
-- Tool-call, search, citation, or output-contract failure.
-- Dataset, Verifier, or ground-truth defect.
+- Replace placeholders with real role implementations.
+- Pin Candidate dependencies and keep secrets runtime-injected.
+- Re-snapshot the Dataset after intentional Dataset changes.
+- Run Doctor again; initialization success is not evaluation readiness.
+
+## Determine comparability correctly
+
+Use the Context v2 `digest`, not timestamps or Job names.
+
+A fresh baseline is required when any of these change:
+
+- Dataset id, version, or source digest.
+- Integration, Renderer, Evaluator, or Rubric identity.
+- Judge provider, model, version, or parameters.
+- Runner marked `semantic: true`.
+- Harbor or integration runtime identity.
+
+Diagnoser, Optimizer, Reporter, and non-semantic Runner changes remain comparable but change the full audit digest. A Candidate digest must differ from the baseline Candidate digest. Promotion Policy is reapplied as a separately versioned decision contract; changing it does not rewrite Evaluation Context.
+
+## Run the evolution loop
+
+### Establish a baseline
+
+Call `harbor_eval_run` with Candidate, Dataset, Stack, explicit `mode`, and a Policy for `promotion-eligible`. Preserve Candidate, Dataset, Stack, Context, Doctor, Contract, Trial assessments, Population report, Summary, and later Promotion report.
+
+Never cherry-pick stochastic runs. Apply the accepted repeat/seed policy symmetrically.
+
+### Diagnose before changing
+
+Use `harbor_eval_result` only to reopen a stable Job summary. Inspect Trial assessments and classify each failure as:
+
+- Candidate capability or policy.
+- Tool-call, invalid search, citation, or output-contract failure.
+- Dataset, Evaluator, Rubric, Judge, or GT defect.
 - Infrastructure, dependency, permission, timeout, or deployment failure.
-- Stochastic variance requiring repeats.
+- Stochastic uncertainty.
 
-Do not optimize the Agent to compensate for a broken evaluation environment. Do not leak holdout answers or ground truth into the Candidate.
+Do not optimize the Candidate around broken evaluation infrastructure. Never leak holdout answers or GT into Candidate prompts, skills, tools, or memory.
 
-### 3. Make one controlled change
+### Propose one controlled change
 
-State one hypothesis that connects evidence to the proposed change. Create a new immutable Candidate version and modify only the accepted mutation surface. Never edit the baseline Candidate in place.
+Require every optimization hypothesis to include:
 
-Snapshot the new Candidate and verify that its digest differs. If it does not differ, stop because no new Candidate exists.
+- Evidence references to Job/Trial/findings.
+- Root-cause classification.
+- Expected metric effect.
+- Exact mutation surface and forbidden surface.
+- Rollback condition.
 
-### 4. Re-run under the same context
+Create a new immutable Candidate version; never edit the baseline in place. Stop when the new digest is unchanged.
 
-Call `harbor_eval_run` with the same Dataset and evaluation settings. For stochastic Agents, use the accepted repeat policy for both baseline and Candidate; never cherry-pick the best run.
+### Re-run and gate
 
-Compare only Jobs whose `evaluation-context` digests match. If the context changed, establish a new baseline instead of claiming improvement.
+Call `harbor_context_preview`; establish a fresh baseline if needed. Run the Candidate under the same comparable Context. Then call `harbor_candidate_compare`.
 
-### 5. Apply the deterministic gate
+- `PROMOTE`: recommend external promotion with the complete evidence package.
+- `REJECT`: keep the Champion and explain every structured reason code.
 
-Call `harbor_candidate_compare` with the baseline Job, Candidate Job, and accepted Promotion Policy. Respect its decision:
-
-- `PROMOTE`: recommend promotion and provide the evidence package.
-- `REJECT`: keep the current Champion and explain each failed criterion.
-
-The gate is a recommendation boundary. Never deploy, mutate the active DSH profile, merge code, or replace the Champion unless the user separately authorizes the external CI/CD action.
-
-## Preserve experimental invariants
-
-- One Job binds one Candidate digest; one Candidate may have many Jobs.
-- Baseline and Candidate must share the same evaluation-context digest.
-- Keep Candidate, evaluation context, policy, summaries, trajectories, and gate report as checkpoints.
-- Separate infrastructure failures from capability failures in every report.
-- Change one causal factor per iteration unless the user explicitly accepts a bundled experiment.
-- Use hidden or held-out evaluation data for promotion; do not let the Optimizer train directly on it.
-- Report uncertainty when sample size or stochastic variance prevents a stable conclusion.
+Never bypass `INFRASTRUCTURE_EXCEPTION_PRESENT`, `ARTIFACT_SCHEMA_INVALID`, Dataset/Stack/Rubric/Judge mismatch, or non-regression failures.
 
 ## Handle evaluator meta-evaluation
 
-When the object being improved is the evaluator, rotate the roles:
+Rotate roles when improving the Evaluator:
 
-- Candidate is a Verifier or Judge version.
-- Dataset contains cases with independently maintained human ground truth.
-- Metrics measure evaluator alignment, such as RCR, bias, variance, calibration, latency, and cost.
-- Promotion compares evaluator Candidates under a fixed GT set and policy.
+- Candidate is the Evaluator/Rubric/Judge version.
+- Dataset contains independently maintained human GT.
+- Metrics include RCR, bias, variance, calibration, latency, and cost as appropriate.
+- The Candidate evaluator must not author its own GT or final promotion decision.
 
-Never let the Candidate Judge provide its own final ground truth or promotion decision.
+Manage evaluator Candidates and meta-evaluation Jobs with the same Manifest, Context v2, Doctor, evidence, and Gate rules.
 
 ## Report each cycle
 
-Return a compact audit record containing:
+Return:
 
-- Accepted evaluation contract and any remaining assumptions.
-- Baseline and Candidate ids, versions, digests, and Job paths.
-- Evaluation-context and Promotion Policy identities.
-- Primary and diagnostic metric deltas.
-- Representative failure evidence and root-cause classification.
-- Gate decision with exact reasons.
-- External action required for promotion and the next controlled hypothesis if rejected.
+- Accepted Evaluation Contract and unresolved assumptions.
+- Candidate, Dataset, Stack, Context, Judge, and Policy identities.
+- Comparable baseline or fresh-baseline decision.
+- Metric deltas, exception counts, Population groups, and artifact validation.
+- Representative Trial evidence and root-cause classes.
+- Controlled change hypothesis and mutation surface.
+- Gate decision with exact reason codes.
+- External CI/CD action still required.

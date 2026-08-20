@@ -19,7 +19,8 @@ Commands:
   setup                 Install locked Python and Node.js dependencies
   doctor                Check local prerequisites and integration health
   test                  Run all local package tests and build checks
-  context <dataset>     Print the reproducible evaluation-context fingerprint
+  preview <candidate> <dataset> <stack> [mode]
+                        Preview strict Context v2 and comparable baselines
   dsh-install [profile] Install the released Plugin + Skill (default: web)
   dsh-install-source [profile]
                         Prepare and link this source checkout (default: web)
@@ -142,16 +143,25 @@ case "$command_name" in
       "$repo_dir/examples/shell-minimal/run-demo.sh"
     echo "All local checks passed."
     ;;
-  context)
-    dataset_path="${2:-}"
-    if [[ -z "$dataset_path" ]]; then
-      echo "context requires a dataset path" >&2
+  preview)
+    candidate_path="${2:-}"
+    dataset_path="${3:-}"
+    stack_path="${4:-}"
+    mode="${5:-diagnostic}"
+    if [[ -z "$candidate_path" || -z "$dataset_path" || -z "$stack_path" ]]; then
+      echo "preview requires candidate, dataset, and stack paths" >&2
       exit 2
     fi
     if [[ ! -x "$harbor_dsh_bin" ]]; then
       setup_python
     fi
-    "$harbor_dsh_bin" context "$dataset_path"
+    "$harbor_dsh_bin" context preview \
+      --project-root "$repo_dir" \
+      --candidate "$candidate_path" \
+      --dataset "$dataset_path" \
+      --stack "$stack_path" \
+      --jobs-dir "$repo_dir/jobs" \
+      --mode "$mode"
     ;;
   dsh-install)
     profile="${2:-web}"

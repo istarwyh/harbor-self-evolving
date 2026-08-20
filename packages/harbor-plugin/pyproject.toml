@@ -1,6 +1,6 @@
 [project]
 name = "harbor-dsh-evolution"
-version = "0.4.0"
+version = "0.5.0"
 description = "Candidate identity, evaluation summaries, and promotion gates for DeepSeek Harness agents evaluated with Harbor."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -21,7 +21,11 @@ classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.12",
 ]
-dependencies = ["harbor>=0.21.0,<0.22"]
+dependencies = [
+  "harbor>=0.21.0,<0.22",
+  "jsonschema>=4.23,<5",
+  "PyYAML>=6.0,<7",
+]
 
 [project.urls]
 Homepage = "https://github.com/istarwyh/harbor-self-evolving"

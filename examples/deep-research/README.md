@@ -10,4 +10,12 @@ v1 模拟三个常见失败：工具报错、空搜索、引用不存在的 sour
 ./hse demo
 ```
 
-两个 Job 会保存相同的 `evaluation-context.json`。Gate 先验证该 digest，再比较 reward，因此这个例子证明的是“同一把尺子下 v2 优于 v1”。
+两个 Job 会保存 Context v2、Dataset Manifest、Evaluation Stack Manifest、Architecture Doctor、Evaluation Contract、Trial Assessment 与 Population Report。Gate 先验证可比较 digest、产物 Schema 和基础设施异常，再比较 reward，因此这个例子证明的是“同一把尺子下 v2 优于 v1”。
+
+严格评测身份位于：
+
+- `.harbor/evaluation-stack.yml`
+- `task/dataset-manifest.json`
+- `promotion-policy.json`（Policy v2）
+
+手动调用 `harbor_eval_run` 时还必须传 `stackPath`、显式 `mode`，以及正式评测所需的 `policyPath`。

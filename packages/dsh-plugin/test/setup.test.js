@@ -68,7 +68,7 @@ test('local plugin specs are distinguished from registry and GitHub specs', asyn
 
   assert.equal(await resolveLocalPluginDirectory(pluginDir), pluginDir)
   assert.equal(await resolveLocalPluginDirectory(`file://${pluginDir}`), pluginDir)
-  assert.equal(await resolveLocalPluginDirectory('dsh-harbor-evolution@0.4.0'), undefined)
+  assert.equal(await resolveLocalPluginDirectory('dsh-harbor-evolution@0.5.0'), undefined)
   assert.equal(await resolveLocalPluginDirectory('github:istarwyh/harbor-self-evolving'), undefined)
 })
 

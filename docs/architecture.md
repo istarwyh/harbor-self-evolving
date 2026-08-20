@@ -1,43 +1,73 @@
-# 架构与角色
+# 架构与稳定进步
 
-## 三个角色，一个外部 Gate
+## 三个业务角色与一个确定性 Gate
 
-| 角色 | 在本项目中的落点 | 职责 |
+| 角色 | 落点 | 职责 |
 | --- | --- | --- |
-| 生成器 | DSH/Cordis Candidate | 执行业务任务，产生答案、工具调用和引用 |
-| 评测器 | Harbor Task + Verifier | 在固定环境中把行为转换为指标和失败证据 |
-| 优化器 | 人或 DSH Agent | 读取证据，只产生一个新的 Candidate |
-| Promotion Gate | `promotion.py` + policy | 用确定性规则决定是否晋级，不让优化器自己裁判 |
+| 生成器 | DSH/Cordis Candidate | 执行业务任务并产生行为轨迹 |
+| 评测器 | Harbor Dataset + Evaluation Stack | 把行为转换为 reward、诊断指标和证据 |
+| 优化器 | 人或 DSH Agent | 从证据提出一个受控 Candidate 改动 |
+| Promotion Gate | Policy v2 + `promotion.py` | 独立判断是否晋级，优化器不能自我裁判 |
 
-这里的 checkpoint 不是一份随时变化的工作目录，而是两个相互关联的不可变记录：
+两个 checkpoint 共同回答“评测了谁、用什么尺子、为什么晋级”：
 
-1. Candidate checkpoint：版本、文件清单、运行时和 SHA-256 digest。
-2. Evaluation checkpoint：评测上下文指纹、Harbor Job 配置、Trial 结果、ACP 轨迹、指标汇总和 Gate 报告。
+1. Candidate checkpoint：产品身份、版本、文件清单、运行时和 digest。
+2. Evaluation checkpoint：Dataset Manifest、Evaluation Stack Manifest、Context v2、Doctor、Contract、Trials、Population、Summary 和 Gate 报告。
 
-因此可以回答三个关键问题：评测的是谁、在什么环境评测、为什么晋级。
+## Evaluation Stack
 
-## 数据流
+`.harbor/evaluation-stack.yml` 显式定义八个角色：
+
+- Integration：调用业务 Agent/服务。
+- Renderer：把原始执行结果规范化。
+- Evaluator：计算指标和结构化 findings。
+- Rubric：声明判分语义。
+- Diagnoser：从 evidence 分类根因。
+- Optimizer：提出带 evidence reference 的改动假设。
+- Runner：只负责编排。
+- Reporter：把 Contract、Trial、Population 和 Gate 产物呈现出来。
+
+Judge 的 provider/model/version/parameters 也是 Stack 身份。Doctor 会阻止把 HTTP、Rubric、Judge 和 Promotion 决策塞进一个 God Runner。
+
+## Context v2 的两种 digest
 
 ```text
-Cordis composition
-  └─ snapshot → candidate-manifest.json
-                     ↓ digest lock
-Harbor Dataset → Job → Trial(s) → Verifier rewards
-       ↓ context digest       ↓
-              evaluation-summary.json
-                     ↓
-baseline summary + candidate summary + promotion-policy.json
-                     ↓
-              PROMOTE / REJECT
+Candidate manifest ──────────────┐
+Dataset manifest ────────────────┼─ full_digest（完整审计）
+Evaluation Stack full identity ──┤
+runtime + Job mode ──────────────┘
+
+Dataset identity ────────────────┐
+Integration/Renderer/Evaluator ──┤
+Rubric/Judge ────────────────────┼─ digest（可比较性）
+semantic Runner + runtime ───────┘
 ```
 
-一个 Candidate 可以对应多个 Job；一个 Job 只允许绑定一个 Candidate digest。Job 启动时会对 Dataset 文件树生成 `evaluation-context.json`，其中包含 Task 身份、Harbor 版本、本集成版本及集成源码 digest。Gate 默认拒绝 context digest 缺失或不一致的两个 Job，也拒绝产品线不同或 digest 未变化的 Candidate，因此不能靠换题、换 Verifier、换环境源码或重复提交同一 Candidate 制造“进步”。
+Candidate 不进入可比较 digest：v1/v2 必须是不同 Candidate digest，但必须共享同一把评测尺子。Diagnoser、Optimizer、Reporter 和 `semantic: false` Runner 会进入完整审计，却不改变 reward 可比较性。
 
-Context 固定的是输入源码和工具版本；容器基础镜像仍应使用 digest、远程模型也应固定版本或 deployment id。Gate 同时记录 policy digest，便于审计本次晋级到底使用了哪套规则。
+以下变化必须建立 fresh baseline：Dataset id/version/source、Integration、Renderer、Evaluator、Rubric、Judge、语义 Runner、Harbor 或 Adapter runtime。Policy 是独立版本化的决策合同，可以在已有指标足够时重新应用，不会改写 Context。
 
-## reward 如何承载业务失败
+## 严格数据流
 
-DeepResearch 示例把结果拆成可诊断指标：
+```text
+Clarify → Init → Dataset Validate → Architecture Doctor
+                                    ↓
+Candidate Snapshot → Context Preview → Harbor Job
+                                    ↓
+Contract + Trial Assessments + Population + Summary
+                                    ↓
+evidence-linked controlled change → next Candidate Job
+                                    ↓
+Context v2 comparability + Policy v2 → PROMOTE / REJECT
+                                    ↓
+external CI/CD promotes the same evaluated artifact
+```
+
+`promotion-eligible` Job 必须具有 Candidate Manifest、Dataset Manifest、Stack Manifest、Context v2、Policy v2 和零 Doctor error。Context v1 不提供兼容降级。
+
+## reward 与诊断证据
+
+DeepResearch 示例把过程失败直接写进 reward：
 
 ```text
 reward = 0.4 × task_completion
@@ -46,15 +76,8 @@ reward = 0.4 × task_completion
        + 0.2 × citation_correctness
 ```
 
-v1 虽然答对“30 天”，但发生工具失败、空查询和错误 source id，因此只有 0.4；v2 修复三个过程质量问题后得到 1.0。总 reward 用于排序，分项指标用于根因分析和非回归约束。
+工具调用失败、空搜索和错误引用不是 prose-only 备注，而是独立指标和 Trial evidence。总 reward 用于排序，分项指标用于根因和非回归。
 
-## 元评测也是同一套结构
+## 元评测
 
-当要优化的是评测器本身，可把角色旋转一次：
-
-- Candidate 变为某个 Verifier / Judge 版本；
-- Harbor Task 变为带人工 GT 的判分样本；
-- reward 变为 RCR 等评测器对齐指标；
-- Promotion Gate 要求对 GT 的一致性提升，并限制偏置、方差或成本退化。
-
-也就是说，Harbor 既能管理“业务 Agent 是否进步”，也能管理“用于判断进步的评测器是否可靠”。两种实验必须分开建 Job 和 policy，不能让同一个待优化 Judge 同时充当自己的最终裁判。
+优化评测器时旋转角色：Candidate 是 Evaluator/Rubric/Judge 版本；Dataset 是带独立人工 GT 的样本；指标可包含 RCR、偏置、方差、校准、时延和成本。待优化评测器不能生成自己的 GT 或最终 Gate 决策。元评测仍使用相同 Manifest、Context v2、Doctor、Job 和 Gate 机制。

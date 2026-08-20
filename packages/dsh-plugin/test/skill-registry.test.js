@@ -19,7 +19,9 @@ test('bundled Skill loads through the official DSH Skill Registry', async () => 
   assert.equal(summaries[0].invocation.userInvocable, true)
   assert.equal(skill.source, 'npm:dsh-harbor-evolution')
   assert.equal(skill.resourceBase.kind, 'directory')
-  assert.match(skill.content, /Run the stable evolution loop/)
+  assert.match(skill.content, /Run the evolution loop/)
+  assert.match(skill.content, /harbor_evolution_doctor/)
+  assert.match(skill.content, /fresh_baseline_required/)
 
   dispose()
   assert.deepEqual(await root.skills.list(), [])

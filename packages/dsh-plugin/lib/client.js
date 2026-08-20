@@ -48,220 +48,154 @@ var harbor_ocean_default = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD/4
 
 // src/client/index.jsx
 var NS = "harbor-evolution";
-var ROUTE = "/_dsh/harbor-evolution/dashboard";
+var API = "/_dsh/harbor-evolution";
 var dictionaries = {
   zh: {
     tab: "Harbor",
     settings: "Harbor \u81EA\u8FDB\u5316",
-    eyebrow: "HARBOR SELF-EVOLVING",
-    heroTitle: "\u8BA9\u6BCF\u6B21 Agent \u6539\u52A8\u90FD\u6709\u8BC1\u636E",
-    heroBody: "Candidate \u56FA\u5316\u80FD\u529B\uFF0CJob \u4FDD\u5B58\u5B9E\u9A8C\uFF0CPromotion Gate \u53EA\u8BA9\u53EF\u6BD4\u8F83\u3001\u65E0\u56DE\u5F52\u7684\u7248\u672C\u9760\u5CB8\u3002",
+    eyebrow: "EVALUATION WORKBENCH",
+    heroTitle: "\u7A33\u5B9A\u5730\u770B\u89C1 Agent \u662F\u5426\u771F\u7684\u8FDB\u6B65",
+    heroBody: "Evaluation Stack \u56FA\u5B9A\u8BC4\u6D4B\u542B\u4E49\uFF0CContext v2 \u56FA\u5B9A\u53EF\u6BD4\u8F83\u6027\uFF0CPromotion Gate \u53EA\u63A5\u53D7\u6709\u8BC1\u636E\u4E14\u65E0\u56DE\u5F52\u7684 Candidate\u3002",
     refresh: "\u5237\u65B0",
-    refreshed: "\u6700\u8FD1\u5237\u65B0",
-    totalJobs: "\u8BC4\u6D4B\u6279\u6B21",
-    completedJobs: "\u5DF2\u5B8C\u6210",
-    activeJobs: "\u8FDB\u884C\u4E2D",
-    failedJobs: "\u5931\u8D25",
-    latestMetric: "\u6700\u65B0\u6307\u6807",
-    jobs: "\u6700\u8FD1\u7684 Harbor Jobs",
-    jobsHint: "\u6700\u591A\u5C55\u793A\u6700\u8FD1 50 \u4E2A\u6279\u6B21\u3002\u7ED3\u679C\u76F4\u63A5\u8BFB\u53D6\u7A33\u5B9A\u7684 evaluation-summary.json\u3002",
-    emptyTitle: "\u8FD8\u6CA1\u6709\u8BC4\u6D4B\u7ED3\u679C",
-    emptyBody: "\u8BA9 Agent \u8C03\u7528\u5B98\u65B9 Skill\uFF0C\u5148\u6F84\u6E05 Candidate\u3001Dataset \u4E0E Promotion Policy\uFF0C\u518D\u542F\u52A8\u7B2C\u4E00\u4E2A Job\u3002",
-    startStep1: "1. \u56FA\u5316 Candidate",
-    startStep2: "2. \u8FD0\u884C Harbor Job",
-    startStep3: "3. \u6BD4\u8F83\u5E76\u51B3\u5B9A\u664B\u7EA7",
+    jobs: "\u8BC4\u6D4B\u6279\u6B21",
+    jobsHint: "\u8F7B\u91CF\u603B\u89C8\uFF1B\u70B9\u51FB Job \u6253\u5F00\u5B8C\u6574\u8BC4\u6D4B\u5DE5\u4F5C\u53F0\u3002",
+    empty: "\u8FD8\u6CA1\u6709 Context v2 Job\u3002\u5148\u8C03\u7528\u5B98\u65B9 Skill \u5B8C\u6210\u67B6\u6784\u6F84\u6E05\u548C\u521D\u59CB\u5316\u3002",
+    completed: "\u5B8C\u6210",
+    partial: "\u5E26\u5F02\u5E38",
+    failed: "\u5931\u8D25",
+    pending: "\u8FD0\u884C\u4E2D",
     candidate: "Candidate",
-    context: "\u8BC4\u6D4B\u4E0A\u4E0B\u6587",
+    context: "Context v2",
     trials: "Trials",
-    exceptions: "Exceptions",
-    metrics: "\u6307\u6807",
-    pending: "\u4E0B\u6F5C\u4E2D",
-    completed: "\u5DF2\u9760\u5CB8",
-    partial: "\u5E26\u5F02\u5E38\u5B8C\u6210",
-    failed: "\u9047\u5230\u98CE\u66B4",
-    promote: "\u664B\u7EA7",
-    reject: "\u62D2\u7EDD\u664B\u7EA7",
-    noMetrics: "\u6682\u65E0\u6307\u6807",
-    loading: "\u6B63\u5728\u8BFB\u53D6 Harbor \u822A\u7EBF\u2026",
-    loadError: "\u65E0\u6CD5\u8BFB\u53D6 Harbor \u72B6\u6001",
-    retry: "\u91CD\u8BD5",
-    doctorTitle: "\u5B89\u88C5\u4E0E\u8FD0\u884C\u68C0\u67E5",
-    doctorBody: "\u8FD9\u91CC\u68C0\u67E5 DSH Plugin \u5230 Harbor Runtime \u7684\u5173\u952E\u8DEF\u5F84\u3002\u914D\u7F6E\u4ECD\u7531 Cordis Profile \u7BA1\u7406\uFF0C\u4E0D\u4F1A\u88AB\u6D4F\u89C8\u5668\u9759\u9ED8\u6539\u5199\u3002",
-    ready: "\u53EF\u4EE5\u5F00\u59CB\u8BC4\u6D4B",
-    attention: "\u9700\u8981\u5904\u7406",
-    projectRoot: "\u9879\u76EE\u6839\u76EE\u5F55",
-    jobsDir: "Jobs \u76EE\u5F55",
-    harbor: "Harbor CLI",
-    harborDsh: "Promotion CLI",
-    runtime: "\u8FD0\u884C\u5951\u7EA6",
-    dshVersion: "DSH \u7248\u672C",
-    agentImport: "Agent \u5165\u53E3",
-    pluginImport: "Harbor Plugin",
-    skillGuide: "\u5982\u4F55\u5F00\u59CB",
-    skillBody: "\u5728\u5BF9\u8BDD\u4E2D\u8BF4\u660E\u201C\u8BF7\u7528 Harbor \u81EA\u8FDB\u5316 Skill \u521D\u59CB\u5316\u5E76\u8BC4\u6D4B\u6211\u7684 Agent\u201D\u3002Skill \u4F1A\u5148\u8865\u9F50\u9700\u6C42\uFF0C\u800C\u4E0D\u662F\u76F4\u63A5\u6267\u884C\u9AD8\u6210\u672C Job\u3002",
-    toolSnapshot: "\u56FA\u5316 Candidate",
-    toolRun: "\u8FD0\u884C Harbor \u8BC4\u6D4B",
-    toolResult: "\u8BFB\u53D6\u8BC4\u6D4B\u7ED3\u679C",
-    toolCompare: "\u6267\u884C Promotion Gate",
-    running: "\u6267\u884C\u4E2D",
-    toolFailed: "\u5DE5\u5177\u8C03\u7528\u5931\u8D25",
-    noResult: "\u6CA1\u6709\u53EF\u89E3\u6790\u7684\u7ED3\u6784\u5316\u7ED3\u679C",
-    digest: "Digest",
+    exceptions: "\u5F02\u5E38",
+    mode: "\u6A21\u5F0F",
+    result: "\u7ED3\u679C\u6458\u8981",
+    process: "\u8BC4\u6D4B\u8FC7\u7A0B",
+    contract: "\u8BC4\u6D4B\u5951\u7EA6",
+    stack: "Evaluation Stack",
+    dataset: "Dataset",
+    assessments: "Trial \u8BC4\u6D4B",
+    reasons: "\u539F\u56E0\u4E0E\u8BC1\u636E",
+    optimization: "\u4F18\u5316\u5EFA\u8BAE",
+    promotion: "\u664B\u7EA7\u51B3\u7B56",
+    audit: "\u5BA1\u8BA1\u4EA7\u7269",
+    close: "\u5173\u95ED",
+    search: "\u641C\u7D22 Trial",
+    all: "\u5168\u90E8",
+    assessed: "\u5DF2\u8BC4\u6D4B",
+    infra: "\u57FA\u7840\u8BBE\u65BD\u5F02\u5E38",
+    previous: "\u4E0A\u4E00\u9875",
+    next: "\u4E0B\u4E00\u9875",
+    noData: "\u6682\u65E0\u4EA7\u7269",
+    validation: "\u4EA7\u7269\u6821\u9A8C",
+    ready: "\u53EF\u7528\u4E8E\u6B63\u5F0F\u8BC4\u6D4B",
+    blocked: "\u5B58\u5728\u963B\u65AD\u9879",
+    doctor: "Architecture Doctor",
+    primaryMetric: "\u4E3B\u6307\u6807",
+    population: "\u6837\u672C\u5206\u5E03",
+    component: "\u7EC4\u4EF6",
     version: "\u7248\u672C",
-    job: "Job",
-    decision: "\u51B3\u7B56",
-    reasons: "Gate \u539F\u56E0",
-    comparable: "\u540C\u4E00\u8BC4\u6D4B\u4E0A\u4E0B\u6587",
-    changed: "Candidate \u5DF2\u6539\u53D8"
+    digest: "Digest",
+    source: "\u8BC1\u636E",
+    findings: "Findings",
+    output: "\u8F93\u51FA\u4E0E\u4E2D\u95F4\u7ED3\u679C",
+    setupDoctor: "\u5B89\u88C5\u4E0E\u67B6\u6784\u68C0\u67E5",
+    setupHint: "\u8FD9\u91CC\u4EC5\u5C55\u793A\u72B6\u6001\uFF0C\u4E0D\u4F1A\u4ECE\u6D4F\u89C8\u5668\u6539\u5199 Cordis \u914D\u7F6E\u3002",
+    retry: "\u91CD\u8BD5",
+    loading: "\u6B63\u5728\u8BFB\u53D6\u2026"
   },
   en: {
     tab: "Harbor",
     settings: "Harbor Evolution",
-    eyebrow: "HARBOR SELF-EVOLVING",
-    heroTitle: "Make every Agent change evidence-based",
-    heroBody: "Candidates freeze capabilities, Jobs preserve experiments, and the Promotion Gate admits only comparable, non-regressing versions.",
+    eyebrow: "EVALUATION WORKBENCH",
+    heroTitle: "See whether the Agent actually improved",
+    heroBody: "Evaluation Stack fixes meaning, Context v2 fixes comparability, and the Promotion Gate accepts only evidenced, non-regressing Candidates.",
     refresh: "Refresh",
-    refreshed: "Last refreshed",
-    totalJobs: "Evaluation jobs",
-    completedJobs: "Completed",
-    activeJobs: "Active",
-    failedJobs: "Failed",
-    latestMetric: "Latest metric",
-    jobs: "Recent Harbor Jobs",
-    jobsHint: "Shows up to 50 recent jobs from stable evaluation-summary.json files.",
-    emptyTitle: "No evaluation results yet",
-    emptyBody: "Ask the official Skill to clarify the Candidate, Dataset, and Promotion Policy before starting the first Job.",
-    startStep1: "1. Freeze Candidate",
-    startStep2: "2. Run Harbor Job",
-    startStep3: "3. Compare and promote",
+    jobs: "Evaluation jobs",
+    jobsHint: "Lightweight overview; open a Job for the full workbench.",
+    empty: "No Context v2 Jobs yet. Use the official Skill to clarify and initialize the architecture.",
+    completed: "Completed",
+    partial: "Partial",
+    failed: "Failed",
+    pending: "Running",
     candidate: "Candidate",
-    context: "Evaluation context",
+    context: "Context v2",
     trials: "Trials",
     exceptions: "Exceptions",
-    metrics: "Metrics",
-    pending: "Diving",
-    completed: "Landed",
-    partial: "Completed with exceptions",
-    failed: "Storm",
-    promote: "Promote",
-    reject: "Reject",
-    noMetrics: "No metrics",
-    loading: "Reading Harbor routes\u2026",
-    loadError: "Could not read Harbor status",
-    retry: "Retry",
-    doctorTitle: "Installation and runtime checks",
-    doctorBody: "Checks the critical path from the DSH Plugin to the Harbor Runtime. Cordis Profile remains the configuration owner.",
-    ready: "Ready to evaluate",
-    attention: "Needs attention",
-    projectRoot: "Project root",
-    jobsDir: "Jobs directory",
-    harbor: "Harbor CLI",
-    harborDsh: "Promotion CLI",
-    runtime: "Runtime contract",
-    dshVersion: "DSH version",
-    agentImport: "Agent entry",
-    pluginImport: "Harbor plugin",
-    skillGuide: "How to start",
-    skillBody: "Say \u201Cuse the Harbor self-evolution Skill to initialize and evaluate my Agent\u201D. The Skill clarifies requirements before launching an expensive Job.",
-    toolSnapshot: "Freeze Candidate",
-    toolRun: "Run Harbor evaluation",
-    toolResult: "Read evaluation result",
-    toolCompare: "Run Promotion Gate",
-    running: "Running",
-    toolFailed: "Tool call failed",
-    noResult: "No structured result could be parsed",
-    digest: "Digest",
+    mode: "Mode",
+    result: "Outcome",
+    process: "Evaluation process",
+    contract: "Evaluation contract",
+    stack: "Evaluation Stack",
+    dataset: "Dataset",
+    assessments: "Trial assessments",
+    reasons: "Reasons and evidence",
+    optimization: "Optimization",
+    promotion: "Promotion",
+    audit: "Audit artifacts",
+    close: "Close",
+    search: "Search trials",
+    all: "All",
+    assessed: "Assessed",
+    infra: "Infrastructure error",
+    previous: "Previous",
+    next: "Next",
+    noData: "No artifact",
+    validation: "Artifact validation",
+    ready: "Promotion ready",
+    blocked: "Blocked",
+    doctor: "Architecture Doctor",
+    primaryMetric: "Primary metric",
+    population: "Population",
+    component: "Component",
     version: "Version",
-    job: "Job",
-    decision: "Decision",
-    reasons: "Gate reasons",
-    comparable: "Same evaluation context",
-    changed: "Candidate changed"
+    digest: "Digest",
+    source: "Evidence",
+    findings: "Findings",
+    output: "Output and intermediate results",
+    setupDoctor: "Installation and architecture checks",
+    setupHint: "Read-only status; the browser never rewrites Cordis configuration.",
+    retry: "Retry",
+    loading: "Loading\u2026"
   }
 };
 var CSS = `
-.hse-root{--hse-blue:#2769ff;--hse-cyan:#3ed8ff;--hse-deep:#071d48;color:var(--dsw-alias-label-primary,#172033);height:100%;min-height:0;overflow:auto;background:var(--dsw-alias-bg-layer-1,#f5f8ff);font-family:inherit}
-.hse-page{width:min(1180px,calc(100% - 40px));margin:0 auto;padding:28px 0 56px}
-.hse-hero{position:relative;isolation:isolate;overflow:hidden;min-height:270px;border-radius:24px;padding:34px;color:#fff;background:#071d48 var(--hse-ocean) center/cover no-repeat;box-shadow:0 20px 60px rgba(4,27,74,.25)}
-.hse-hero:before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(3,19,53,.96) 0%,rgba(4,28,75,.83) 45%,rgba(5,33,82,.24) 78%,rgba(2,19,48,.12) 100%)}
-.hse-hero:after{content:"";position:absolute;width:340px;height:340px;left:-120px;bottom:-250px;border-radius:50%;border:1px solid rgba(98,222,255,.3);box-shadow:0 0 0 38px rgba(80,196,255,.06),0 0 0 84px rgba(80,196,255,.035)}
-.hse-hero-copy{position:relative;z-index:1;max-width:610px}
-.hse-eyebrow{display:flex;align-items:center;gap:9px;font-size:11px;font-weight:800;letter-spacing:.16em;color:#79e1ff}
-.hse-eyebrow:before{content:"";width:22px;height:2px;border-radius:2px;background:#53d6ff;box-shadow:0 0 12px #53d6ff}
-.hse-hero h1{margin:18px 0 12px;font-size:clamp(27px,4vw,44px);line-height:1.08;letter-spacing:-.035em;max-width:540px}
-.hse-hero p{margin:0;max-width:570px;color:rgba(235,247,255,.82);font-size:15px;line-height:1.75}
-.hse-refresh{position:absolute;z-index:2;top:24px;right:24px;display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:8px 13px;background:rgba(3,21,55,.4);color:#fff;font:inherit;font-size:12px;cursor:pointer;backdrop-filter:blur(10px);transition:.18s ease}
-.hse-refresh:hover{background:rgba(34,112,235,.55);transform:translateY(-1px)}
-.hse-refresh:disabled{opacity:.55;cursor:wait}
-.hse-stats{position:relative;z-index:2;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:30px;max-width:670px}
-.hse-stat{min-height:64px;padding:12px 14px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:rgba(4,27,65,.42);backdrop-filter:blur(8px)}
-.hse-stat span{display:block;font-size:11px;color:rgba(225,243,255,.68)}
-.hse-stat strong{display:block;margin-top:4px;font-size:22px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hse-section{margin-top:28px}
-.hse-section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:13px}
-.hse-section h2,.hse-doctor h2{margin:0;font-size:18px;letter-spacing:-.01em}
-.hse-section-head p,.hse-doctor-intro{margin:4px 0 0;color:var(--dsw-alias-label-secondary,#67728a);font-size:12px;line-height:1.55}
-.hse-job-list{display:grid;gap:12px}
-.hse-job{position:relative;padding:18px;border:1px solid var(--dsw-alias-border-l1,#dde5f2);border-radius:17px;background:var(--dsw-alias-bg-layer-2,#fff);box-shadow:var(--dsw-shadow-lv1,0 5px 18px rgba(27,54,93,.06));overflow:hidden}
-.hse-job:before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:#5e8cff}
-.hse-job[data-status="completed"]:before{background:#23ba83}.hse-job[data-status="partial"]:before{background:#f1a23c}.hse-job[data-status="failed"]:before{background:#ed5b6c}
-.hse-job-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
-.hse-job-title{min-width:0}.hse-job-title strong{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hse-job-title small{display:block;margin-top:5px;color:var(--dsw-alias-label-secondary,#748096);font-size:11px}
-.hse-status{flex:none;display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 9px;background:rgba(39,105,255,.1);color:#2769e8;font-size:11px;font-weight:700}
-.hse-status:before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;box-shadow:0 0 0 3px currentColor;opacity:.7}
-.hse-status[data-status="completed"]{color:#12835d;background:rgba(35,186,131,.11)}.hse-status[data-status="partial"]{color:#b36a08;background:rgba(241,162,60,.13)}.hse-status[data-status="failed"]{color:#ca3145;background:rgba(237,91,108,.12)}
-.hse-job-meta{display:grid;grid-template-columns:1.4fr 1.4fr .55fr .55fr;gap:8px;margin-top:15px}
-.hse-meta{min-width:0;padding:9px 10px;border-radius:10px;background:var(--dsw-alias-bg-layer-1,#f5f8fc)}.hse-meta span{display:block;color:var(--dsw-alias-label-secondary,#748096);font-size:10px}.hse-meta code,.hse-meta strong{display:block;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:inherit}
-.hse-metrics{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px}.hse-metric{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--dsw-alias-border-l1,#dde5f2);border-radius:8px;padding:6px 8px;font-size:11px}.hse-metric b{color:#2769e8}
-.hse-promotion{margin-top:11px;padding:10px 12px;border-radius:10px;background:rgba(39,105,255,.07);font-size:11px}.hse-promotion[data-decision="PROMOTE"]{background:rgba(35,186,131,.1);color:#08734e}.hse-promotion[data-decision="REJECT"]{background:rgba(237,91,108,.09);color:#a92135}.hse-promotion strong{margin-right:8px}
-.hse-empty,.hse-error{padding:34px;border:1px dashed var(--dsw-alias-border-l1,#cfd9e8);border-radius:18px;text-align:center;background:var(--dsw-alias-bg-layer-2,#fff)}.hse-empty h3,.hse-error h3{margin:10px 0 7px}.hse-empty p,.hse-error p{max-width:600px;margin:0 auto;color:var(--dsw-alias-label-secondary,#748096);font-size:13px;line-height:1.6}
-.hse-steps{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin-top:19px}.hse-steps span{padding:8px 11px;border-radius:9px;background:rgba(39,105,255,.08);color:#2769e8;font-size:11px;font-weight:700}
-.hse-spinner{width:28px;height:28px;margin:0 auto 12px;border:3px solid rgba(39,105,255,.14);border-top-color:#2769ff;border-radius:50%;animation:hse-spin .8s linear infinite}@keyframes hse-spin{to{transform:rotate(360deg)}}
-.hse-button{margin-top:13px;border:0;border-radius:9px;padding:8px 13px;background:#2769ff;color:#fff;font:inherit;font-size:12px;cursor:pointer}
-.hse-doctor{width:min(860px,calc(100% - 40px));margin:0 auto;padding:30px 0 54px}
-.hse-doctor-banner{display:flex;align-items:center;justify-content:space-between;gap:20px;margin:20px 0;padding:17px 19px;border-radius:15px;background:linear-gradient(135deg,rgba(39,105,255,.12),rgba(62,216,255,.08));border:1px solid rgba(39,105,255,.18)}
-.hse-doctor-banner strong{font-size:14px}.hse-doctor-banner span{font-size:12px;color:var(--dsw-alias-label-secondary,#748096)}
-.hse-checks{display:grid;grid-template-columns:1fr 1fr;gap:10px}.hse-check{display:flex;align-items:center;gap:11px;padding:13px;border:1px solid var(--dsw-alias-border-l1,#dde5f2);border-radius:12px;background:var(--dsw-alias-bg-layer-2,#fff)}
-.hse-check-dot{width:9px;height:9px;border-radius:50%;background:#27bb83;box-shadow:0 0 0 4px rgba(39,187,131,.12)}.hse-check[data-status="warning"] .hse-check-dot{background:#e6a036;box-shadow:0 0 0 4px rgba(230,160,54,.12)}.hse-check[data-status="error"] .hse-check-dot{background:#ed5b6c;box-shadow:0 0 0 4px rgba(237,91,108,.12)}
-.hse-check div{min-width:0}.hse-check strong,.hse-check small{display:block}.hse-check strong{font-size:12px}.hse-check small{margin-top:3px;color:var(--dsw-alias-label-secondary,#748096);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.hse-contract{margin-top:20px;padding:18px;border:1px solid var(--dsw-alias-border-l1,#dde5f2);border-radius:15px;background:var(--dsw-alias-bg-layer-2,#fff)}.hse-contract h3{margin:0 0 12px;font-size:14px}.hse-contract dl{display:grid;grid-template-columns:130px minmax(0,1fr);gap:8px;margin:0;font-size:11px}.hse-contract dt{color:var(--dsw-alias-label-secondary,#748096)}.hse-contract dd{margin:0;overflow-wrap:anywhere}.hse-contract code{font-size:10px}
-.hse-skill-guide{margin-top:20px;padding:18px;border-radius:15px;color:#dff7ff;background:linear-gradient(135deg,#08275b,#0b4381);box-shadow:0 14px 35px rgba(5,39,91,.15)}.hse-skill-guide h3{margin:0 0 7px;font-size:14px}.hse-skill-guide p{margin:0;color:rgba(223,247,255,.78);font-size:12px;line-height:1.65}
-.hse-tool{border:1px solid var(--dsw-alias-border-l1,#dce4f1);border-radius:13px;background:var(--dsw-alias-bg-layer-2,#fff);overflow:hidden}.hse-tool-head{display:flex;align-items:center;gap:10px;width:100%;padding:11px 13px;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}.hse-tool-icon{display:grid;place-items:center;width:27px;height:27px;border-radius:9px;color:#2769ff;background:rgba(39,105,255,.1)}.hse-tool-title{font-size:12px;font-weight:700}.hse-tool-summary{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-secondary,#748096);font-size:11px}.hse-tool-state{margin-left:auto;font-size:10px;color:#238260}.hse-tool[data-state="running"] .hse-tool-state{color:#2769ff}.hse-tool[data-state="error"] .hse-tool-state{color:#cf3549}.hse-tool-body{display:grid;gap:8px;padding:0 13px 13px}.hse-tool-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.hse-tool-field{min-width:0;padding:8px 9px;border-radius:9px;background:var(--dsw-alias-bg-layer-1,#f5f8fc)}.hse-tool-field span,.hse-tool-field strong,.hse-tool-field code{display:block}.hse-tool-field span{font-size:9px;color:var(--dsw-alias-label-secondary,#748096)}.hse-tool-field strong,.hse-tool-field code{margin-top:3px;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hse-reasons{margin:0;padding-left:18px;color:var(--dsw-alias-label-secondary,#748096);font-size:10px;line-height:1.5}
-@media(max-width:760px){.hse-page,.hse-doctor{width:min(100% - 24px,1180px);padding-top:12px}.hse-hero{padding:26px 20px;min-height:310px}.hse-refresh{top:14px;right:14px}.hse-hero-copy{padding-top:28px}.hse-stats{grid-template-columns:repeat(2,1fr)}.hse-job-meta{grid-template-columns:1fr 1fr}.hse-checks{grid-template-columns:1fr}.hse-contract dl{grid-template-columns:1fr}.hse-contract dd{margin-bottom:5px}}
-@media(prefers-reduced-motion:reduce){.hse-spinner{animation:none}.hse-refresh{transition:none}}
+.hse-root{--blue:#2769ff;--cyan:#44d9ff;--deep:#061b44;height:100%;min-height:0;overflow:auto;color:var(--dsw-alias-label-primary,#172033);background:var(--dsw-alias-bg-layer-1,#f4f7fc);font-family:inherit}.hse-page{width:min(1240px,calc(100% - 36px));margin:auto;padding:24px 0 56px}
+.hse-hero{position:relative;isolation:isolate;overflow:hidden;min-height:230px;padding:30px;border-radius:24px;color:#fff;background:#061b44 var(--ocean) center/cover no-repeat;box-shadow:0 20px 60px rgba(4,27,74,.23)}.hse-hero:before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(3,17,48,.96),rgba(4,31,79,.82) 52%,rgba(4,31,79,.2))}.hse-hero h1{max-width:650px;margin:16px 0 10px;font-size:clamp(28px,4vw,45px);line-height:1.08;letter-spacing:-.04em}.hse-hero p{max-width:670px;margin:0;color:#dceeff;font-size:14px;line-height:1.7}.hse-eyebrow{color:#76e4ff;font-size:11px;font-weight:800;letter-spacing:.17em}.hse-refresh{position:absolute;right:22px;top:22px;padding:8px 12px;border:1px solid #ffffff4a;border-radius:999px;color:#fff;background:#06245e99;cursor:pointer}
+.hse-stats{display:flex;gap:9px;margin-top:25px;flex-wrap:wrap}.hse-stat{min-width:125px;padding:11px 13px;border:1px solid #ffffff26;border-radius:13px;background:#031a41a3;backdrop-filter:blur(8px)}.hse-stat span{display:block;color:#cde5fa;font-size:10px}.hse-stat b{display:block;margin-top:4px;font-size:20px}.hse-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin:28px 0 12px}.hse-head h2{margin:0;font-size:18px}.hse-head p{margin:4px 0 0;color:#748096;font-size:12px}
+.hse-list{display:grid;gap:10px}.hse-job{display:block;width:100%;padding:0;border:1px solid var(--dsw-alias-border-l1,#dce4f0);border-radius:16px;color:inherit;background:var(--dsw-alias-bg-layer-2,#fff);text-align:left;cursor:pointer;overflow:hidden;box-shadow:0 5px 18px #1b365d0d}.hse-job:hover{border-color:#78a3ff;transform:translateY(-1px)}.hse-job-body{padding:16px 18px}.hse-job-top{display:flex;justify-content:space-between;gap:14px}.hse-job-title{min-width:0}.hse-job-title strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}.hse-job-title small{display:block;margin-top:4px;color:#7b879c;font-size:10px}.hse-status{flex:none;padding:5px 9px;border-radius:999px;color:#126d50;background:#23ba8318;font-size:10px;font-weight:700}.hse-status[data-status=failed]{color:#b5283d;background:#ed5b6c18}.hse-status[data-status=partial]{color:#9c620e;background:#f1a23c1c}.hse-status[data-status=pending]{color:#225cce;background:#2769ff18}.hse-meta-grid{display:grid;grid-template-columns:1.5fr 1.2fr .55fr .55fr .8fr;gap:7px;margin-top:13px}.hse-meta{min-width:0;padding:8px 9px;border-radius:9px;background:var(--dsw-alias-bg-layer-1,#f4f7fb)}.hse-meta span{display:block;color:#7b879c;font-size:9px}.hse-meta b,.hse-meta code{display:block;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.hse-metrics{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.hse-pill{padding:5px 7px;border:1px solid var(--dsw-alias-border-l1,#dce4f0);border-radius:7px;font-size:10px}.hse-pill b{margin-left:5px;color:var(--blue)}
+.hse-empty,.hse-error{padding:34px;border:1px dashed #cbd6e6;border-radius:16px;text-align:center;background:var(--dsw-alias-bg-layer-2,#fff);color:#748096;font-size:12px}.hse-spin{width:25px;height:25px;margin:0 auto 10px;border:3px solid #2769ff22;border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+.hse-overlay{position:fixed;inset:0;z-index:1000;display:flex;justify-content:flex-end;background:#06142c7a;backdrop-filter:blur(3px)}.hse-drawer{width:min(1040px,94vw);height:100%;overflow:auto;background:var(--dsw-alias-bg-layer-1,#f4f7fc);box-shadow:-24px 0 70px #04142c52}.hse-drawer-head{position:sticky;top:0;z-index:3;display:flex;justify-content:space-between;gap:15px;padding:18px 22px;border-bottom:1px solid var(--dsw-alias-border-l1,#dce4f0);background:color-mix(in srgb,var(--dsw-alias-bg-layer-2,#fff) 92%,transparent);backdrop-filter:blur(12px)}.hse-drawer-head h2{margin:0;font-size:18px}.hse-drawer-head p{margin:5px 0 0;color:#748096;font-size:10px}.hse-close,.hse-button{border:0;border-radius:9px;padding:8px 11px;color:#fff;background:var(--blue);cursor:pointer}.hse-close{align-self:flex-start;background:#142a4f}.hse-workbench{padding:18px 22px 45px}.hse-section{margin-bottom:14px;padding:16px;border:1px solid var(--dsw-alias-border-l1,#dce4f0);border-radius:14px;background:var(--dsw-alias-bg-layer-2,#fff)}.hse-section h3{margin:0 0 11px;font-size:14px}.hse-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.hse-kpi{padding:11px;border-radius:10px;background:linear-gradient(135deg,#2769ff12,#44d9ff0a)}.hse-kpi span{display:block;color:#748096;font-size:9px}.hse-kpi b{display:block;margin-top:4px;font-size:17px}.hse-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.hse-card{min-width:0;padding:11px;border-radius:10px;background:var(--dsw-alias-bg-layer-1,#f4f7fb)}.hse-card span,.hse-card b,.hse-card code{display:block}.hse-card span{color:#748096;font-size:9px}.hse-card b,.hse-card code{margin-top:4px;overflow-wrap:anywhere;font-size:10px}.hse-findings{display:grid;gap:6px}.hse-finding{padding:9px 10px;border-left:3px solid #6d9cff;border-radius:7px;background:#2769ff0c;font-size:10px}.hse-finding[data-level=error]{border-color:#e75267;background:#e752670c}.hse-finding[data-level=warning]{border-color:#e6a036;background:#e6a0360c}.hse-finding b{margin-right:7px}.hse-components{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.hse-component{padding:9px;border-radius:9px;background:#0b2e6421}.hse-component span{display:block;color:#748096;font-size:9px}.hse-component b,.hse-component code{display:block;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px}
+.hse-trial-tools{display:flex;gap:7px;margin-bottom:9px}.hse-input,.hse-select{min-width:0;padding:8px 9px;border:1px solid #cad6e7;border-radius:8px;color:inherit;background:transparent;font:inherit;font-size:10px}.hse-input{flex:1}.hse-table{width:100%;border-collapse:collapse;font-size:10px}.hse-table th,.hse-table td{padding:8px;border-bottom:1px solid #e4eaf2;text-align:left}.hse-table button{border:0;color:var(--blue);background:none;cursor:pointer;font:inherit}.hse-pager{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:9px;font-size:10px}.hse-pager button{padding:5px 8px;border:1px solid #cad6e7;border-radius:7px;background:transparent;color:inherit;cursor:pointer}.hse-trial-detail{margin-top:10px;padding:12px;border-radius:10px;background:#071d48;color:#dcecff}.hse-trial-detail pre,.hse-audit pre{max-height:340px;overflow:auto;margin:8px 0 0;white-space:pre-wrap;word-break:break-word;font-size:9px;line-height:1.5}.hse-reasons{margin:0;padding-left:18px;font-size:10px;line-height:1.6}.hse-audit summary{cursor:pointer;font-size:11px;font-weight:700}.hse-valid{color:#14815d}.hse-invalid{color:#c33148}
+.hse-settings{width:min(850px,calc(100% - 32px));margin:auto;padding:28px 0}.hse-checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:16px}.hse-check{padding:12px;border:1px solid #dce4f0;border-radius:10px;background:var(--dsw-alias-bg-layer-2,#fff)}.hse-check b,.hse-check small{display:block}.hse-check small{margin-top:4px;color:#748096}.hse-tool{border:1px solid #dce4f0;border-radius:11px;background:var(--dsw-alias-bg-layer-2,#fff);overflow:hidden}.hse-tool button{display:flex;gap:8px;width:100%;padding:10px;border:0;color:inherit;background:transparent;text-align:left;cursor:pointer}.hse-tool strong{font-size:11px}.hse-tool small{margin-left:auto}.hse-tool pre{max-height:260px;overflow:auto;margin:0;padding:11px;border-top:1px solid #e3e9f1;white-space:pre-wrap;font-size:9px}
+@media(max-width:800px){.hse-page{width:calc(100% - 20px)}.hse-hero{padding:24px 18px}.hse-meta-grid,.hse-kpis{grid-template-columns:repeat(2,1fr)}.hse-components{grid-template-columns:repeat(2,1fr)}.hse-grid,.hse-checks{grid-template-columns:1fr}.hse-drawer{width:100vw}.hse-workbench{padding:12px}.hse-drawer-head{padding:14px}.hse-table th:nth-child(3),.hse-table td:nth-child(3){display:none}}
+@media(prefers-reduced-motion:reduce){.hse-spin{animation:none}.hse-job:hover{transform:none}}
 `;
 function installStyles() {
   const id = "dsh-harbor-evolution/client";
   if (document.querySelector(`style[data-plugin-css="${id}"]`)) return () => {
   };
   const style = document.createElement("style");
-  style.dataset.plugin = "dsh-harbor-evolution";
   style.dataset.pluginCss = id;
   style.textContent = CSS;
   document.head.appendChild(style);
   return () => style.remove();
 }
 function isRecord(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+  return value && typeof value === "object" && !Array.isArray(value);
 }
-function blockText(block) {
-  if (!isRecord(block) || !("kind" in block) || !Array.isArray(block.content)) return "";
-  return block.content.filter((entry) => entry?.type === "text").map((entry) => entry.text).join("\n");
+function format(value) {
+  return typeof value === "number" ? value.toFixed(4).replace(/0+$/, "").replace(/\.$/, "") : String(value ?? "\u2014");
 }
-function decodeToolResult(block) {
-  if (!isRecord(block) || !("kind" in block) || block.isError) return void 0;
-  if (isRecord(block.meta)) return block.meta;
-  const text = blockText(block).trim();
-  if (!text) return void 0;
-  try {
-    const parsed = JSON.parse(text);
-    return isRecord(parsed) ? parsed : void 0;
-  } catch {
-    return void 0;
-  }
+function short(value) {
+  return typeof value === "string" && value.length > 22 ? `${value.slice(0, 15)}\u2026${value.slice(-5)}` : value ?? "\u2014";
 }
-async function fetchDashboard() {
-  const response = await fetch(ROUTE, { credentials: "same-origin", cache: "no-store" });
+function reasonText(reason) {
+  return isRecord(reason) ? `${reason.code}: ${reason.message}` : String(reason);
+}
+async function api(route, params = {}) {
+  const query = new URLSearchParams(Object.entries(params).filter(([, value]) => value !== void 0 && value !== ""));
+  const response = await fetch(`${API}/${route}${query.size ? `?${query}` : ""}`, { credentials: "same-origin", cache: "no-store" });
   const body = await response.json();
   if (!response.ok || !body?.ok) throw new Error(body?.error?.message ?? `HTTP ${response.status}`);
   return body.value;
@@ -269,97 +203,104 @@ async function fetchDashboard() {
 function useDashboard(poll = true) {
   const [state, setState] = (0, import_react.useState)({ status: "loading" });
   const load = (0, import_react.useCallback)(async (quiet = false) => {
-    if (!quiet) setState((current) => ({ ...current, status: current.value ? "refreshing" : "loading", error: void 0 }));
+    if (!quiet) setState((current) => ({ ...current, status: current.value ? "refreshing" : "loading" }));
     try {
-      const value = await fetchDashboard();
-      setState({ status: "ready", value });
+      setState({ status: "ready", value: await api("dashboard") });
     } catch (error) {
-      setState((current) => ({ ...current, status: "error", error: error instanceof Error ? error.message : String(error) }));
+      setState((current) => ({ ...current, status: "error", error: error.message }));
     }
   }, []);
   (0, import_react.useEffect)(() => {
     void load();
-    if (!poll) return void 0;
-    const timer = window.setInterval(() => {
-      void load(true);
-    }, 5e3);
-    return () => window.clearInterval(timer);
-  }, [load, poll]);
+  }, [load]);
+  (0, import_react.useEffect)(() => {
+    if (!poll || !state.value) return void 0;
+    const interval = state.value.overview?.activeJobs ? 3e3 : 15e3;
+    const timer = window.setTimeout(() => void load(true), interval);
+    return () => window.clearTimeout(timer);
+  }, [load, poll, state.value]);
   return { ...state, load };
 }
-function WhaleIcon({ size = 18 }) {
-  return /* @__PURE__ */ import_react.default.createElement("svg", { viewBox: "0 0 24 24", width: size, height: size, fill: "none", stroke: "currentColor", strokeWidth: "1.6", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true" }, /* @__PURE__ */ import_react.default.createElement("path", { d: "M3 13c2.1 3.8 6.4 5.2 10.1 3.7 2.4-1 3.9-3 4.3-5.1 1.3.2 2.7-.3 3.6-1.4-1.5-.2-2.3-1-2.8-2.2-.7.8-1.2 1.8-1.2 2.8-2.9-.1-4.4-2.2-7.7-2.2C6.5 8.6 4.3 10 3 13Z" }), /* @__PURE__ */ import_react.default.createElement("path", { d: "M7.2 12.3h.1" }));
+function MetricPills({ metrics }) {
+  return /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-metrics" }, Object.entries(metrics ?? {}).map(([key, value]) => /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-pill", key }, key, /* @__PURE__ */ import_react.default.createElement("b", null, format(value)))));
 }
-function formatValue(value) {
-  if (typeof value !== "number") return String(value ?? "\u2014");
-  if (Number.isInteger(value)) return String(value);
-  return value.toFixed(4).replace(/0+$/, "").replace(/\.$/, "");
+function JobCard({ job, t, open }) {
+  const candidate = job.candidate ?? {};
+  const context = job.evaluationContext ?? {};
+  return /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-job", onClick: () => open(job.name) }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-job-body" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-job-top" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-job-title" }, /* @__PURE__ */ import_react.default.createElement("strong", null, job.name), /* @__PURE__ */ import_react.default.createElement("small", null, new Date(job.updatedAt).toLocaleString())), /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-status", "data-status": job.status }, t(job.status))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("candidate")), /* @__PURE__ */ import_react.default.createElement("b", null, candidate.candidate_id ?? "\u2014", " \xB7 ", candidate.version ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("context")), /* @__PURE__ */ import_react.default.createElement("code", { title: context.digest }, short(context.digest))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("trials")), /* @__PURE__ */ import_react.default.createElement("b", null, job.nTrials)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("exceptions")), /* @__PURE__ */ import_react.default.createElement("b", null, job.nExceptions)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("mode")), /* @__PURE__ */ import_react.default.createElement("b", null, job.mode ?? "\u2014"))), /* @__PURE__ */ import_react.default.createElement(MetricPills, { metrics: job.metrics })));
 }
-function shortDigest(value) {
-  if (typeof value !== "string") return "\u2014";
-  return value.length > 19 ? `${value.slice(0, 15)}\u2026${value.slice(-4)}` : value;
+function ArtifactSection({ title, value, children }) {
+  return /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, title), children ?? (value ? /* @__PURE__ */ import_react.default.createElement("pre", null, JSON.stringify(value, null, 2)) : /* @__PURE__ */ import_react.default.createElement("span", null, "\u2014")));
 }
-function statusLabel(status, t) {
-  return t(status in dictionaries.zh ? status : "pending");
+function TrialTable({ job, t }) {
+  const [query, setQuery] = (0, import_react.useState)("");
+  const [status, setStatus] = (0, import_react.useState)("");
+  const [offset, setOffset] = (0, import_react.useState)(0);
+  const [page, setPage] = (0, import_react.useState)();
+  const [detail, setDetail] = (0, import_react.useState)();
+  (0, import_react.useEffect)(() => {
+    const timer = window.setTimeout(() => {
+      void api("trials", { job, offset, limit: 50, query, status }).then(setPage);
+    }, 180);
+    return () => window.clearTimeout(timer);
+  }, [job, offset, query, status]);
+  const choose = async (trial) => setDetail(await api("trial", { job, trial }));
+  return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-trial-tools" }, /* @__PURE__ */ import_react.default.createElement("input", { className: "hse-input", value: query, placeholder: t("search"), onChange: (event) => {
+    setQuery(event.target.value);
+    setOffset(0);
+  } }), /* @__PURE__ */ import_react.default.createElement("select", { className: "hse-select", value: status, onChange: (event) => {
+    setStatus(event.target.value);
+    setOffset(0);
+  } }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, t("all")), /* @__PURE__ */ import_react.default.createElement("option", { value: "assessed" }, t("assessed")), /* @__PURE__ */ import_react.default.createElement("option", { value: "infrastructure-error" }, t("infra")))), /* @__PURE__ */ import_react.default.createElement("table", { className: "hse-table" }, /* @__PURE__ */ import_react.default.createElement("thead", null, /* @__PURE__ */ import_react.default.createElement("tr", null, /* @__PURE__ */ import_react.default.createElement("th", null, "Trial"), /* @__PURE__ */ import_react.default.createElement("th", null, "Status"), /* @__PURE__ */ import_react.default.createElement("th", null, "Metrics"))), /* @__PURE__ */ import_react.default.createElement("tbody", null, page?.items?.map((trial) => /* @__PURE__ */ import_react.default.createElement("tr", { key: trial.id }, /* @__PURE__ */ import_react.default.createElement("td", null, /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => void choose(trial.id) }, trial.name ?? trial.id)), /* @__PURE__ */ import_react.default.createElement("td", null, trial.status), /* @__PURE__ */ import_react.default.createElement("td", null, Object.entries(trial.rewards ?? {}).map(([key, value]) => `${key} ${format(value)}`).join(" \xB7 ")))))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-pager" }, /* @__PURE__ */ import_react.default.createElement("span", null, offset + 1, "\u2013", Math.min(offset + (page?.items?.length ?? 0), page?.total ?? 0), " / ", page?.total ?? 0), /* @__PURE__ */ import_react.default.createElement("button", { disabled: !offset, onClick: () => setOffset(Math.max(0, offset - 50)) }, t("previous")), /* @__PURE__ */ import_react.default.createElement("button", { disabled: !page?.hasMore, onClick: () => setOffset(offset + 50) }, t("next"))), detail ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-trial-detail" }, /* @__PURE__ */ import_react.default.createElement("b", null, t("output")), /* @__PURE__ */ import_react.default.createElement("pre", null, JSON.stringify(detail.assessment, null, 2))) : null);
 }
-function MetricPills({ metrics, t }) {
-  const entries = Object.entries(isRecord(metrics) ? metrics : {});
-  if (!entries.length) return /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-metric" }, t("noMetrics"));
-  return entries.map(([name2, value]) => /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-metric", key: name2 }, name2, /* @__PURE__ */ import_react.default.createElement("b", null, formatValue(value))));
-}
-function JobCard({ job, t }) {
-  const candidate = isRecord(job.candidate) ? job.candidate : {};
-  const context = isRecord(job.evaluationContext) ? job.evaluationContext : {};
-  return /* @__PURE__ */ import_react.default.createElement("article", { className: "hse-job", "data-status": job.status }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-job-top" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-job-title" }, /* @__PURE__ */ import_react.default.createElement("strong", null, job.name), /* @__PURE__ */ import_react.default.createElement("small", null, new Date(job.updatedAt).toLocaleString())), /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-status", "data-status": job.status }, statusLabel(job.status, t))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-job-meta" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("candidate")), /* @__PURE__ */ import_react.default.createElement("strong", null, candidate.candidate_id ?? "\u2014", " \xB7 ", candidate.version ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("context")), /* @__PURE__ */ import_react.default.createElement("code", { title: context.digest }, shortDigest(context.digest))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("trials")), /* @__PURE__ */ import_react.default.createElement("strong", null, job.nTrials)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("exceptions")), /* @__PURE__ */ import_react.default.createElement("strong", null, job.nExceptions))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-metrics" }, /* @__PURE__ */ import_react.default.createElement(MetricPills, { metrics: job.metrics, t })), job.promotion ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-promotion", "data-decision": job.promotion.decision }, /* @__PURE__ */ import_react.default.createElement("strong", null, job.promotion.decision === "PROMOTE" ? t("promote") : t("reject")), job.promotion.reasons?.[0] ?? "") : null);
-}
-function EmptyState({ t }) {
-  return /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-empty" }, /* @__PURE__ */ import_react.default.createElement(WhaleIcon, { size: 34 }), /* @__PURE__ */ import_react.default.createElement("h3", null, t("emptyTitle")), /* @__PURE__ */ import_react.default.createElement("p", null, t("emptyBody")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-steps" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("startStep1")), /* @__PURE__ */ import_react.default.createElement("span", null, t("startStep2")), /* @__PURE__ */ import_react.default.createElement("span", null, t("startStep3"))));
-}
-function ErrorState({ error, retry, t }) {
-  return /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-error" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("loadError")), /* @__PURE__ */ import_react.default.createElement("p", null, error), /* @__PURE__ */ import_react.default.createElement("button", { className: "hse-button", type: "button", onClick: () => void retry() }, t("retry")));
+function Workbench({ job, close, t }) {
+  const [state, setState] = (0, import_react.useState)({ status: "loading" });
+  (0, import_react.useEffect)(() => {
+    let active = true;
+    void api("job", { job }).then((value) => active && setState({ status: "ready", value }), (error) => active && setState({ status: "error", error: error.message }));
+    return () => {
+      active = false;
+    };
+  }, [job]);
+  const detail = state.value;
+  const a = detail?.artifacts ?? {};
+  const summary = a.summary ?? {};
+  const context = a.context ?? {};
+  const doctor = a.doctor ?? {};
+  const contract = a.contract ?? {};
+  const stack = a.stack ?? {};
+  const reasons = a.promotion?.reasons ?? summary.exceptions ?? [];
+  return /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-overlay", role: "presentation", onMouseDown: (event) => event.target === event.currentTarget && close() }, /* @__PURE__ */ import_react.default.createElement("aside", { className: "hse-drawer", role: "dialog", "aria-modal": "true", "aria-label": job }, /* @__PURE__ */ import_react.default.createElement("header", { className: "hse-drawer-head" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("h2", null, job), /* @__PURE__ */ import_react.default.createElement("p", null, summary.candidate?.candidate_id ?? "\u2014", " \xB7 ", summary.candidate?.version ?? "\u2014", " \xB7 ", context.mode ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-close", onClick: close }, t("close"))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-workbench" }, state.status === "loading" ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-empty" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-spin" }), t("loading")) : state.status === "error" ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-error" }, state.error) : /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(ArtifactSection, { title: t("result") }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpis" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("primaryMetric")), /* @__PURE__ */ import_react.default.createElement("b", null, format(summary.metrics?.[contract.primary_metric]))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("trials")), /* @__PURE__ */ import_react.default.createElement("b", null, summary.n_trials ?? 0)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("exceptions")), /* @__PURE__ */ import_react.default.createElement("b", null, summary.n_exceptions ?? 0)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("validation")), /* @__PURE__ */ import_react.default.createElement("b", { className: summary.artifact_validation?.valid ? "hse-valid" : "hse-invalid" }, summary.artifact_validation?.valid ? "VALID" : "INVALID"))), /* @__PURE__ */ import_react.default.createElement(MetricPills, { metrics: summary.metrics })), /* @__PURE__ */ import_react.default.createElement(ArtifactSection, { title: t("process") }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("doctor")), /* @__PURE__ */ import_react.default.createElement("b", { className: doctor.promotion_ready ? "hse-valid" : "hse-invalid" }, doctor.promotion_ready ? t("ready") : t("blocked"))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("context")), /* @__PURE__ */ import_react.default.createElement("code", null, short(context.digest)))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-findings" }, doctor.findings?.map((finding, index) => /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-finding", "data-level": finding.level, key: `${finding.code}-${index}` }, /* @__PURE__ */ import_react.default.createElement("b", null, finding.code), finding.message)))), /* @__PURE__ */ import_react.default.createElement(ArtifactSection, { title: t("contract") }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, "ID / ", t("version")), /* @__PURE__ */ import_react.default.createElement("b", null, contract.contract_id ?? "\u2014", " \xB7 ", contract.version ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("primaryMetric")), /* @__PURE__ */ import_react.default.createElement("b", null, contract.primary_metric ?? "\u2014"))), /* @__PURE__ */ import_react.default.createElement(MetricPills, { metrics: Object.fromEntries((contract.metrics ?? []).map((metric) => [metric.id, metric.direction ?? metric.label ?? "metric"])) })), /* @__PURE__ */ import_react.default.createElement(ArtifactSection, { title: t("stack") }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-components" }, Object.entries(stack.components ?? {}).map(([role, component]) => /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-component", key: role }, /* @__PURE__ */ import_react.default.createElement("span", null, role, component.reward_affecting ? " \xB7 reward" : ""), /* @__PURE__ */ import_react.default.createElement("b", null, component.id, " \xB7 ", component.version), /* @__PURE__ */ import_react.default.createElement("code", { title: component.digest }, short(component.digest)))))), /* @__PURE__ */ import_react.default.createElement(ArtifactSection, { title: t("dataset") }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, "ID / ", t("version")), /* @__PURE__ */ import_react.default.createElement("b", null, a.dataset?.dataset_id ?? "\u2014", " \xB7 ", a.dataset?.version ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("population")), /* @__PURE__ */ import_react.default.createElement("b", null, a.dataset?.task_count ?? 0, " tasks \xB7 ", a.dataset?.file_count ?? 0, " files")))), /* @__PURE__ */ import_react.default.createElement(ArtifactSection, { title: t("assessments") }, /* @__PURE__ */ import_react.default.createElement(TrialTable, { job, t })), /* @__PURE__ */ import_react.default.createElement(ArtifactSection, { title: t("reasons") }, /* @__PURE__ */ import_react.default.createElement("ul", { className: "hse-reasons" }, reasons.length ? reasons.map((reason, index) => /* @__PURE__ */ import_react.default.createElement("li", { key: index }, reasonText(reason))) : /* @__PURE__ */ import_react.default.createElement("li", null, t("noData")))), /* @__PURE__ */ import_react.default.createElement(ArtifactSection, { title: t("optimization"), value: a.optimization }), /* @__PURE__ */ import_react.default.createElement(ArtifactSection, { title: t("promotion"), value: a.promotion }), /* @__PURE__ */ import_react.default.createElement("details", { className: "hse-section hse-audit" }, /* @__PURE__ */ import_react.default.createElement("summary", null, t("audit")), /* @__PURE__ */ import_react.default.createElement("pre", null, JSON.stringify({ validation: detail.validation, candidate: a.candidate, context: a.context, stack: a.stack, dataset: a.dataset, population: a.population }, null, 2)))))));
 }
 function DashboardView({ t }) {
   const state = useDashboard(true);
+  const [selected, setSelected] = (0, import_react.useState)();
   const snapshot = state.value;
-  const stats = [
-    ["totalJobs", snapshot?.overview?.totalJobs ?? "\u2014"],
-    ["completedJobs", snapshot?.overview?.completedJobs ?? "\u2014"],
-    ["activeJobs", snapshot?.overview?.activeJobs ?? "\u2014"],
-    ["latestMetric", snapshot?.overview?.latestMetric ? `${snapshot.overview.latestMetric.name} ${formatValue(snapshot.overview.latestMetric.value)}` : "\u2014"]
-  ];
-  return /* @__PURE__ */ import_react.default.createElement("main", { className: "hse-root" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-page" }, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-hero", style: { "--hse-ocean": `url(${harbor_ocean_default})` } }, /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-refresh", disabled: state.status === "loading" || state.status === "refreshing", onClick: () => void state.load() }, /* @__PURE__ */ import_react.default.createElement("span", null, "\u21BB"), t("refresh")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-hero-copy" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-eyebrow" }, t("eyebrow")), /* @__PURE__ */ import_react.default.createElement("h1", null, t("heroTitle")), /* @__PURE__ */ import_react.default.createElement("p", null, t("heroBody"))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-stats" }, stats.map(([label, value]) => /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-stat", key: label }, /* @__PURE__ */ import_react.default.createElement("span", null, t(label)), /* @__PURE__ */ import_react.default.createElement("strong", null, value))))), /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-section-head" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("h2", null, t("jobs")), /* @__PURE__ */ import_react.default.createElement("p", null, t("jobsHint"))), snapshot?.generatedAt ? /* @__PURE__ */ import_react.default.createElement("p", null, t("refreshed"), " ", new Date(snapshot.generatedAt).toLocaleTimeString()) : null), state.status === "loading" ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-empty" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-spinner" }), /* @__PURE__ */ import_react.default.createElement("p", null, t("loading"))) : state.status === "error" && !snapshot ? /* @__PURE__ */ import_react.default.createElement(ErrorState, { error: state.error, retry: state.load, t }) : !snapshot?.jobs?.length ? /* @__PURE__ */ import_react.default.createElement(EmptyState, { t }) : /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-job-list" }, snapshot.jobs.map((job) => /* @__PURE__ */ import_react.default.createElement(JobCard, { job, t, key: job.name }))))));
+  const stats = [[t("jobs"), snapshot?.overview?.totalJobs ?? "\u2014"], [t("completed"), snapshot?.overview?.completedJobs ?? "\u2014"], [t("pending"), snapshot?.overview?.activeJobs ?? "\u2014"], [snapshot?.overview?.latestMetric?.name ?? t("primaryMetric"), format(snapshot?.overview?.latestMetric?.value)]];
+  return /* @__PURE__ */ import_react.default.createElement("main", { className: "hse-root" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-page" }, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-hero", style: { "--ocean": `url(${harbor_ocean_default})` } }, /* @__PURE__ */ import_react.default.createElement("button", { className: "hse-refresh", onClick: () => void state.load() }, t("refresh")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-eyebrow" }, t("eyebrow")), /* @__PURE__ */ import_react.default.createElement("h1", null, t("heroTitle")), /* @__PURE__ */ import_react.default.createElement("p", null, t("heroBody")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-stats" }, stats.map(([label, value]) => /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-stat", key: label }, /* @__PURE__ */ import_react.default.createElement("span", null, label), /* @__PURE__ */ import_react.default.createElement("b", null, value))))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-head" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("h2", null, t("jobs")), /* @__PURE__ */ import_react.default.createElement("p", null, t("jobsHint")))), state.status === "loading" ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-empty" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-spin" }), t("loading")) : state.status === "error" && !snapshot ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-error" }, state.error, /* @__PURE__ */ import_react.default.createElement("br", null), /* @__PURE__ */ import_react.default.createElement("button", { className: "hse-button", onClick: () => void state.load() }, t("retry"))) : !snapshot?.jobs?.length ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-empty" }, t("empty")) : /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-list" }, snapshot.jobs.map((job) => /* @__PURE__ */ import_react.default.createElement(JobCard, { job, t, open: setSelected, key: job.name })))), selected ? /* @__PURE__ */ import_react.default.createElement(Workbench, { job: selected, close: () => setSelected(void 0), t }) : null);
 }
 function DoctorView({ t }) {
   const state = useDashboard(false);
-  const snapshot = state.value;
-  const checks = snapshot?.checks ?? {};
-  const allReady = Object.values(checks).every((check) => check?.status === "ok");
-  const labels = { projectRoot: "projectRoot", jobsDir: "jobsDir", harbor: "harbor", harborDsh: "harborDsh" };
-  return /* @__PURE__ */ import_react.default.createElement("main", { className: "hse-root" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-doctor" }, /* @__PURE__ */ import_react.default.createElement("h2", null, t("doctorTitle")), /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-doctor-intro" }, t("doctorBody")), state.status === "loading" ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-empty", style: { marginTop: 20 } }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-spinner" }), /* @__PURE__ */ import_react.default.createElement("p", null, t("loading"))) : state.status === "error" && !snapshot ? /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 20 } }, /* @__PURE__ */ import_react.default.createElement(ErrorState, { error: state.error, retry: state.load, t })) : /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-doctor-banner" }, /* @__PURE__ */ import_react.default.createElement("strong", null, allReady ? t("ready") : t("attention")), /* @__PURE__ */ import_react.default.createElement("span", null, "Plugin v", snapshot?.pluginVersion ?? "0.4.0")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-checks" }, Object.entries(labels).map(([key, label]) => /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-check", "data-status": checks[key]?.status ?? "error", key }, /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-check-dot" }), /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("strong", null, t(label)), /* @__PURE__ */ import_react.default.createElement("small", { title: checks[key]?.detail }, checks[key]?.detail ?? "\u2014"))))), /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-contract" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("runtime")), /* @__PURE__ */ import_react.default.createElement("dl", null, /* @__PURE__ */ import_react.default.createElement("dt", null, t("projectRoot")), /* @__PURE__ */ import_react.default.createElement("dd", null, /* @__PURE__ */ import_react.default.createElement("code", null, snapshot?.config?.projectRoot ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("dt", null, t("jobsDir")), /* @__PURE__ */ import_react.default.createElement("dd", null, /* @__PURE__ */ import_react.default.createElement("code", null, snapshot?.config?.jobsDir ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("dt", null, t("dshVersion")), /* @__PURE__ */ import_react.default.createElement("dd", null, snapshot?.config?.dshVersion ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("dt", null, t("agentImport")), /* @__PURE__ */ import_react.default.createElement("dd", null, /* @__PURE__ */ import_react.default.createElement("code", null, snapshot?.config?.agentImportPath ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("dt", null, t("pluginImport")), /* @__PURE__ */ import_react.default.createElement("dd", null, /* @__PURE__ */ import_react.default.createElement("code", null, snapshot?.config?.pluginImportPath ?? "\u2014")))), /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-skill-guide" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("skillGuide")), /* @__PURE__ */ import_react.default.createElement("p", null, t("skillBody"))))));
+  return /* @__PURE__ */ import_react.default.createElement("main", { className: "hse-root" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-settings" }, /* @__PURE__ */ import_react.default.createElement("h2", null, t("setupDoctor")), /* @__PURE__ */ import_react.default.createElement("p", null, t("setupHint")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-checks" }, Object.entries(state.value?.checks ?? {}).map(([key, check]) => /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-check", key }, /* @__PURE__ */ import_react.default.createElement("b", { className: check.status === "ok" ? "hse-valid" : "hse-invalid" }, key, " \xB7 ", check.status), /* @__PURE__ */ import_react.default.createElement("small", null, check.detail))))));
 }
-function ToolField({ label, value, code = false }) {
-  return /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-tool-field" }, /* @__PURE__ */ import_react.default.createElement("span", null, label), code ? /* @__PURE__ */ import_react.default.createElement("code", { title: String(value ?? "\u2014") }, String(value ?? "\u2014")) : /* @__PURE__ */ import_react.default.createElement("strong", null, String(value ?? "\u2014")));
+function blockText(block) {
+  return isRecord(block) && Array.isArray(block.content) ? block.content.filter((item) => item?.type === "text").map((item) => item.text).join("\n") : "";
 }
-function toolPresentation(toolName, value, t) {
-  if (toolName === "harbor_candidate_snapshot") {
-    return { title: t("toolSnapshot"), summary: value ? `${value.candidate_id ?? "\u2014"} \xB7 ${value.version ?? "\u2014"}` : void 0, fields: [[t("candidate"), value?.candidate_id], [t("version"), value?.version], [t("digest"), shortDigest(value?.digest), true]] };
+function decodeToolResult(block) {
+  if (!isRecord(block) || block.isError) return void 0;
+  if (isRecord(block.meta)) return block.meta;
+  try {
+    const value = JSON.parse(blockText(block));
+    return isRecord(value) ? value : void 0;
+  } catch {
+    return void 0;
   }
-  if (toolName === "harbor_eval_run") {
-    const summary = value?.summary;
-    return { title: t("toolRun"), summary: summary?.job ?? value?.jobDir, metrics: summary?.metrics, fields: [[t("job"), summary?.job ?? value?.jobDir, true], [t("trials"), summary?.n_trials], [t("exceptions"), summary?.n_exceptions], [t("digest"), shortDigest(value?.manifest?.digest), true]] };
-  }
-  if (toolName === "harbor_eval_result") {
-    return { title: t("toolResult"), summary: value?.job, metrics: value?.metrics, fields: [[t("job"), value?.job, true], [t("trials"), value?.n_trials], [t("exceptions"), value?.n_exceptions], [t("context"), shortDigest(value?.evaluation_context?.digest), true]] };
-  }
-  return { title: t("toolCompare"), summary: value?.decision, metrics: value?.candidate_metrics, fields: [[t("decision"), value?.decision], [t("candidate"), value?.candidate?.version ?? value?.candidate_job], [t("comparable"), value?.baseline_evaluation_context?.digest === value?.candidate_evaluation_context?.digest ? "\u2713" : "\u2014"], [t("changed"), value?.baseline_candidate?.digest !== value?.candidate?.digest ? "\u2713" : "\u2014"]], reasons: value?.reasons };
 }
-function HarborToolView({ block, toolName, t }) {
+function HarborToolView({ block, toolName }) {
   const [open, setOpen] = (0, import_react.useState)(true);
-  const running = !isRecord(block) || !("kind" in block);
-  const failed = !running && block.isError;
   const value = decodeToolResult(block);
-  const view = toolPresentation(toolName, value, t);
-  return /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-tool", "data-state": running ? "running" : failed ? "error" : "success" }, /* @__PURE__ */ import_react.default.createElement("button", { className: "hse-tool-head", type: "button", "aria-expanded": open, onClick: () => setOpen((current) => !current) }, /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-tool-icon" }, /* @__PURE__ */ import_react.default.createElement(WhaleIcon, null)), /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-tool-title" }, view.title), view.summary ? /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-tool-summary" }, "\xB7 ", view.summary) : null, /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-tool-state" }, running ? t("running") : failed ? t("toolFailed") : "\u2713")), open ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-tool-body" }, failed ? /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-tool-summary" }, blockText(block) || t("toolFailed")) : !value ? /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-tool-summary" }, running ? t("running") : t("noResult")) : /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-tool-grid" }, view.fields?.map(([label, fieldValue, code], index) => /* @__PURE__ */ import_react.default.createElement(ToolField, { label, value: fieldValue, code, key: `${label}-${index}` }))), view.metrics ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-metrics" }, /* @__PURE__ */ import_react.default.createElement(MetricPills, { metrics: view.metrics, t })) : null, Array.isArray(view.reasons) && view.reasons.length ? /* @__PURE__ */ import_react.default.createElement("ul", { className: "hse-reasons" }, view.reasons.map((reason, index) => /* @__PURE__ */ import_react.default.createElement("li", { key: index }, reason))) : null)) : null);
+  const running = !isRecord(block) || !("kind" in block);
+  return /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-tool" }, /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => setOpen(!open) }, /* @__PURE__ */ import_react.default.createElement("strong", null, "\u{1F433} ", toolName), /* @__PURE__ */ import_react.default.createElement("small", null, running ? "running" : block.isError ? "error" : "\u2713")), open ? /* @__PURE__ */ import_react.default.createElement("pre", null, value ? JSON.stringify(value, null, 2) : blockText(block) || "Running\u2026") : null);
 }
 var name = "dsh-harbor-evolution";
 var inject = ["slots", "locale"];
@@ -368,25 +309,10 @@ function apply(ctx) {
   ctx.effect(() => ctx.locale.register(NS, dictionaries), "harbor-evolution: locale");
   const t = ctx.locale.bind(NS);
   const injected = () => ({ t });
-  ctx.slots.inject("conversation.view", () => ctx.slots.register({
-    name: "conversation.view",
-    id: "harbor-evolution",
-    order: 30,
-    locale: NS,
-    label: () => t("tab"),
-    inject: injected
-  }, DashboardView));
-  ctx.slots.inject("settings.section", () => ctx.slots.register({
-    name: "settings.section",
-    id: "harbor-evolution",
-    order: 35,
-    label: () => t("settings"),
-    inject: injected
-  }, DoctorView));
+  ctx.slots.inject("conversation.view", () => ctx.slots.register({ name: "conversation.view", id: "harbor-evolution", order: 30, locale: NS, label: () => t("tab"), inject: injected }, DashboardView));
+  ctx.slots.inject("settings.section", () => ctx.slots.register({ name: "settings.section", id: "harbor-evolution", order: 35, label: () => t("settings"), inject: injected }, DoctorView));
   ctx.slots.inject("tool.call.toolview", function* registerTools() {
-    for (const key of ["harbor_candidate_snapshot", "harbor_eval_run", "harbor_eval_result", "harbor_candidate_compare"]) {
-      yield ctx.slots.register({ name: "tool.call.toolview", key, inject: injected }, HarborToolView);
-    }
+    for (const key of ["harbor_candidate_snapshot", "harbor_evolution_init", "harbor_evolution_doctor", "harbor_dataset_validate", "harbor_context_preview", "harbor_eval_run", "harbor_eval_result", "harbor_candidate_compare"]) yield ctx.slots.register({ name: "tool.call.toolview", key, inject: injected }, HarborToolView);
   });
 }
 module.exports = { name, inject, apply };

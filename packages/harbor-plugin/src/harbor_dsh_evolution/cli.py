@@ -4,9 +4,13 @@ import argparse
 import json
 from pathlib import Path
 
-from harbor_dsh_evolution.candidate import snapshot_candidate, verify_candidate
-from harbor_dsh_evolution.context import build_evaluation_context
+from harbor_dsh_evolution.candidate import load_manifest, snapshot_candidate, verify_candidate
+from harbor_dsh_evolution.context import context_preview
+from harbor_dsh_evolution.dataset import snapshot_dataset, validate_dataset
+from harbor_dsh_evolution.doctor import architecture_doctor
+from harbor_dsh_evolution.initialize import initialize_project
 from harbor_dsh_evolution.promotion import compare_jobs, write_report
+from harbor_dsh_evolution.stack import snapshot_stack, validate_stack, write_stack_manifest
 from harbor_dsh_evolution.summary import load_or_create_summary
 
 
@@ -27,8 +31,61 @@ def _parser() -> argparse.ArgumentParser:
     summary = commands.add_parser("summarize", help="Summarize a Harbor Job")
     summary.add_argument("job_dir", type=Path)
 
-    context = commands.add_parser("context", help="Fingerprint a Harbor dataset")
-    context.add_argument("dataset_dir", type=Path)
+    initialize = commands.add_parser("init", help="Initialize a strict Evaluation Stack project")
+    initialize.add_argument("--project-root", required=True, type=Path)
+    initialize.add_argument("--dataset", required=True, type=Path)
+    initialize.add_argument("--stack-id", required=True)
+    initialize.add_argument("--stack-version", required=True)
+    initialize.add_argument("--dataset-id", required=True)
+    initialize.add_argument("--dataset-version", required=True)
+    initialize.add_argument("--contract-id", required=True)
+    initialize.add_argument("--contract-version", required=True)
+    initialize.add_argument("--primary-metric", required=True)
+    initialize.add_argument("--primary-direction", required=True, choices=("maximize", "minimize"))
+    initialize.add_argument("--judge-provider", required=True)
+    initialize.add_argument("--judge-model", required=True)
+    initialize.add_argument("--judge-version", required=True)
+    initialize.add_argument("--policy-id", required=True)
+    initialize.add_argument("--policy-version", required=True)
+    initialize.add_argument("--min-improvement", required=True, type=float)
+
+    dataset = commands.add_parser("dataset", help="Manage Dataset manifests")
+    dataset_commands = dataset.add_subparsers(dest="dataset_command", required=True)
+    dataset_snapshot = dataset_commands.add_parser("snapshot")
+    dataset_snapshot.add_argument("dataset_dir", type=Path)
+    dataset_snapshot.add_argument("--id", dest="dataset_id")
+    dataset_snapshot.add_argument("--version", default="1.0.0")
+    dataset_validate = dataset_commands.add_parser("validate")
+    dataset_validate.add_argument("dataset_dir", type=Path)
+    dataset_validate.add_argument("--project-root", required=True, type=Path)
+
+    stack = commands.add_parser("stack", help="Manage Evaluation Stack manifests")
+    stack_commands = stack.add_subparsers(dest="stack_command", required=True)
+    stack_validate = stack_commands.add_parser("validate")
+    stack_validate.add_argument("stack_path", type=Path)
+    stack_validate.add_argument("--project-root", required=True, type=Path)
+    stack_snapshot = stack_commands.add_parser("snapshot")
+    stack_snapshot.add_argument("stack_path", type=Path)
+    stack_snapshot.add_argument("--project-root", required=True, type=Path)
+    stack_snapshot.add_argument("--output", type=Path)
+
+    preview = commands.add_parser("context", help="Preview Evaluation Context v2")
+    preview_commands = preview.add_subparsers(dest="context_command", required=True)
+    context_preview_parser = preview_commands.add_parser("preview")
+    context_preview_parser.add_argument("--project-root", required=True, type=Path)
+    context_preview_parser.add_argument("--candidate", required=True, type=Path)
+    context_preview_parser.add_argument("--dataset", required=True, type=Path)
+    context_preview_parser.add_argument("--stack", required=True, type=Path)
+    context_preview_parser.add_argument("--jobs-dir", required=True, type=Path)
+    context_preview_parser.add_argument("--mode", required=True, choices=("diagnostic", "promotion-eligible"))
+
+    doctor = commands.add_parser("doctor", help="Validate evaluation architecture")
+    doctor.add_argument("--architecture", action="store_true", required=True)
+    doctor.add_argument("--project-root", required=True, type=Path)
+    doctor.add_argument("--stack", required=True, type=Path)
+    doctor.add_argument("--dataset", required=True, type=Path)
+    doctor.add_argument("--candidate", type=Path)
+    doctor.add_argument("--policy", type=Path)
 
     promote = commands.add_parser("promote", help="Apply a Promotion Gate")
     promote.add_argument("baseline_job", type=Path)
@@ -40,29 +97,75 @@ def _parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     args = _parser().parse_args()
+    exit_code = 0
     if args.command == "snapshot":
-        result = snapshot_candidate(
-            args.candidate_dir,
-            candidate_id=args.candidate_id,
-            version=args.version,
-            runtime_version=args.runtime_version,
-        ).to_dict()
+        result = snapshot_candidate(args.candidate_dir, candidate_id=args.candidate_id, version=args.version, runtime_version=args.runtime_version).to_dict()
     elif args.command == "verify":
-        result = verify_candidate(
-            args.candidate_dir, expected_digest=args.digest
-        ).to_dict()
+        result = verify_candidate(args.candidate_dir, expected_digest=args.digest).to_dict()
     elif args.command == "summarize":
         result = load_or_create_summary(args.job_dir)
+    elif args.command == "init":
+        result = initialize_project(
+            project_root=args.project_root,
+            dataset_path=args.dataset,
+            stack_id=args.stack_id,
+            stack_version=args.stack_version,
+            dataset_id=args.dataset_id,
+            dataset_version=args.dataset_version,
+            contract_id=args.contract_id,
+            contract_version=args.contract_version,
+            primary_metric=args.primary_metric,
+            primary_direction=args.primary_direction,
+            judge_provider=args.judge_provider,
+            judge_model=args.judge_model,
+            judge_version=args.judge_version,
+            policy_id=args.policy_id,
+            policy_version=args.policy_version,
+            min_improvement=args.min_improvement,
+        )
+    elif args.command == "dataset":
+        if args.dataset_command == "snapshot":
+            result = snapshot_dataset(args.dataset_dir, dataset_id=args.dataset_id, version=args.version)
+        else:
+            result = validate_dataset(args.dataset_dir, project_root=args.project_root).to_dict()
+            exit_code = 0 if result["valid"] else 2
+    elif args.command == "stack":
+        if args.stack_command == "validate":
+            result = validate_stack(args.stack_path, project_root=args.project_root)
+            result.pop("stack", None)
+            exit_code = 0 if result["valid"] else 2
+        else:
+            result = snapshot_stack(args.stack_path, project_root=args.project_root)
+            if args.output:
+                write_stack_manifest(result, args.output)
     elif args.command == "context":
-        result = build_evaluation_context(args.dataset_dir).to_dict()
+        candidate_dir = args.candidate
+        candidate = load_manifest(candidate_dir) if candidate_dir.is_dir() else load_manifest(candidate_dir.parent)
+        result = context_preview(
+            project_root=args.project_root,
+            candidate=candidate,
+            dataset_dir=args.dataset,
+            stack_path=args.stack,
+            jobs_dir=args.jobs_dir,
+            mode=args.mode,
+        )
+    elif args.command == "doctor":
+        result = architecture_doctor(
+            project_root=args.project_root,
+            stack_path=args.stack,
+            dataset_path=args.dataset,
+            candidate_path=args.candidate,
+            policy_path=args.policy,
+        )
+        exit_code = 0 if result["promotion_ready"] else 2
     else:
         report = compare_jobs(args.baseline_job, args.candidate_job, args.policy)
         output = args.output or args.candidate_job / "promotion-report.json"
         write_report(report, output)
         result = report
-
+        exit_code = 0 if report["decision"] == "PROMOTE" else 1
     print(json.dumps(result, ensure_ascii=False, indent=2))
-    return 0 if result.get("decision") != "REJECT" else 1
+    return exit_code
 
 
 if __name__ == "__main__":

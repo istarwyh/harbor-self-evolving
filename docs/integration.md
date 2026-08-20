@@ -1,68 +1,86 @@
 # 接入指南
 
-## 1. 定义 Candidate
+## 1. Candidate
 
-一个 DSH Candidate 至少包含：
+Candidate 是完整、可运行、锁定依赖的 DSH/Cordis composition：
 
 ```text
-candidate/
+candidates/<agent>/<version>/
 ├── cordis.yml
 ├── package.json
 ├── package-lock.json
-└── business plugins...
+└── business plugins, prompts, skills, tools...
 ```
 
-不要把密钥写入 Candidate。运行时凭证应由受控环境注入，并在不同 Candidate 之间保持相同权限。
+同一 Agent 产品线的 `package.json.name` 保持一致，version 和 digest 区分具体 Candidate。不要写入密钥、生产 session 或可变部署状态。调用 `harbor_candidate_snapshot` 后，任意文件变化都会让旧 manifest 失效。
 
-执行 snapshot 后，任何文件变化都会改变 digest；旧 manifest 与新内容不一致时，Harbor Agent 会拒绝运行。CLI 与 DSH 工具默认使用 `package.json` 的 `name` / `version`，也允许显式覆盖。
-`candidate_id` 表示同一个 Agent 产品线，通常在 v1/v2 间保持稳定；`version` 与 `digest` 标识具体 Candidate。
+## 2. Dataset Manifest
 
-## 2. 定义 Harbor Dataset
+Dataset Task 固定 instruction、容器、Verifier 和 GT。先生成/校验 `dataset-manifest.json`：
 
-Task 固定 instruction、容器环境和 verifier。若使用极简 Alpine 镜像，必须包含 `bash`；本插件的 ACP-ready 快速路径还会检测 `python3`、`curl`、`node`、`npm`、`stdbuf` 和 `/opt/harbor-acp-venv`。示例 Dockerfile 展示了如何在构建阶段固定这些依赖，避免每个 Job 重复联网安装。
+```bash
+harbor-dsh dataset snapshot datasets/search --id vertical-search --version 1.0.0
+harbor-dsh dataset validate datasets/search --project-root "$PWD"
+```
 
-业务副作用应使用测试账号、mock server 或隔离 sandbox。Verifier 应输出多个可诊断 reward，而不只是单一总分。
+修改 Dataset 文件后 source digest 会失配；显式升级 Dataset version、重新 snapshot，并建立 fresh baseline。业务副作用必须使用测试账号、mock 或 sandbox。
 
-## 3. 从 DSH 发起评测
+## 3. Evaluation Stack
 
-Cordis bundle 的 `projectRoot` 是安全边界。Candidate、Dataset、Job 和 policy 路径都必须位于该目录下；子进程使用参数数组启动，不经过 shell。
+运行初始化 Skill，或显式调用 `harbor_evolution_init` 创建标准结构。然后实现八个业务角色，避免在 Task 或 Runner 内复制 Evaluator。检查：
 
-典型调用顺序：
+```bash
+harbor-dsh stack validate .harbor/evaluation-stack.yml --project-root "$PWD"
+harbor-dsh doctor --architecture \
+  --project-root "$PWD" \
+  --stack .harbor/evaluation-stack.yml \
+  --dataset datasets/search \
+  --candidate candidates/search/v1 \
+  --policy policies/promotion.json
+```
+
+## 4. 从 DSH 发起
+
+推荐工具顺序：
 
 ```text
 harbor_candidate_snapshot
-→ harbor_eval_run
-→ harbor_eval_result
-→ 人或 Optimizer 生成新 Candidate
+→ harbor_dataset_validate
+→ harbor_evolution_doctor
+→ harbor_context_preview
+→ harbor_eval_run(mode=diagnostic | promotion-eligible)
+→ evidence-linked Candidate change
+→ harbor_context_preview
 → harbor_eval_run
 → harbor_candidate_compare
 ```
 
-`harbor_eval_run` 会再次 snapshot，因此无法用旧 digest 冒充已修改的 Candidate。只需提供 `candidatePath` 和 `datasetPath`；`candidateId`、`version` 与 `jobName` 均可省略。运行完成后会直接返回 Job 路径、Candidate manifest 和 evaluation summary，只有需要稍后重新读取时才调用 `harbor_eval_result`。
+`harbor_eval_run` 必须传 `candidatePath`、`datasetPath`、`stackPath` 和 `mode`；`promotion-eligible` 还必须传 `policyPath`。它会在启动 Harbor 前再次运行严格检查。
 
-## 4. 接入 CI/CD
+## 5. Workbench 与大批量 Jobs
 
-推荐生产链路：
+Harbor Tab 总览只读取轻量 Summary。打开 Job 后按需读取完整产物；Trials 由服务端分页、搜索和筛选，单页最多 100。Trial detail 返回脱敏、截断的 assessment，不返回完整原始 SSE。原始 Harbor `result.json`/trajectory 仍留在 Job 目录供受控离线审计。
+
+## 6. CI/CD
 
 ```text
 Optimizer branch / PR
 → CI 单测与安全检查
-→ 构建 candidate image@sha256
-→ 部署到隔离 preview
-→ Harbor smoke + regression Jobs
+→ 构建 immutable image@sha256
+→ 部署隔离 preview
+→ Harbor smoke/regression Jobs
 → Promotion Gate
-→ 人工审批（可选）
-→ CD 更新 Champion
+→ 审批
+→ CD 晋级同一 image digest
 ```
 
-当前 `DshCandidateAgent` 直接上传本地 Candidate 并通过 ACP 运行，适合本地开发和 CI。面向已部署服务时，应新增一个 image/endpoint Agent adapter，但继续复用 Candidate manifest、Job Plugin、summary 和 Gate，不要让 Harbor 负责生产发布。
+当前本地 Adapter 通过 ACP 上传 Candidate。评测已部署服务时可新增 endpoint/image Integration，但继续复用 Manifest、Stack、Context、Artifacts 和 Gate。Harbor 不负责生产发布。
 
-## 5. 稳定衡量进步
+## 7. 稳定性规则
 
-- 固定评测集和环境镜像 digest。
-- 每个 Job 保存 `evaluation-context.json`；Gate 强制 baseline 与 candidate 的 context digest 相同。
-- 固定 Candidate 的直接与传递依赖，提交 lockfile。
-- 同时保存总 reward、分项指标、异常和轨迹。
-- 对随机 Agent 做多次 Trial，并比较置信区间，而非只看一次均值。
-- Gate 规则版本化；改 Verifier 或 policy 时重新建立 baseline。
-- 将生产观察指标作为外部验收，不把离线分数直接等同于业务收益。
+- 固定 Dataset、环境镜像 digest、Judge 和 reward-affecting Stack 组件。
+- 所有指标声明方向；不要假设都是 `/10` 或越大越好。
+- 区分 capability failure 和 infrastructure exception。
+- 随机 Agent 使用对称 seed/repeat policy，不挑最好的一次。
+- 任何优化建议必须引用 Job/Trial/finding，并限定 mutation surface。
+- 离线 Gate 不是线上业务收益；保留部署后的外部观察指标。
