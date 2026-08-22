@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "oecd-ai",
+      "title": "OECD: Artificial intelligence",
+      "url": "https://www.oecd.org/en/topics/sub-issues/ai-principles.html",
+      "content": "人工智能系统接收数据或输入，利用算法和模型推断如何生成预测、内容、建议或决策。它可以表现出学习、推理或模式识别等能力，但能力边界取决于数据、模型、目标和部署环境。",
+      "keywords": [
+        "人工智能",
+        "AI",
+        "机器",
+        "模型",
+        "算法"
+      ]
+    }
+  ]
+}

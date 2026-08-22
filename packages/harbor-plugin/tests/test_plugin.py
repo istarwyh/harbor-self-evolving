@@ -10,10 +10,19 @@ from helpers import make_candidate, make_dataset, make_stack
 
 
 def fake_job(tmp_path: Path, dataset: Path):
+    def register(_callback):
+        return None
+
     return SimpleNamespace(
         config=SimpleNamespace(tasks=[SimpleNamespace(path=dataset)], datasets=[]),
         job_dir=tmp_path / "jobs" / "job",
-        on_trial_ended=lambda _callback: None,
+        on_trial_started=register,
+        on_environment_started=register,
+        on_agent_started=register,
+        on_agent_ended=register,
+        on_verification_started=register,
+        on_trial_ended=register,
+        on_trial_cancelled=register,
     )
 
 
@@ -34,8 +43,14 @@ async def test_plugin_persists_strict_identity_artifacts(tmp_path: Path):
     assert context["schema_version"] == 2
     assert context["dataset"]["dataset_id"] == "vertical-search"
     assert (job / "dataset-manifest.json").is_file()
+    preview = json.loads((job / "dataset-preview.json").read_text())
+    assert preview["tasks"][0]["instruction"] == "Find the requested source and cite it.\n"
+    assert "verifier" not in preview["tasks"][0]
     assert (job / "evaluation-stack-manifest.json").is_file()
     assert (job / "architecture-doctor.json").is_file()
+    lifecycle = json.loads((job / "trial-lifecycle.json").read_text())
+    assert lifecycle["dataset_total"] == 1
+    assert lifecycle["trials"][0]["phase"] == "queued"
 
 
 @pytest.mark.asyncio

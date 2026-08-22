@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "sep-love",
+      "title": "Stanford Encyclopedia of Philosophy: Love",
+      "url": "https://plato.stanford.edu/entries/love/",
+      "content": "爱情很难被压缩成单一感觉。它通常同时包含情感吸引、对另一个人的关怀、亲密与依恋，也可能包含承诺和共同生活的实践；生理反应、个人经历和文化叙事都会塑造爱情。",
+      "keywords": [
+        "爱情",
+        "爱",
+        "依恋",
+        "亲密",
+        "关怀"
+      ]
+    }
+  ]
+}

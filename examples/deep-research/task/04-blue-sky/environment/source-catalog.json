@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "nasa-blue-sky",
+      "title": "NASA Space Place: Why Is the Sky Blue?",
+      "url": "https://spaceplace.nasa.gov/blue-sky/en/",
+      "content": "阳光进入大气后会被气体分子散射。较短波长的蓝光比红光更容易发生瑞利散射，因此来自天空各方向的散射光中蓝色更显著；人的视觉敏感度也影响最终看到的颜色。",
+      "keywords": [
+        "天空",
+        "蓝色",
+        "蓝天",
+        "大气",
+        "散射"
+      ]
+    }
+  ]
+}

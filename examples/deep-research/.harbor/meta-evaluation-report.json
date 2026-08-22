@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "protocol": "meta-evaluation-report/v1",
+  "ground_truth": {
+    "id": "deep-research-evaluator-gt",
+    "version": "1.0.0",
+    "digest": "sha256:2a9efd3ceee94eac4daaf8b87c99f666441933e2064c4bac271913840ada1a23",
+    "source": {
+      "kind": "programmatic",
+      "description": "Versioned reference labels derived from the accepted Deep Research task contract and controlled evaluator fixtures.",
+      "provenance": "examples/deep-research/meta-evaluation/fixtures v1.0.0",
+      "independent_of_candidate": true
+    },
+    "case_count": 3,
+    "badcase_count": 2
+  },
+  "evaluator": {
+    "id": "deep-research-verifier",
+    "version": "4.0.0"
+  },
+  "coverage": {
+    "expected_observations": 9,
+    "observed": 9,
+    "rate": 1.0,
+    "repeat_policy": {
+      "repeats": 3,
+      "seed_policy": "deterministic fixtures"
+    }
+  },
+  "metrics": {
+    "esf": 1.0,
+    "sce": 0.0,
+    "rcr": 1.0,
+    "weighted_penalty_recall": 1.0,
+    "normal_pass_rate": 1.0
+  },
+  "criterion_sce": {
+    "citation_compliance": 0.0,
+    "interestingness": 0.0,
+    "response_quality": 0.0
+  },
+  "disagreements": [],
+  "digest": "sha256:f2332424d9d5aee4c11ed00a99e455b7b54ddce4d036457425061c16c3cc12b3"
+}

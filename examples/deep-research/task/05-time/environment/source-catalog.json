@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "nist-time",
+      "title": "NIST: A Walk Through Time",
+      "url": "https://www.nist.gov/pml/time-and-frequency-division/popular-links/walk-through-time",
+      "content": "时间帮助我们描述事件的先后、持续和变化，并通过周期稳定的过程来测量。现代物理把时间与空间联系在一起；相对论表明，运动状态和引力会影响不同观察者测得的时间间隔。",
+      "keywords": [
+        "时间",
+        "钟",
+        "变化",
+        "相对论",
+        "时空"
+      ]
+    }
+  ]
+}

@@ -29,6 +29,8 @@
 
 Judge 的 provider/model/version/parameters 也是 Stack 身份。Doctor 会阻止把 HTTP、Rubric、Judge 和 Promotion 决策塞进一个 God Runner。
 
+Evaluator 通过 [`harbor-dsh-evaluator/v1`](evaluator-interface.md) 描述 `script` 或 `llm-as-judge` 实现。Descriptor 固定输入/输出协议、可编辑文件和 Criterion 离散值；实现 bundle 的摘要进入 Evaluation Stack comparability identity。Workbench 只允许修改 Descriptor 精确授权的项目内文件，并强制创建新的 Evaluator 与 Stack 版本。
+
 ## Context v2 的两种 digest
 
 ```text
@@ -54,7 +56,9 @@ Clarify → Init → Dataset Validate → Architecture Doctor
                                     ↓
 Candidate Snapshot → Context Preview → Harbor Job
                                     ↓
-Contract + Trial Assessments + Population + Summary
+Trial Lifecycle → Contract + Assessment v2 + Artifact Registry
+                                    ↓
+Reporter → Diagnoser → Optimizer → Artifact validation → Summary v3
                                     ↓
 evidence-linked controlled change → next Candidate Job
                                     ↓
@@ -64,6 +68,35 @@ external CI/CD promotes the same evaluated artifact
 ```
 
 `promotion-eligible` Job 必须具有 Candidate Manifest、Dataset Manifest、Stack Manifest、Context v2、Policy v2 和零 Doctor error。Context v1 不提供兼容降级。
+
+## Trial Lifecycle 与分数可信度
+
+Job 启动时按 Dataset 顺序预登记全部 Trial。Harbor Hook 只推进状态：
+
+```text
+queued → preparing-environment → preparing-agent → running-agent
+       → running-integration → rendering → evaluating
+       → completed | candidate-quality-failed | infrastructure-error
+                   | evaluation-error | cancelled
+```
+
+`trial-events.jsonl` 追加写历史，`trial-lifecycle.json` 原子更新当前快照。Retry 创建新 `attempt`，旧 attempt 与 assessment 永不覆盖。Job 进度的分母来自 Dataset total，而不是已经被发现的 Trial 数。
+
+Trial Assessment v2 分离：
+
+```text
+raw_rewards: Verifier 原始输出，仅用于审计
+score.value: 可进入质量聚合的主指标值
+score.valid: 是否满足输入、Agent、Integration、Renderer、Judge、Schema 硬约束
+```
+
+基础设施或评测器失败时，即使 raw reward 是数字，`score.value` 仍为 `null`，UI 显示 `—`。Population 和 Gate 只使用有效分数。
+
+## Post-processing 与 Gate 边界
+
+Reporter、Diagnoser 和 Optimizer 在 reward 计算后运行，身份与版本写入产物，默认 `reward_affecting: false`。它们不能修改 Evaluation Contract 或历史 Assessment。优化假设必须指向 evidence refs、允许/禁止改动面、护栏、回滚条件和唯一下一实验。
+
+Workbench 的 Compare 只是只读预览。Diagnostic Job、页面刷新、Reporter、Diagnoser、Optimizer 都不会运行 Gate，更不会部署、发布或替换 Champion。
 
 ## reward 与诊断证据
 
@@ -76,8 +109,8 @@ reward = 0.4 × task_completion
        + 0.2 × citation_correctness
 ```
 
-工具调用失败、空搜索和错误引用不是 prose-only 备注，而是独立指标和 Trial evidence。总 reward 用于排序，分项指标用于根因和非回归。
+工具调用失败、空搜索和错误引用不是 prose-only 备注，而是独立指标和 Trial evidence。DeepResearch v1/v2 使用同一个真实 Responses API 生成器；搜索状态来自生成器实际执行，本地 Source Catalog 的命中结果进入 v2 prompt，模型只能引用已检索 source。总 reward 用于排序，分项指标用于根因和非回归。
 
 ## 元评测
 
-优化评测器时旋转角色：Candidate 是 Evaluator/Rubric/Judge 版本；Dataset 是带独立人工 GT 的样本；指标可包含 RCR、偏置、方差、校准、时延和成本。待优化评测器不能生成自己的 GT 或最终 Gate 决策。元评测仍使用相同 Manifest、Context v2、Doctor、Job 和 Gate 机制。
+优化评测器时旋转角色：Candidate 是 Evaluator/Rubric/Judge 版本；Dataset 是带独立 GT 的固定产物；指标至少包含 ESF、SCE 与 RCR，也可加入时延和成本。GT 可以是人工、程序、多方共识、独立模型或外部标准，但必须有 provenance、独立于待测 Evaluator，且不能由待测评测器生成。元评测仍使用相同 Manifest、Context v2、Doctor、Job 和 Gate 机制。

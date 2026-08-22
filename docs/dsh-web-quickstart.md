@@ -1,6 +1,6 @@
 # 本地 DSH Web 快速开始
 
-版本组合：DSH `0.1.0-rc.6`、Plugin + Skill `0.5.0`、Harbor Adapter `0.5.0`。
+版本组合：DSH `0.1.0-rc.6`、Plugin + Skill `0.6.0`、Harbor Adapter `0.6.0`。
 
 ## 安装与重启
 
@@ -8,7 +8,7 @@
 
 ```bash
 cd /absolute/path/to/agent-workspace
-npx --yes dsh-harbor-evolution@0.5.0 setup --project-root "$PWD"
+npx --yes dsh-harbor-evolution@0.6.0 setup --project-root "$PWD"
 ```
 
 GitHub URL 是文档/源码入口，正式用户仍使用 npm 安装；不要直接 link 新 checkout。安装器会建立独立 Harbor venv、安装同版本 Python Adapter、把 Plugin + Skill 写入 `web` profile、保存 CLI 路径并验证 entry point。
@@ -54,6 +54,8 @@ Skill 会在信息齐全后调用非覆盖式 initializer，再要求实现业�
 
 ## DeepResearch 严格示例
 
+该示例默认连接宿主机 `http://127.0.0.1:8317/v1/responses`，Candidate 内固定使用 `host.docker.internal`，模型为 `gpt-5.6-luna`。运行 `./hse demo` 前需确保接口可用；API key 使用 `HSE_DEMO_LLM_API_KEY` 注入。endpoint/model 是 Candidate 身份的一部分，切换时应修改 `generator-config.json`、升级 Candidate version 并重新 snapshot，不能在同一个 digest 下静默替换。
+
 在本仓库源码模式中，v1/v2 调用都需要：
 
 ```text
@@ -72,7 +74,7 @@ candidateJob = jobs/<v2-job>
 policyPath = examples/deep-research/promotion-policy.json
 ```
 
-WorkBench 会展示 Contract、Stack、Dataset、Doctor、分页 Trial、Population、Optimization（存在时）、Promotion 和审计状态。
+Workbench 会跟随 DSH 语言设置展示九个阶段。「候选版本」先固定 Candidate、Dataset、Evaluation Stack 与 Runtime 身份；「评测集」展示 Agent 实际收到的 instruction；「产物呈现」会直接展示真实 LLM 生成的 `research-report.md`；「评测器」展示统一接口、三元 Criterion、Evaluator/Rubric/Judge 源码和受控升级入口；「评测器元评测」引导建立独立 Ground Truth 并展示 ESF/SCE/RCR；「评测报告」分页对照产物、分数、原因与建议；「优化器」展示 evidence-linked 单一实验假设；「晋级门禁」展示可比性、逐指标 delta、改善/回归样本和已执行 Gate。完整 JSON 只放在折叠审计区。运行中按 Dataset 顺序增量刷新，历史 Job 仅在有安全源文件或 Trial 轨迹时回读。
 
 ## Profile 配置
 
@@ -95,7 +97,7 @@ WorkBench 会展示 Contract、Stack、Dataset、Doctor、分页 Trial、Populat
 | 现象 | 处理 |
 | --- | --- |
 | 插件没有 Harbor Tab | 确认装入 `web` profile，停止旧进程并重启 |
-| 工具存在但 Skill 不出现 | 确认 `harbor-evolution` 版本为 `0.5.0` 并重启 |
+| 工具存在但 Skill 不出现 | 确认 `harbor-evolution` 版本为 `0.6.0` 并重启 |
 | `spawn harbor ENOENT` | 重新运行 setup 保存绝对 CLI 路径 |
 | Harbor 找不到 `dsh-evolution` | Adapter 与 Harbor 不在同一 venv；重新 setup |
 | Dataset digest mismatch | intentional change 时升级 Dataset version 并重新 snapshot |

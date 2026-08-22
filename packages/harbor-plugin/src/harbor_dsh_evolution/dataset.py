@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import tomllib
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -9,6 +10,8 @@ from typing import Any
 from harbor_dsh_evolution.identity import public_relative, resolve_inside, tree_digest
 
 MANIFEST_NAME = "dataset-manifest.json"
+PREVIEW_NAME = "dataset-preview.json"
+MAX_INSTRUCTION_CHARS = 128_000
 
 
 @dataclass(frozen=True)
@@ -42,13 +45,21 @@ def _discover_tasks(dataset_dir: Path) -> list[dict[str, Any]]:
         root = task_file.parent
         relative = root.relative_to(dataset_dir).as_posix() or "."
         instruction = root / "instruction.md"
+        try:
+            configuration = tomllib.loads(task_file.read_text())
+        except (OSError, tomllib.TOMLDecodeError):
+            configuration = {}
+        metadata = configuration.get("metadata") if isinstance(configuration.get("metadata"), dict) else {}
         task = {
-                "id": relative if relative != "." else f"task-{index + 1}",
-                "path": relative,
-                "instruction": public_relative(dataset_dir, instruction)
-                if instruction.is_file()
-                else f"{relative}/instruction.md".lstrip("./"),
-            }
+            "id": relative if relative != "." else f"task-{index + 1}",
+            "path": relative,
+            "instruction": public_relative(dataset_dir, instruction)
+            if instruction.is_file()
+            else f"{relative}/instruction.md".lstrip("./"),
+            "metadata": metadata,
+        }
+        if isinstance(metadata.get("query"), str) and metadata["query"].strip():
+            task["query"] = metadata["query"].strip()
         verifier = root / "tests" / "test.sh"
         environment = root / "environment" / "Dockerfile"
         if verifier.is_file():
@@ -178,3 +189,43 @@ def load_validated_dataset(dataset_dir: Path, *, project_root: Path | None = Non
         raise ValueError(f"Dataset validation failed: {codes}")
     assert result.manifest is not None
     return result.manifest
+
+
+def build_dataset_preview(dataset_dir: Path, manifest: dict[str, Any]) -> dict[str, Any]:
+    """Snapshot Agent-visible instructions for a human-readable Job view.
+
+    Verifier code and hidden GT stay out of this artifact. The preview contains
+    only the instruction that the evaluated Agent received plus public task
+    identity fields already present in the Dataset Manifest.
+    """
+    dataset_dir = dataset_dir.expanduser().resolve(strict=True)
+    tasks: list[dict[str, Any]] = []
+    for task in manifest.get("tasks") or []:
+        if not isinstance(task, dict):
+            continue
+        instruction_file = resolve_inside(
+            dataset_dir,
+            str(task.get("instruction") or ""),
+            label="task.instruction",
+        )
+        instruction = instruction_file.read_text()
+        truncated = len(instruction) > MAX_INSTRUCTION_CHARS
+        tasks.append(
+            {
+                "id": str(task.get("id") or "unknown"),
+                "path": str(task.get("path") or "."),
+                "instruction_file": str(task.get("instruction") or ""),
+                "instruction": instruction[:MAX_INSTRUCTION_CHARS],
+                "instruction_truncated": truncated,
+                "query": str(task.get("query") or ""),
+                "metadata": task.get("metadata") if isinstance(task.get("metadata"), dict) else {},
+            }
+        )
+    return {
+        "schema_version": 1,
+        "dataset_id": manifest.get("dataset_id"),
+        "version": manifest.get("version"),
+        "source_digest": manifest.get("source_digest"),
+        "task_count": len(tasks),
+        "tasks": tasks,
+    }

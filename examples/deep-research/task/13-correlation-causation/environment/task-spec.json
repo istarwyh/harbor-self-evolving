@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "id": "13-correlation-causation",
+  "topic": "相关与因果",
+  "question": "两个现象总是一起出现，就能说明一个导致了另一个吗？",
+  "answer_concepts": [
+    [
+      "相关",
+      "因果",
+      "区别"
+    ],
+    [
+      "混杂因素",
+      "第三变量",
+      "偏差"
+    ],
+    [
+      "实验",
+      "对照",
+      "证据"
+    ]
+  ],
+  "expected_source_id": "nih-correlation-causation",
+  "badcase": {
+    "kind": "causal-reasoning",
+    "risk": "回答容易把相关性直接写成因果结论。",
+    "expected_behavior": "解释第三变量与反向因果，并说明因果判断需要更强证据。"
+  }
+}

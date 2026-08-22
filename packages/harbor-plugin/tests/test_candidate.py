@@ -9,6 +9,7 @@ from harbor_dsh_evolution.candidate import (
     snapshot_candidate,
     verify_candidate,
 )
+from harbor_dsh_evolution.agent import _responses_environment
 
 
 def make_candidate(tmp_path: Path) -> Path:
@@ -94,3 +95,14 @@ def test_rejects_unknown_manifest_schema():
                 "metadata": {},
             }
         )
+
+
+def test_responses_environment_only_injects_runtime_credential(monkeypatch):
+    monkeypatch.delenv("HSE_DEMO_LLM_API_KEY", raising=False)
+    assert _responses_environment() == {}
+
+    monkeypatch.setenv("HSE_DEMO_LLM_API_KEY", "test-key")
+    assert _responses_environment() == {
+        "HSE_RESPONSES_API_KEY_FILE": "/run/secrets/hse-responses-api-key",
+    }
+    assert "test-key" not in json.dumps(_responses_environment())

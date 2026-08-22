@@ -1,0 +1,5 @@
+{
+  "api": "openai-responses",
+  "responses_url": "http://host.docker.internal:8317/v1/responses",
+  "model": "gpt-5.6-luna"
+}

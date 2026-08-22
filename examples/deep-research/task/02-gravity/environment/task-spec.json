@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "id": "02-gravity",
+  "topic": "重力",
+  "question": "什么是重力？",
+  "answer_concepts": [
+    [
+      "质量",
+      "引力",
+      "时空"
+    ],
+    [
+      "吸引",
+      "下落"
+    ],
+    [
+      "轨道",
+      "行星",
+      "卫星"
+    ]
+  ],
+  "expected_source_id": "nasa-gravity",
+  "badcase": null
+}

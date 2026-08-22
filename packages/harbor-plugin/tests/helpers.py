@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import json
+
 import yaml
 
 from harbor_dsh_evolution.candidate import snapshot_candidate
@@ -38,11 +40,39 @@ def make_stack(root: Path, *, version: str = "1.0.0", runner_semantic: bool = Fa
     roles = ("integration", "renderer", "evaluator", "rubric", "diagnoser", "optimizer", "runner", "reporter")
     components = {}
     for role in roles:
-        suffix = "md" if role == "rubric" else "py"
-        entry = f"stack/{role}.{suffix}"
+        if role == "evaluator":
+            entry = "stack/evaluator/evaluator.json"
+        else:
+            suffix = "md" if role == "rubric" else "py"
+            entry = f"stack/{role}.{suffix}"
         path = root / entry
-        path.parent.mkdir(exist_ok=True)
-        path.write_text(f"# {role}\nROLE = {role!r}\n")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if role == "evaluator":
+            (path.parent / "evaluator.py").write_text(
+                "def evaluate(payload):\n    return {'schema_version': 1, 'protocol': 'evaluation-result/v1', 'criteria': [{'id': 'citation_accuracy', 'score': 1, 'reason': 'The citation is valid.', 'recommendation': 'Preserve this behavior.'}]}\n"
+            )
+            path.write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "interface": "harbor-dsh-evaluator/v1",
+                        "evaluator_id": "search-evaluator",
+                        "version": version,
+                        "kind": "script",
+                        "protocol": {"input": "evaluation-input/v1", "output": "evaluation-result/v1"},
+                        "implementation": {"entry": "evaluator.py", "language": "python", "callable": "evaluate"},
+                        "editable_files": [
+                            {"path": "evaluator.py", "role": "implementation", "language": "python", "affects": ["evaluator"]},
+                        ],
+                        "criteria": [{"id": "citation_accuracy", "label": "Citation accuracy", "values": [0, 0.5, 1]}],
+                        "aggregate": {"metric_id": "reward", "method": "mean"},
+                    },
+                    indent=2,
+                )
+                + "\n"
+            )
+        else:
+            path.write_text(f"# {role}\nROLE = {role!r}\n")
         components[role] = {"id": f"search-{role}", "version": version, "entry": entry}
     components["runner"]["semantic"] = runner_semantic
     stack = {
@@ -60,7 +90,14 @@ def make_stack(root: Path, *, version: str = "1.0.0", runner_semantic: bool = Fa
                 {"id": "citation_accuracy", "direction": "maximize"},
             ],
             "groups": [],
-            "hard_requirements": [],
+            "hard_requirements": [
+                {"id": "input_integrity"},
+                {"id": "agent_completed"},
+                {"id": "integration_valid"},
+                {"id": "renderer_valid"},
+                {"id": "judge_completed"},
+                {"id": "artifact_schema_valid"},
+            ],
         },
     }
     output = root / ".harbor" / "evaluation-stack.yml"

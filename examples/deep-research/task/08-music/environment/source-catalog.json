@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "nih-music",
+      "title": "NIH News in Health: Music and Health",
+      "url": "https://newsinhealth.nih.gov/2021/01/sound-health",
+      "content": "音乐的节奏、旋律与预期变化会调动听觉、运动和奖赏等脑网络。它还能唤起情绪与自传体记忆，并通过共同演奏和聆听形成社会联结，所以同一段音乐会同时影响身体、记忆和意义。",
+      "keywords": [
+        "音乐",
+        "旋律",
+        "节奏",
+        "情绪",
+        "大脑"
+      ]
+    }
+  ]
+}

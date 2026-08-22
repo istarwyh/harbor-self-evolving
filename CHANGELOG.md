@@ -2,6 +2,23 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.6.0 - 2026-08-23
+
+- Add `harbor-dsh-evaluator/v1` for script and LLM-as-Judge implementations, with bundle identity, ternary Criteria validation, Agent tools, and descriptor-authorized Workbench source editing using optimistic concurrency and atomic version updates.
+- Expand the Deep Research example to 13 realistic Chinese questions, including three explicit Badcases, and score 回应问题、有趣性、引用规范性 on `0 / 0.5 / 1` through one shared Evaluator implementation.
+- Add a formal append-only Trial Lifecycle with Dataset-stable order, explicit active/terminal phases, atomic progress snapshots, preserved retry attempts, and 2.5-second incremental Workbench polling.
+- Introduce Trial Assessment v2 and Summary v3: quality score value and validity are separate, invalid infrastructure/evaluation rewards remain audit-only, and Population aggregates include valid scores only.
+- Add explicit Evidence Provenance so Real Renderer output, ACP Agent Output Fallback, Judge explanations, and deterministic diagnosis cannot be confused.
+- Add the Job Artifact Registry, Diagnosis Report, Population Report v2, and Optimization Report v2 with non-reward post-processing identities and controlled-experiment guardrails.
+- Rebuild the ocean/whale Workbench around Candidate → Dataset → Integration → Renderer → Judge → Evaluator Meta-evaluation → Reporter → Optimizer → Gate, with running-Trial detail, stable filters/sorts, split evidence view, compare preview, and actionable Evaluator governance.
+- Capability-detect older Jobs as read-only history instead of synthesizing new semantics; a missing 0.6 artifact is shown as unavailable.
+- Strengthen Promotion Gate with valid-score coverage checks, Trial/population deltas, new-exception detection, and artifact regression evidence. Diagnostic Jobs and UI reads never auto-Gate, promote, deploy, publish, or replace a Champion.
+- Upgrade the bundled Skill and initializer to require Score Validity checks before Candidate optimization and to create new evaluator identities plus fresh baselines for reward-affecting changes.
+- Localize all nine stage tabs through the DSH locale service; snapshot and display Agent-visible Dataset instructions; collect and safely preview generated page/document/structured artifacts; and make Evaluator/Rubric/Judge source plus the independent Ground Truth meta-evaluation workflow directly visible.
+- Require every Evaluator criterion to return a non-empty reason and recommendation through the packaged `evaluation-result/v1` schema, and compare each Trial artifact with its scores, reasons, and recommendations in a paginated report.
+- Add versioned, provenance-bearing Ground Truth plus `evaluator-observations/v1` and `meta-evaluation-report/v1`, with ESF, SCE, RCR, coverage, disagreement, and Badcase reporting for Evaluator optimization.
+- Replace the hard-coded DeepResearch Candidate output with a real streaming Responses API generator: v1 records an invalid search without evidence, while v2 retrieves a Task-owned Source Catalog and constrains the same model to grounded citations; collect readable Markdown plus structured JSON artifacts and keep API credentials runtime-only.
+
 ## 0.5.0 - 2026-08-21
 
 - Replace the Dataset-tree Context v1 contract with strict Candidate + Dataset Manifest + Evaluation Stack + Context v2 identities; no legacy promotion path is retained.

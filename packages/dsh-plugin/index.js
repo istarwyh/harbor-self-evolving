@@ -144,11 +144,60 @@ export function apply(ctx, config) {
 
   ctx.tools.register(jsonTool({
     name: 'harbor_eval_result',
-    description: 'Read the stable evaluation summary produced for a Harbor Job.',
+    description: 'Read a stable Job summary or a sanitized Workbench, Dataset instruction, Trial output/evidence, progress, or Evaluator governance view. Invalid scores remain distinct from raw verifier rewards.',
     parameters: {
       jobPath: { type: 'string', required: true },
+      view: { type: 'string', description: 'summary (default), job, dataset, progress, trial, or governance' },
+      trialId: { type: 'string', description: 'Required only for view=trial; use an id returned by the Job/Progress view' },
+      compareJob: { type: 'string', description: 'Optional previous Job for view=governance impact analysis' },
+      since: { type: 'string', description: 'Optional ISO timestamp for incremental progress changes' },
     },
   }, args => service.result(args)))
+
+  ctx.tools.register(jsonTool({
+    name: 'harbor_evaluator_inspect',
+    description: 'Inspect the active harbor-dsh-evaluator/v1 descriptor, implementation kind, ternary Criteria, and safely editable source files.',
+    parameters: {
+      stackPath: { type: 'string', description: 'Defaults to .harbor/evaluation-stack.yml' },
+    },
+  }, args => service.evaluatorInspect(args)))
+
+  ctx.tools.register(jsonTool({
+    name: 'harbor_evaluator_update',
+    description: 'Update one descriptor-authorized Evaluator source file with optimistic concurrency. Requires new Evaluator and Stack identities and never runs evaluation or Gate automatically.',
+    parameters: {
+      stackPath: { type: 'string', description: 'Defaults to .harbor/evaluation-stack.yml' },
+      filePath: { type: 'string', required: true },
+      content: { type: 'string', required: true },
+      expectedDigest: { type: 'string', required: true },
+      newEvaluatorVersion: { type: 'string', required: true },
+      newStackVersion: { type: 'string', required: true },
+    },
+  }, args => service.evaluator(args)))
+
+  ctx.tools.register(jsonTool({
+    name: 'harbor_ground_truth_init',
+    description: 'Create a non-overwriting Ground Truth draft for evaluator meta-evaluation. GT may be human, programmatic, consensus, model, or external, but must have explicit provenance and remain independent of the Candidate evaluator.',
+    parameters: {
+      outputPath: { type: 'string', description: 'Defaults to .harbor/ground-truth.json' },
+      groundTruthId: { type: 'string', required: true },
+      version: { type: 'string', required: true },
+      sourceKind: { type: 'string', required: true, description: 'human, programmatic, consensus, model, or external' },
+      sourceDescription: { type: 'string', required: true },
+      provenance: { type: 'string', required: true },
+      criteria: { type: 'string', required: true, description: 'Comma-separated criterion ids' },
+    },
+  }, args => service.groundTruthInitialize(args)))
+
+  ctx.tools.register(jsonTool({
+    name: 'harbor_evaluator_meta_evaluate',
+    description: 'Compare repeated evaluator-observations/v1 with independent ground-truth/v1 and write an ESF, SCE, and RCR meta-evaluation report.',
+    parameters: {
+      groundTruthPath: { type: 'string', description: 'Defaults to .harbor/ground-truth.json' },
+      observationsPath: { type: 'string', required: true },
+      outputPath: { type: 'string', description: 'Defaults to .harbor/meta-evaluation-report.json' },
+    },
+  }, args => service.evaluatorMetaEvaluate(args)))
 
   ctx.tools.register(jsonTool({
     name: 'harbor_candidate_compare',

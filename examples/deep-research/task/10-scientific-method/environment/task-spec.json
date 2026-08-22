@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "10-scientific-method",
+  "topic": "科学方法",
+  "question": "为什么需要科学方法？",
+  "answer_concepts": [
+    [
+      "假设",
+      "证据",
+      "观察"
+    ],
+    [
+      "检验",
+      "重复",
+      "反驳"
+    ],
+    [
+      "修正",
+      "迭代",
+      "不确定"
+    ]
+  ],
+  "expected_source_id": "berkeley-science",
+  "badcase": null
+}

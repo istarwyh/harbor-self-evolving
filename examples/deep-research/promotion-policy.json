@@ -1,26 +1,25 @@
 {
   "schema_version": 2,
   "policy_id": "deep-research-quality",
-  "version": "1.0.0",
+  "version": "4.0.0",
   "primary_metric": "reward",
   "primary_direction": "maximize",
   "min_improvement": 0.1,
   "minimums": {
-    "task_completion": 1.0,
-    "citation_correctness": 1.0
+    "response_quality": 0.5,
+    "interestingness": 0.5,
+    "citation_compliance": 1.0
   },
   "maximums": {},
   "non_regression": [
-    "task_completion",
-    "tool_call_success",
-    "search_validity",
-    "citation_correctness"
+    "response_quality",
+    "interestingness",
+    "citation_compliance"
   ],
   "metric_directions": {
-    "task_completion": "maximize",
-    "tool_call_success": "maximize",
-    "search_validity": "maximize",
-    "citation_correctness": "maximize"
+    "response_quality": "maximize",
+    "interestingness": "maximize",
+    "citation_compliance": "maximize"
   },
   "non_regression_tolerance": 0.0,
   "hard_requirements": [

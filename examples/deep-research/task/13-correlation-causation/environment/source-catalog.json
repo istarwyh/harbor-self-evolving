@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "nih-correlation-causation",
+      "title": "NIH: Association does not prove causation",
+      "url": "https://www.ncbi.nlm.nih.gov/books/NBK305518/",
+      "content": "两个现象相关并不自动证明其中一个造成另一个。第三个混杂因素可能同时影响两者，也可能存在反向因果或选择偏差。建立因果关系通常需要时间顺序、机制证据、控制混杂以及随机对照或其他严谨研究设计。",
+      "keywords": [
+        "相关",
+        "因果",
+        "混杂",
+        "第三变量",
+        "实验"
+      ]
+    }
+  ]
+}

@@ -19,6 +19,8 @@ Resolve every value before calling `harbor_evolution_init`:
 
 Also establish diagnostic metrics, min/max thresholds, non-regression metrics, mutation surface, repeat policy, and promotion owner. The initializer creates a minimal Policy; update its explicit placeholders before a formal Gate.
 
+If the Evaluator itself will be optimized, separately establish Ground Truth id/version, source kind (`human`, `programmatic`, `consensus`, `model`, or `external`), provenance, owner, Criteria, case population, and adjudication rule. Do not hide these semantics inside the Agent Dataset identity. Use `harbor_ground_truth_init` only after they are accepted.
+
 ## Generated layout
 
 ```text
@@ -70,7 +72,16 @@ evaluation_contract:
     - { id: reward, label: Overall reward, direction: maximize }
     - { id: valid_search_rate, label: Valid search rate, direction: maximize }
     - { id: citation_accuracy, label: Citation accuracy, direction: maximize }
+  hard_requirements:
+    - { id: input_integrity }
+    - { id: agent_completed }
+    - { id: integration_valid }
+    - { id: renderer_valid }
+    - { id: judge_completed }
+    - { id: artifact_schema_valid }
 ```
+
+The validity requirements answer whether a quality score is admissible. They are separate from metric thresholds. Infrastructure and evaluation failures may retain raw verifier output for audit, but must emit `score.valid=false` and never enter Population aggregates.
 
 Do not duplicate Evaluator logic inside each Task. Reference one Stack Evaluator from task metadata when task-specific routing is needed.
 
@@ -118,3 +129,5 @@ Show the user:
 5. Doctor findings and Context preview.
 
 Start with a baseline. Do not create Candidate v2 until baseline evidence supports one controlled hypothesis.
+
+The first completed Job should produce `trial-lifecycle.json`, `trial-events.jsonl`, Trial Assessment v2 files, `artifact-registry.json`, Population Report v2, and Optimization Report v2. Treat missing 0.6 capabilities on older Jobs as read-only historical limitations, not synthetic defaults.

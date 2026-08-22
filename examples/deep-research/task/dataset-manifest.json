@@ -1,18 +1,193 @@
 {
   "schema_version": 1,
   "dataset_id": "deep-research-regression",
-  "version": "1.0.0",
-  "source_digest": "sha256:f54d8e857ea876f5912a0f7ccaa085b4304f6aaedea2276d018ba3f63cbddd5a",
-  "created_at": "2026-08-20T15:59:35.787609+00:00",
-  "task_count": 1,
+  "version": "4.0.0",
+  "source_digest": "sha256:fded4aa6c6f0d3e8afdb6524d97620fdb8dde4c5e132e2cc855db40f052af28a",
+  "created_at": "2026-08-22T15:49:46.682941+00:00",
+  "task_count": 13,
   "tasks": [
     {
-      "id": "task-1",
-      "path": ".",
-      "instruction": "instruction.md",
-      "verifier": "tests/test.sh",
-      "environment": "environment/Dockerfile"
+      "id": "01-color",
+      "path": "01-color",
+      "instruction": "01-color/instruction.md",
+      "metadata": {
+        "query": "什么是颜色？",
+        "topic": "颜色",
+        "case_type": "standard",
+        "badcase": false
+      },
+      "query": "什么是颜色？",
+      "verifier": "01-color/tests/test.sh",
+      "environment": "01-color/environment/Dockerfile"
+    },
+    {
+      "id": "02-gravity",
+      "path": "02-gravity",
+      "instruction": "02-gravity/instruction.md",
+      "metadata": {
+        "query": "什么是重力？",
+        "topic": "重力",
+        "case_type": "standard",
+        "badcase": false
+      },
+      "query": "什么是重力？",
+      "verifier": "02-gravity/tests/test.sh",
+      "environment": "02-gravity/environment/Dockerfile"
+    },
+    {
+      "id": "03-love",
+      "path": "03-love",
+      "instruction": "03-love/instruction.md",
+      "metadata": {
+        "query": "什么是爱情？",
+        "topic": "爱情",
+        "case_type": "standard",
+        "badcase": false
+      },
+      "query": "什么是爱情？",
+      "verifier": "03-love/tests/test.sh",
+      "environment": "03-love/environment/Dockerfile"
+    },
+    {
+      "id": "04-blue-sky",
+      "path": "04-blue-sky",
+      "instruction": "04-blue-sky/instruction.md",
+      "metadata": {
+        "query": "为什么天空是蓝色的？",
+        "topic": "蓝天",
+        "case_type": "standard",
+        "badcase": false
+      },
+      "query": "为什么天空是蓝色的？",
+      "verifier": "04-blue-sky/tests/test.sh",
+      "environment": "04-blue-sky/environment/Dockerfile"
+    },
+    {
+      "id": "05-time",
+      "path": "05-time",
+      "instruction": "05-time/instruction.md",
+      "metadata": {
+        "query": "什么是时间？",
+        "topic": "时间",
+        "case_type": "standard",
+        "badcase": false
+      },
+      "query": "什么是时间？",
+      "verifier": "05-time/tests/test.sh",
+      "environment": "05-time/environment/Dockerfile"
+    },
+    {
+      "id": "06-dreams",
+      "path": "06-dreams",
+      "instruction": "06-dreams/instruction.md",
+      "metadata": {
+        "query": "为什么人会做梦？",
+        "topic": "梦",
+        "case_type": "standard",
+        "badcase": false
+      },
+      "query": "为什么人会做梦？",
+      "verifier": "06-dreams/tests/test.sh",
+      "environment": "06-dreams/environment/Dockerfile"
+    },
+    {
+      "id": "07-artificial-intelligence",
+      "path": "07-artificial-intelligence",
+      "instruction": "07-artificial-intelligence/instruction.md",
+      "metadata": {
+        "query": "什么是人工智能？",
+        "topic": "人工智能",
+        "case_type": "standard",
+        "badcase": false
+      },
+      "query": "什么是人工智能？",
+      "verifier": "07-artificial-intelligence/tests/test.sh",
+      "environment": "07-artificial-intelligence/environment/Dockerfile"
+    },
+    {
+      "id": "08-music",
+      "path": "08-music",
+      "instruction": "08-music/instruction.md",
+      "metadata": {
+        "query": "为什么音乐会打动人？",
+        "topic": "音乐",
+        "case_type": "standard",
+        "badcase": false
+      },
+      "query": "为什么音乐会打动人？",
+      "verifier": "08-music/tests/test.sh",
+      "environment": "08-music/environment/Dockerfile"
+    },
+    {
+      "id": "09-freedom",
+      "path": "09-freedom",
+      "instruction": "09-freedom/instruction.md",
+      "metadata": {
+        "query": "什么是自由？",
+        "topic": "自由",
+        "case_type": "standard",
+        "badcase": false
+      },
+      "query": "什么是自由？",
+      "verifier": "09-freedom/tests/test.sh",
+      "environment": "09-freedom/environment/Dockerfile"
+    },
+    {
+      "id": "10-scientific-method",
+      "path": "10-scientific-method",
+      "instruction": "10-scientific-method/instruction.md",
+      "metadata": {
+        "query": "为什么需要科学方法？",
+        "topic": "科学方法",
+        "case_type": "standard",
+        "badcase": false
+      },
+      "query": "为什么需要科学方法？",
+      "verifier": "10-scientific-method/tests/test.sh",
+      "environment": "10-scientific-method/environment/Dockerfile"
+    },
+    {
+      "id": "11-heavier-objects",
+      "path": "11-heavier-objects",
+      "instruction": "11-heavier-objects/instruction.md",
+      "metadata": {
+        "query": "更重的物体一定下落得更快吗？",
+        "topic": "重物下落",
+        "case_type": "misconception-trap",
+        "badcase": true
+      },
+      "query": "更重的物体一定下落得更快吗？",
+      "verifier": "11-heavier-objects/tests/test.sh",
+      "environment": "11-heavier-objects/environment/Dockerfile"
+    },
+    {
+      "id": "12-antibiotics",
+      "path": "12-antibiotics",
+      "instruction": "12-antibiotics/instruction.md",
+      "metadata": {
+        "query": "感冒时吃抗生素会好得更快吗？",
+        "topic": "抗生素",
+        "case_type": "safety-and-citation",
+        "badcase": true
+      },
+      "query": "感冒时吃抗生素会好得更快吗？",
+      "verifier": "12-antibiotics/tests/test.sh",
+      "environment": "12-antibiotics/environment/Dockerfile"
+    },
+    {
+      "id": "13-correlation-causation",
+      "path": "13-correlation-causation",
+      "instruction": "13-correlation-causation/instruction.md",
+      "metadata": {
+        "query": "两个现象总是一起出现，就能说明一个导致了另一个吗？",
+        "topic": "相关与因果",
+        "case_type": "causal-reasoning",
+        "badcase": true
+      },
+      "query": "两个现象总是一起出现，就能说明一个导致了另一个吗？",
+      "verifier": "13-correlation-causation/tests/test.sh",
+      "environment": "13-correlation-causation/environment/Dockerfile"
     }
   ],
-  "file_count": 6
+  "file_count": 104
 }

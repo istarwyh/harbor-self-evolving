@@ -2,13 +2,20 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 from harbor_dsh_evolution.candidate import load_manifest, snapshot_candidate, verify_candidate
 from harbor_dsh_evolution.context import context_preview
 from harbor_dsh_evolution.dataset import snapshot_dataset, validate_dataset
 from harbor_dsh_evolution.doctor import architecture_doctor
+from harbor_dsh_evolution.evaluator import inspect_evaluator, update_evaluator_source
 from harbor_dsh_evolution.initialize import initialize_project
+from harbor_dsh_evolution.meta_evaluation import (
+    initialize_ground_truth,
+    load_ground_truth,
+    run_meta_evaluation,
+)
 from harbor_dsh_evolution.promotion import compare_jobs, write_report
 from harbor_dsh_evolution.stack import snapshot_stack, validate_stack, write_stack_manifest
 from harbor_dsh_evolution.summary import load_or_create_summary
@@ -68,6 +75,45 @@ def _parser() -> argparse.ArgumentParser:
     stack_snapshot.add_argument("stack_path", type=Path)
     stack_snapshot.add_argument("--project-root", required=True, type=Path)
     stack_snapshot.add_argument("--output", type=Path)
+
+    evaluator = commands.add_parser("evaluator", help="Inspect or update an Evaluator Interface")
+    evaluator_commands = evaluator.add_subparsers(dest="evaluator_command", required=True)
+    evaluator_inspect = evaluator_commands.add_parser("inspect")
+    evaluator_inspect.add_argument("--project-root", required=True, type=Path)
+    evaluator_inspect.add_argument("--stack", required=True, type=Path)
+    evaluator_update = evaluator_commands.add_parser("update")
+    evaluator_update.add_argument("--project-root", required=True, type=Path)
+    evaluator_update.add_argument("--stack", required=True, type=Path)
+    evaluator_update.add_argument("--file", required=True)
+    evaluator_update.add_argument("--expected-digest", required=True)
+    evaluator_update.add_argument("--new-evaluator-version", required=True)
+    evaluator_update.add_argument("--new-stack-version", required=True)
+    evaluator_update.add_argument("--content-stdin", action="store_true", required=True)
+
+    ground_truth = commands.add_parser("ground-truth", help="Initialize or validate independent Ground Truth")
+    ground_truth_commands = ground_truth.add_subparsers(dest="ground_truth_command", required=True)
+    ground_truth_init = ground_truth_commands.add_parser("init")
+    ground_truth_init.add_argument("--project-root", required=True, type=Path)
+    ground_truth_init.add_argument("--output", default=".harbor/ground-truth.json", type=Path)
+    ground_truth_init.add_argument("--id", dest="ground_truth_id", required=True)
+    ground_truth_init.add_argument("--version", required=True)
+    ground_truth_init.add_argument(
+        "--source-kind",
+        required=True,
+        choices=("human", "programmatic", "consensus", "model", "external"),
+    )
+    ground_truth_init.add_argument("--source-description", required=True)
+    ground_truth_init.add_argument("--provenance", required=True)
+    ground_truth_init.add_argument("--criteria", required=True)
+    ground_truth_validate = ground_truth_commands.add_parser("validate")
+    ground_truth_validate.add_argument("path", type=Path)
+    ground_truth_validate.add_argument("--project-root", required=True, type=Path)
+
+    meta_evaluate = commands.add_parser("meta-evaluate", help="Compare repeated Evaluator observations with Ground Truth")
+    meta_evaluate.add_argument("--project-root", required=True, type=Path)
+    meta_evaluate.add_argument("--ground-truth", required=True, type=Path)
+    meta_evaluate.add_argument("--observations", required=True, type=Path)
+    meta_evaluate.add_argument("--output", default=".harbor/meta-evaluation-report.json", type=Path)
 
     preview = commands.add_parser("context", help="Preview Evaluation Context v2")
     preview_commands = preview.add_subparsers(dest="context_command", required=True)
@@ -138,6 +184,45 @@ def main() -> int:
             result = snapshot_stack(args.stack_path, project_root=args.project_root)
             if args.output:
                 write_stack_manifest(result, args.output)
+    elif args.command == "evaluator":
+        if args.evaluator_command == "inspect":
+            result = inspect_evaluator(
+                project_root=args.project_root,
+                stack_path=args.stack,
+                include_source=True,
+            )
+        else:
+            result = update_evaluator_source(
+                project_root=args.project_root,
+                stack_path=args.stack,
+                file_path=args.file,
+                content=sys.stdin.read(),
+                expected_digest=args.expected_digest,
+                new_evaluator_version=args.new_evaluator_version,
+                new_stack_version=args.new_stack_version,
+            )
+    elif args.command == "ground-truth":
+        if args.ground_truth_command == "init":
+            result = initialize_ground_truth(
+                project_root=args.project_root,
+                output_path=args.output,
+                ground_truth_id=args.ground_truth_id,
+                version=args.version,
+                source_kind=args.source_kind,
+                source_description=args.source_description,
+                provenance=args.provenance,
+                criteria=[item.strip() for item in args.criteria.split(",") if item.strip()],
+            )
+        else:
+            _, result = load_ground_truth(args.path, project_root=args.project_root)
+            exit_code = 0 if result["valid"] and result["ready"] else 2
+    elif args.command == "meta-evaluate":
+        result = run_meta_evaluation(
+            project_root=args.project_root,
+            ground_truth_path=args.ground_truth,
+            observations_path=args.observations,
+            output_path=args.output,
+        )
     elif args.command == "context":
         candidate_dir = args.candidate
         candidate = load_manifest(candidate_dir) if candidate_dir.is_dir() else load_manifest(candidate_dir.parent)

@@ -7,6 +7,7 @@ from typing import Any
 
 import yaml
 
+from harbor_dsh_evolution.evaluator import load_evaluator_descriptor
 from harbor_dsh_evolution.identity import canonical_digest, public_relative, resolve_inside, tree_digest
 
 STACK_MANIFEST_NAME = "evaluation-stack-manifest.json"
@@ -21,6 +22,14 @@ REQUIRED_ROLES = (
     "reporter",
 )
 COMPARABILITY_ROLES = ("integration", "renderer", "evaluator", "rubric")
+VALIDITY_REQUIREMENTS = {
+    "input_integrity",
+    "agent_completed",
+    "integration_valid",
+    "renderer_valid",
+    "judge_completed",
+    "artifact_schema_valid",
+}
 
 
 def load_stack(path: Path) -> dict[str, Any]:
@@ -63,14 +72,23 @@ def validate_stack(path: Path, *, project_root: Path) -> dict[str, Any]:
             continue
         try:
             entry_path = resolve_inside(project_root, entry, label=f"components.{role}.entry")
-            if entry_path.is_dir():
+            evaluator_interface = None
+            if role == "evaluator":
+                evaluator_interface = load_evaluator_descriptor(
+                    entry_path,
+                    project_root=project_root,
+                    expected_id=component_id,
+                    expected_version=version,
+                )
+                digest = evaluator_interface["digest"]
+            elif entry_path.is_dir():
                 digest, _ = tree_digest(entry_path, namespace=f"harbor-dsh-stack-{role}-v1")
             else:
                 digest = canonical_digest(
                     {"path": public_relative(project_root, entry_path), "content": entry_path.read_text(errors="replace")},
                     namespace=f"harbor-dsh-stack-{role}-v1",
                 )
-            normalized[role] = {
+            normalized_component = {
                 "id": component_id,
                 "version": version,
                 "entry": public_relative(project_root, entry_path),
@@ -79,8 +97,12 @@ def validate_stack(path: Path, *, project_root: Path) -> dict[str, Any]:
                     role == "runner" and bool(component.get("semantic"))
                 ),
             }
-        except (FileNotFoundError, ValueError):
-            error("STACK_COMPONENT_ENTRY_INVALID", f"{role} entry is missing or outside the project")
+            if evaluator_interface:
+                normalized_component["interface"] = evaluator_interface
+            normalized[role] = normalized_component
+        except (FileNotFoundError, ValueError) as exception:
+            code = "EVALUATOR_INTERFACE_INVALID" if role == "evaluator" else "STACK_COMPONENT_ENTRY_INVALID"
+            error(code, f"{role} entry is invalid: {exception}")
 
     judge = stack.get("judge")
     if not isinstance(judge, dict) or not all(
@@ -100,6 +122,31 @@ def validate_stack(path: Path, *, project_root: Path) -> dict[str, Any]:
         metrics = evaluation_contract.get("metrics")
         if not isinstance(metrics, list) or not metrics:
             error("EVALUATION_CONTRACT_INVALID", "evaluation_contract requires metrics")
+        evaluator_interface = (normalized.get("evaluator") or {}).get("interface") or {}
+        evaluator_criteria = {str(item.get("id")) for item in evaluator_interface.get("criteria") or []}
+        aggregate_metric = ((evaluator_interface.get("aggregate") or {}).get("metric_id"))
+        contract_metrics = {
+            str(item.get("id"))
+            for item in metrics or []
+            if isinstance(item, dict) and item.get("id") != aggregate_metric
+        }
+        if evaluator_interface and evaluator_criteria != contract_metrics:
+            error(
+                "EVALUATOR_CONTRACT_MISMATCH",
+                "Evaluator criteria must exactly match non-primary Evaluation Contract metrics",
+            )
+        requirement_ids = {
+            str(item.get("id") or item.get("requirement"))
+            for item in evaluation_contract.get("hard_requirements") or []
+            if isinstance(item, dict) and (item.get("id") or item.get("requirement"))
+        }
+        missing_validity = sorted(VALIDITY_REQUIREMENTS - requirement_ids)
+        if missing_validity:
+            error(
+                "EVALUATION_VALIDITY_REQUIREMENTS_MISSING",
+                "evaluation_contract must declare Score Validity requirements: "
+                + ", ".join(missing_validity),
+            )
     forbidden = {"authorization", "cookie", "token", "api_key", "secret", "password"}
     serialized_keys = {str(key).casefold() for key in _walk_keys(stack)}
     if forbidden.intersection(serialized_keys):

@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict'
+import { Readable } from 'node:stream'
 import test from 'node:test'
 
-import { createDashboardHandler, DASHBOARD_ROUTE, installDashboardWeb, isSameOriginRequest, JOB_ROUTE, TRIALS_ROUTE, TRIAL_ROUTE } from '../lib/web.js'
+import { COMPARE_ROUTE, createDashboardHandler, createMutationHandler, DASHBOARD_ROUTE, DATASET_ROUTE, EVALUATOR_ROUTE, GOVERNANCE_ROUTE, installDashboardWeb, isSameOriginRequest, JOB_ROUTE, META_ROUTE, PROGRESS_ROUTE, TRIALS_ROUTE, TRIAL_ROUTE } from '../lib/web.js'
 
 function invoke(handler, request) {
   return new Promise(resolve => {
@@ -36,6 +37,22 @@ test('same-origin guard rejects cross-site browser requests', () => {
   assert.equal(isSameOriginRequest({ headers: {}, socket: { remoteAddress: '192.0.2.10' } }), false)
 })
 
+test('Evaluator mutation accepts bounded same-origin JSON only', async () => {
+  let received
+  const handler = createMutationHandler(async body => { received = body; return { updated: true } })
+  const request = Readable.from([JSON.stringify({ filePath: 'evaluators/current.py', content: 'updated' })])
+  request.method = 'POST'
+  request.headers = { host: '127.0.0.1:3080', origin: 'http://127.0.0.1:3080', 'content-type': 'application/json' }
+  const response = await invoke(handler, request)
+  assert.equal(response.status, 200)
+  assert.equal(received.filePath, 'evaluators/current.py')
+
+  const crossSite = Readable.from(['{}'])
+  crossSite.method = 'POST'
+  crossSite.headers = { host: '127.0.0.1:3080', origin: 'https://example.com', 'content-type': 'application/json' }
+  assert.equal((await invoke(handler, crossSite)).status, 403)
+})
+
 test('read-only Workbench routes are optional and scoped through Cordis', () => {
   let requested
   const routes = []
@@ -48,8 +65,8 @@ test('read-only Workbench routes are optional and scoped through Cordis', () => 
       })
     },
   }
-  installDashboardWeb(ctx, { dashboard: async () => ({}), job: async () => ({}), trials: async () => ({}), trial: async () => ({}) })
+  installDashboardWeb(ctx, { dashboard: async () => ({}), job: async () => ({}), trials: async () => ({}), trial: async () => ({}), dataset: async () => ({}), progress: async () => ({}), comparison: async () => ({}), governance: async () => ({}), evaluator: async () => ({}), meta: async () => ({}) })
   assert.deepEqual(requested, ['webServer'])
-  assert.deepEqual(routes.map(route => route.path), [DASHBOARD_ROUTE, JOB_ROUTE, TRIALS_ROUTE, TRIAL_ROUTE])
+  assert.deepEqual(routes.map(route => route.path), [DASHBOARD_ROUTE, JOB_ROUTE, TRIALS_ROUTE, TRIAL_ROUTE, DATASET_ROUTE, PROGRESS_ROUTE, COMPARE_ROUTE, GOVERNANCE_ROUTE, EVALUATOR_ROUTE, META_ROUTE])
   assert.ok(routes.every(route => route.kind === 'exact' && typeof route.handler === 'function'))
 })

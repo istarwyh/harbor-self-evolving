@@ -31,6 +31,10 @@ test('Cordis plugin registers the bundled evolution Skill and strict architectur
     'harbor_context_preview',
     'harbor_eval_run',
     'harbor_eval_result',
+    'harbor_evaluator_inspect',
+    'harbor_evaluator_update',
+    'harbor_ground_truth_init',
+    'harbor_evaluator_meta_evaluate',
     'harbor_candidate_compare',
   ])
   assert.equal(skills.length, 1)
@@ -52,4 +56,6 @@ test('published package exposes the DSH bundle patch', async () => {
 
   assert.equal(packageJson.dsh.bundle.patch, './cordis.patch.yml')
   assert.equal(packageJson.exports['./cordis.patch.yml'], './cordis.patch.yml')
+  assert.equal(packageJson.exports['./schemas/evaluation-result.schema.json'], './schemas/evaluation-result.schema.json')
+  assert.equal(packageJson.exports['./schemas/ground-truth.schema.json'], './schemas/ground-truth.schema.json')
 })
