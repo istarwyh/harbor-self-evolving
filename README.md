@@ -23,7 +23,7 @@ cd /absolute/path/to/your-agent-workspace
 npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 ```
 
-安装器会让 npm Plugin 与 Python Adapter 使用同一个正式版本；需要完全固定版本时，把 `latest` 改为 `0.5.0`。
+安装器会让 npm Plugin 与 Python Adapter 使用同一个正式版本；需要完全固定版本时，把 `latest` 改为 `0.6.0`。
 
 默认安装到 DSH 的 `web` profile。`setup` 会一次完成：
 
@@ -51,7 +51,9 @@ DSH_HOME="$HOME/.dsh" pnpm dlx @deepseek-ai/dsh@0.1.0-rc.6 web
 在 Web profile 中还会出现三个可见入口：
 
 - 对话页的 `Harbor` Tab：先看轻量 Job 结果，再打开按需加载的 Evaluation Workbench。
-- Job 工作台：依次查看结果、过程、Contract、Stack、Dataset、分页 Trial、证据、优化建议、Gate 和审计产物。
+- Job 工作台：九个阶段跟随 DSH 语言设置；先直接展示固定的 Candidate / Dataset / Evaluation Stack / Runtime 身份，再展示 Agent 收到的 query 与 instruction、Harbor 收集的页面/文档/结构化产物、评测器 Ground Truth 元评测、逐 Trial 判分、Population 有效覆盖、受控优化假设和 Baseline 回归 Gate。完整 JSON 只留在折叠审计区。
+- 评测器页：直接查看 `script` 或 `llm-as-judge` 的统一接口、三元 Criterion、Rubric 与实现源码；只能受控修改 Descriptor 授权的文件，并强制创建新的 Evaluator / Stack 身份。
+- `harbor-dsh-evaluator/v1`：统一 `script` 与 `llm-as-judge` 的输入、三元 Criteria 输出、实现身份和可编辑文件；详情见 [`docs/evaluator-interface.md`](docs/evaluator-interface.md)。
 - 工具调用中的 Harbor 专属卡片：直接理解初始化、Doctor、Context 预览、评测与 Gate。
 - “设置 → Harbor 自进化”：检查项目目录、Evaluation Stack、Jobs 和两个 Harbor CLI 是否就绪。
 
@@ -71,7 +73,7 @@ GUI 当前是观察与诊断面，评测、比较等高成本动作仍由官方 
 
 ## 用户实际获得的能力
 
-Plugin 注册 8 个确定性工具：
+Plugin 注册 12 个确定性工具：
 
 - `harbor_candidate_snapshot`：固化不可变 Candidate。
 - `harbor_evolution_init`：在需求确认后创建不覆盖已有文件的标准 Evaluation Stack 结构。
@@ -79,7 +81,11 @@ Plugin 注册 8 个确定性工具：
 - `harbor_dataset_validate`：验证任务、路径、敏感字段和 Dataset source digest。
 - `harbor_context_preview`：预览 Context v2、可比 baseline 和 fresh-baseline 要求。
 - `harbor_eval_run`：运行显式的 `diagnostic` 或 `promotion-eligible` Job。
-- `harbor_eval_result`：读取规范化 Summary。
+- `harbor_eval_result`：读取规范化 Summary，或按 `view=job|progress|dataset|trial|governance` 读取脱敏后的阶段、指令、生成产物与评测器治理证据。
+- `harbor_evaluator_inspect`：查看统一 Evaluator 接口、Rubric、实现身份和声明授权的可编辑文件。
+- `harbor_evaluator_update`：用摘要锁与新版本身份受控修改声明授权的实现文件；不会自动运行评测或 Gate。
+- `harbor_ground_truth_init`：建立不覆盖已有文件、带来源与 provenance 的独立 Ground Truth 草稿。
+- `harbor_evaluator_meta_evaluate`：用固定产物、Ground Truth 和重复观测计算 ESF、SCE、RCR、覆盖率与分歧。
 - `harbor_candidate_compare`：执行严格、可解释、带原因码的 Promotion Gate。
 
 Skill 负责稳定使用这些工具，而不是让 Agent 无约束地“改自己”：
@@ -112,15 +118,20 @@ evaluation-context.json     # Context v2：本次是否可与 baseline 比较
 architecture-doctor.json   # 角色边界和正式评测阻断项
 evaluation-contract.json   # 指标语义、方向、分组和硬约束
 candidate-events.jsonl      # Trial 完成事件
-evaluation-summary.json     # 稳定指标与失败证据
-trial-assessments/*.json    # 分页、脱敏的 Trial 评测产物
-population-report.json      # 通用样本分组和聚合
+trial-events.jsonl          # 追加写的 Trial Lifecycle 事件
+trial-lifecycle.json        # Dataset 稳定顺序与当前 phase/attempt 快照
+evaluation-summary.json     # Summary v3；只聚合有效业务分数
+trial-assessments/*.json    # Assessment v2；score 与 validity 分离
+population-report.json      # Population v2；有效覆盖率、分组和聚合
+artifact-registry.json      # role/path/schema/reward 影响的产物注册表
+diagnosis-report.json       # 非 reward 的确定性根因归类
+optimization-report.json    # 带护栏和回滚条件的下一实验
 */agent/trajectory.json     # ACP 执行轨迹
 */result.json               # Harbor 原始 Trial 结果
 promotion-report.json       # 晋级或拒绝及原因
 ```
 
-Promotion Gate 会先检查 Context v2、Dataset、Integration、Renderer、Evaluator、Rubric、Judge、语义 Runner、产物 Schema 和基础设施异常，再按指标方向判断提升、最小/最大阈值与非回归。Harbor Job 跑完不等于 Candidate 已通过 Gate。
+Promotion Gate 会先检查 Context v2、Dataset、Integration、Renderer、Evaluator、Rubric、Judge、语义 Runner、产物 Schema、Trial 覆盖、Score Validity 和基础设施异常，再按指标方向判断提升、最小/最大阈值与非回归。Harbor Job 跑完不等于 Candidate 已通过 Gate；Diagnostic Job、Reporter 和 Optimizer 都不能自动 Gate。
 
 ## 示例与源码开发
 
@@ -133,7 +144,7 @@ cd harbor-self-evolving
 ./hse demo
 ```
 
-它会真实评测 v1、v2，并展示工具调用失败、无效搜索和错误引用如何进入 reward，最终由 Gate 决定是否 `PROMOTE`。不依赖 DSH 的最小例子位于 `examples/shell-minimal/`。
+它会让 v1、v2 针对 13 个真实中文概念问题（含 3 个显式 Badcase），通过 DSH ACP 调用真实 Responses API：v1 的无效搜索没有证据，v2 检索每个 Task 的 Source Catalog 后再让同一个 LLM 生成带引用的报告。统一 Evaluator 按「回应问题 / 有趣性 / 引用规范性」做 `0 / 0.5 / 1` 三元评分并返回原因与建议，最终由 Gate 决定是否 `PROMOTE`。接口配置和产物说明见 [`examples/deep-research/README.md`](examples/deep-research/README.md)。不依赖 DSH 的最小例子位于 `examples/shell-minimal/`。
 
 安装正式发布的 Plugin + Skill：
 
@@ -162,7 +173,7 @@ packages/dsh-plugin/       # npm Plugin、Skill、Web GUI、工具与一键安�
 packages/harbor-plugin/    # Python Adapter、Job Plugin、summary 与 Gate
 examples/deep-research/    # DSH ACP → Harbor → Promotion 参考实现
 examples/shell-minimal/    # 最小 Harbor Candidate 参考实现
-schemas/                   # Stack、Dataset、Context v2、Trial、Population、Optimization 与 Gate 契约
+schemas/                   # Evaluator、Stack、Dataset、Context v2、Trial、Population、Optimization 与 Gate 契约
 docs/                      # 架构、接入、Web 快速开始与安全边界
 ```
 

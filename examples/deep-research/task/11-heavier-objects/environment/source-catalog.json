@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "nasa-falling-objects",
+      "title": "NASA: The Hammer-Feather Drop",
+      "url": "https://www.nasa.gov/history/alsj/a15/a15.clsout3.html",
+      "content": "在真空中，不同质量物体受到相同的重力加速度，会同时下落。现实空气中，阻力取决于形状、迎风面积和速度，羽毛因此比锤子慢；这并不意味着质量本身决定自由落体加速度。",
+      "keywords": [
+        "重物",
+        "下落",
+        "自由落体",
+        "真空",
+        "空气阻力"
+      ]
+    }
+  ]
+}

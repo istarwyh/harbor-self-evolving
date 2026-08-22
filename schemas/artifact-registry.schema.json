@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/istarwyh/harbor-self-evolving/schemas/artifact-registry.schema.json",
+  "title": "Job Artifact Registry",
+  "type": "object",
+  "required": ["schema_version", "artifacts"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["role", "artifact", "path", "schema", "reward_affecting", "status"],
+        "properties": {
+          "role": { "type": "string" }, "artifact": { "type": "string" },
+          "path": { "type": "string" }, "schema": { "type": "string" },
+          "reward_affecting": { "type": "boolean" },
+          "status": { "enum": ["registered", "unavailable", "invalid"] }
+        }
+      }
+    }
+  }
+}

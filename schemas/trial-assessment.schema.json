@@ -1,11 +1,45 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/istarwyh/harbor-self-evolving/schemas/trial-assessment.schema.json",
-  "title": "Trial Assessment",
+  "title": "Trial Assessment v2",
   "type": "object",
-  "required": ["schema_version", "trial_id", "trial_name", "status", "rewards", "findings", "evidence", "process"],
+  "required": ["schema_version", "trial_id", "query", "population", "status", "score", "requirements", "criteria", "output", "evidence_provenance", "exception"],
   "properties": {
-    "schema_version": { "const": 1 }, "trial_id": { "type": "string" }, "trial_name": { "type": "string" }, "status": { "enum": ["assessed", "infrastructure-error"] },
-    "rewards": { "type": "object", "additionalProperties": { "type": "number" } }, "findings": { "type": "array", "items": { "type": "object" } }, "evidence": { "type": "array", "items": { "type": "object" } }, "output": {}, "process": { "type": "array", "items": { "type": "object" } }
+    "schema_version": { "const": 2 },
+    "trial_id": { "type": "string", "minLength": 1 },
+    "trial_name": { "type": "string" },
+    "dataset_trial": { "type": "string" },
+    "query": { "type": "string" },
+    "population": { "type": "object" },
+    "status": { "enum": ["completed", "candidate-quality-failed", "infrastructure-error", "evaluation-error", "cancelled"] },
+    "score": {
+      "type": "object",
+      "required": ["value", "valid", "invalid_reasons"],
+      "properties": {
+        "value": { "type": ["number", "null"] },
+        "valid": { "type": "boolean" },
+        "invalid_reasons": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "requirements": {
+      "type": "object",
+      "required": ["input_integrity", "agent_completed", "integration_valid", "renderer_valid", "judge_completed", "artifact_schema_valid"],
+      "properties": {
+        "input_integrity": { "type": "boolean" },
+        "agent_completed": { "type": "boolean" },
+        "integration_valid": { "type": "boolean" },
+        "renderer_valid": { "type": "boolean" },
+        "judge_completed": { "type": "boolean" },
+        "artifact_schema_valid": { "type": "boolean" }
+      }
+    },
+    "criteria": { "type": "array", "items": { "type": "object" } },
+    "findings": { "type": "array", "items": { "type": "object" } },
+    "recommendations": { "type": "array" },
+    "raw_rewards": { "type": "object", "additionalProperties": { "type": "number" } },
+    "output": {},
+    "evidence_provenance": { "type": "array", "items": { "type": "object" } },
+    "exception": { "type": ["object", "null"] },
+    "process": { "type": "array", "items": { "type": "object" } }
   }
 }

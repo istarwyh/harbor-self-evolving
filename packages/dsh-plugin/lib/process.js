@@ -6,7 +6,7 @@ export function runProcess(command, args, options = {}) {
       cwd: options.cwd,
       env: options.env ?? process.env,
       shell: false,
-      stdio: ['ignore', 'pipe', 'pipe'],
+      stdio: [options.input === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'],
     })
     let stdout = ''
     let stderr = ''
@@ -16,6 +16,7 @@ export function runProcess(command, args, options = {}) {
     }, options.timeoutMs ?? 1_800_000)
     child.stdout.on('data', chunk => { stdout += chunk })
     child.stderr.on('data', chunk => { stderr += chunk })
+    if (options.input !== undefined) child.stdin.end(options.input)
     child.on('error', error => {
       clearTimeout(timeout)
       reject(error)

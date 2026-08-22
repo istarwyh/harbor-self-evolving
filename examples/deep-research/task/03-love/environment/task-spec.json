@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "03-love",
+  "topic": "爱情",
+  "question": "什么是爱情？",
+  "answer_concepts": [
+    [
+      "情感",
+      "依恋",
+      "关系"
+    ],
+    [
+      "关怀",
+      "承诺",
+      "亲密"
+    ],
+    [
+      "心理",
+      "生理",
+      "文化"
+    ]
+  ],
+  "expected_source_id": "sep-love",
+  "badcase": null
+}

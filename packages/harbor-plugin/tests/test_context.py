@@ -26,7 +26,7 @@ def test_reward_affecting_stack_change_requires_fresh_baseline(tmp_path: Path):
     dataset = make_dataset(tmp_path)
     stack = make_stack(tmp_path)
     first = make_context(tmp_path, candidate, dataset, stack)
-    (tmp_path / "stack" / "evaluator.py").write_text("# changed evaluator\n")
+    (tmp_path / "stack" / "evaluator" / "evaluator.py").write_text("# changed evaluator\n")
     second = make_context(tmp_path, candidate, dataset, stack)
     assert first["digest"] != second["digest"]
 

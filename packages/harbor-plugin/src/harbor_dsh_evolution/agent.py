@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
 import shlex
+import tempfile
 from pathlib import Path
 from typing import override
 
@@ -12,10 +14,20 @@ from harbor.models.agent.context import AgentContext
 from harbor_dsh_evolution.candidate import CandidateManifest, verify_candidate
 
 
+def _responses_environment() -> dict[str, str]:
+    api_key = os.environ.get("HSE_DEMO_LLM_API_KEY", "").strip()
+    return (
+        {"HSE_RESPONSES_API_KEY_FILE": DshCandidateAgent._RESPONSES_SECRET_PATH}
+        if api_key
+        else {}
+    )
+
+
 class DshCandidateAgent(AcpAgent):
     """Run one immutable DeepSeek Harness Candidate through Harbor's ACP runner."""
 
     _REMOTE_ROOT = "/opt/harbor-dsh-candidate"
+    _RESPONSES_SECRET_PATH = "/run/secrets/hse-responses-api-key"
     _DSH_ACP_PACKAGE = "@deepseek-ai/dsh-acp-demo@0.1.0-rc.6"
 
     def __init__(
@@ -36,6 +48,9 @@ class DshCandidateAgent(AcpAgent):
                 f"requested={candidate_version}, manifest={self.manifest.version}"
             )
         self.candidate_digest = candidate_digest
+        self._responses_api_key = os.environ.get("HSE_DEMO_LLM_API_KEY", "").strip()
+
+        responses_environment = _responses_environment()
 
         registry_entry = {
             "id": self.manifest.candidate_id,
@@ -48,6 +63,7 @@ class DshCandidateAgent(AcpAgent):
                     "args": ["--config", f"{self._REMOTE_ROOT}/cordis.yml"],
                     "env": {
                         "DSH_SESSION_ROOT": f"{self._REMOTE_ROOT}/.sessions",
+                        **responses_environment,
                     },
                 }
             },
@@ -107,6 +123,18 @@ fi
     @override
     async def setup(self, environment: BaseEnvironment) -> None:
         await super().setup(environment)
+        if self._responses_api_key:
+            await environment.exec("mkdir -p /run/secrets", user="root")
+            with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as secret:
+                secret.write(self._responses_api_key)
+                secret.flush()
+                await environment.upload_file(
+                    Path(secret.name), self._RESPONSES_SECRET_PATH
+                )
+            await environment.exec(
+                f"chmod 600 {shlex.quote(self._RESPONSES_SECRET_PATH)}",
+                user="root",
+            )
         await environment.exec(
             f"rm -rf {shlex.quote(self._REMOTE_ROOT)} && "
             f"mkdir -p {shlex.quote(self._REMOTE_ROOT)}",

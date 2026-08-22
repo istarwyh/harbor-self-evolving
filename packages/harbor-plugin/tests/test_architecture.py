@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from harbor_dsh_evolution.dataset import snapshot_dataset, validate_dataset
+from harbor_dsh_evolution.dataset import build_dataset_preview, snapshot_dataset, validate_dataset
 from harbor_dsh_evolution.doctor import architecture_doctor
 from harbor_dsh_evolution.initialize import initialize_project
 from harbor_dsh_evolution.stack import snapshot_stack
@@ -22,6 +22,18 @@ def test_dataset_validator_detects_duplicate_task_and_source_mutation(tmp_path: 
     snapshot_dataset(dataset, dataset_id="vertical-search", version="2")
     (dataset / "instruction.md").write_text("mutated\n")
     assert "DATASET_SOURCE_DIGEST_MISMATCH" in {item["code"] for item in validate_dataset(dataset).findings}
+
+
+def test_dataset_snapshot_exposes_user_query_and_topic_from_task_metadata(tmp_path: Path):
+    dataset = make_dataset(tmp_path)
+    (dataset / "task.toml").write_text(
+        '[task]\nname="concept/color"\nversion="1"\n\n[metadata]\nquery="什么是颜色？"\ntopic="颜色"\n'
+    )
+    manifest = snapshot_dataset(dataset, dataset_id="concepts", version="3.0.0")
+    assert manifest["tasks"][0]["query"] == "什么是颜色？"
+    preview = build_dataset_preview(dataset, manifest)
+    assert preview["tasks"][0]["query"] == "什么是颜色？"
+    assert preview["tasks"][0]["metadata"]["topic"] == "颜色"
 
 
 def test_stack_snapshot_separates_comparison_and_full_identity(tmp_path: Path):

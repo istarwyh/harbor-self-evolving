@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "05-time",
+  "topic": "时间",
+  "question": "什么是时间？",
+  "answer_concepts": [
+    [
+      "变化",
+      "顺序",
+      "事件"
+    ],
+    [
+      "测量",
+      "钟",
+      "尺度"
+    ],
+    [
+      "相对论",
+      "观察者",
+      "时空"
+    ]
+  ],
+  "expected_source_id": "nist-time",
+  "badcase": null
+}

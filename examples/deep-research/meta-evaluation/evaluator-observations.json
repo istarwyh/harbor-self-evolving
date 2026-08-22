@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "protocol": "evaluator-observations/v1",
+  "evaluator": {
+    "id": "deep-research-verifier",
+    "version": "4.0.0"
+  },
+  "repeat_policy": {
+    "repeats": 3,
+    "seed_policy": "deterministic fixtures"
+  },
+  "observations": [
+    { "case_id": "complete-grounded-answer", "repeat": 1, "criteria": [{ "id": "response_quality", "score": 1 }, { "id": "interestingness", "score": 1 }, { "id": "citation_compliance", "score": 1 }] },
+    { "case_id": "complete-grounded-answer", "repeat": 2, "criteria": [{ "id": "response_quality", "score": 1 }, { "id": "interestingness", "score": 1 }, { "id": "citation_compliance", "score": 1 }] },
+    { "case_id": "complete-grounded-answer", "repeat": 3, "criteria": [{ "id": "response_quality", "score": 1 }, { "id": "interestingness", "score": 1 }, { "id": "citation_compliance", "score": 1 }] },
+    { "case_id": "invalid-search-and-citation", "repeat": 1, "criteria": [{ "id": "response_quality", "score": 0.5 }, { "id": "interestingness", "score": 0.5 }, { "id": "citation_compliance", "score": 0 }] },
+    { "case_id": "invalid-search-and-citation", "repeat": 2, "criteria": [{ "id": "response_quality", "score": 0.5 }, { "id": "interestingness", "score": 0.5 }, { "id": "citation_compliance", "score": 0 }] },
+    { "case_id": "invalid-search-and-citation", "repeat": 3, "criteria": [{ "id": "response_quality", "score": 0.5 }, { "id": "interestingness", "score": 0.5 }, { "id": "citation_compliance", "score": 0 }] },
+    { "case_id": "empty-answer", "repeat": 1, "criteria": [{ "id": "response_quality", "score": 0 }, { "id": "interestingness", "score": 0 }, { "id": "citation_compliance", "score": 0 }] },
+    { "case_id": "empty-answer", "repeat": 2, "criteria": [{ "id": "response_quality", "score": 0 }, { "id": "interestingness", "score": 0 }, { "id": "citation_compliance", "score": 0 }] },
+    { "case_id": "empty-answer", "repeat": 3, "criteria": [{ "id": "response_quality", "score": 0 }, { "id": "interestingness", "score": 0 }, { "id": "citation_compliance", "score": 0 }] }
+  ]
+}

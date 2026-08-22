@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "06-dreams",
+  "topic": "梦",
+  "question": "为什么人会做梦？",
+  "answer_concepts": [
+    [
+      "睡眠",
+      "快速眼动",
+      "REM"
+    ],
+    [
+      "大脑",
+      "记忆",
+      "情绪"
+    ],
+    [
+      "理论",
+      "尚无定论",
+      "不确定"
+    ]
+  ],
+  "expected_source_id": "ninds-sleep",
+  "badcase": null
+}

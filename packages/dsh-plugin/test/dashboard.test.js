@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, mkdir, symlink, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, symlink, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { performance } from 'node:perf_hooks'
 import test from 'node:test'
 
-import { readDashboardSnapshot, readJobDetail, readTrialDetail, readTrialsPage } from '../lib/dashboard.js'
+import { readComparison, readDashboardSnapshot, readDatasetPreview, readEvaluatorGovernance, readJobDetail, readJobProgress, readMetaEvaluation, readTrialDetail, readTrialsPage } from '../lib/dashboard.js'
 
 function config(projectRoot) {
   return { projectRoot, jobsDir: 'jobs', harborBin: '/bin/sh', harborDshBin: '/bin/sh', dshVersion: '0.1.0-rc.6', agentImportPath: 'example:Agent', pluginImportPath: 'dsh-evolution' }
@@ -33,14 +33,14 @@ test('dashboard is a lightweight Context v2 overview', async () => {
   await mkdir(path.join(projectRoot, 'jobs', 'legacy'))
   await writeFile(path.join(projectRoot, 'jobs', 'legacy', 'evaluation-summary.json'), JSON.stringify({ schema_version: 1, evaluation_context: { schema_version: 1 } }))
   const snapshot = await readDashboardSnapshot(config(projectRoot), { pluginVersion: '0.5.0-test' })
-  assert.equal(snapshot.schemaVersion, 2)
+  assert.equal(snapshot.schemaVersion, 3)
   assert.equal(snapshot.pluginVersion, '0.5.0-test')
-  assert.equal(snapshot.overview.totalJobs, 3)
+  assert.equal(snapshot.overview.totalJobs, 4)
   assert.deepEqual(snapshot.overview.latestMetric, { name: 'reward', value: 0.82 })
   assert.equal(snapshot.jobs.find(job => job.name === 'candidate-v2').status, 'partial')
   assert.equal(snapshot.jobs.find(job => job.name === 'pending').status, 'pending')
   assert.match(snapshot.jobs.find(job => job.name === 'broken').readError, /invalid JSON/)
-  assert.equal(snapshot.jobs.some(job => job.name === 'legacy'), false)
+  assert.equal(snapshot.jobs.find(job => job.name === 'legacy').capabilities.readOnlyLegacy, true)
   assert.equal('path' in snapshot.jobs[0], false)
 })
 
@@ -52,22 +52,22 @@ test('job and trial APIs redact evidence, reject traversal, and report invalid s
   await symlink(outside, path.join(job, 'optimization-report.json'))
   const detail = await readJobDetail(config(projectRoot), { job: 'candidate-v2' })
   assert.equal(detail.validation.optimization.status, 'invalid')
+  assert.equal('process' in detail.artifacts, false)
   const trial = await readTrialDetail(config(projectRoot), { job: 'candidate-v2', trial: 'trial-0' })
   assert.equal(trial.assessment.output.token, '[REDACTED]')
   assert.match(trial.assessment.output.text, /\[TRUNCATED/)
   await assert.rejects(() => readJobDetail(config(projectRoot), { job: '../outside' }), /invalid/)
 })
 
-test('job detail rejects Context v1 artifacts', async () => {
+test('job detail opens Context v1 artifacts as capability-gated read-only history', async () => {
   const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-v1-'))
   const job = path.join(projectRoot, 'jobs', 'legacy')
   await mkdir(job, { recursive: true })
   await writeFile(path.join(job, 'evaluation-context.json'), JSON.stringify({ schema_version: 1 }))
 
-  await assert.rejects(
-    () => readJobDetail(config(projectRoot), { job: 'legacy' }),
-    /not a Context v2 evaluation/,
-  )
+  const detail = await readJobDetail(config(projectRoot), { job: 'legacy' })
+  assert.equal(detail.capabilities.readOnlyLegacy, true)
+  assert.equal(detail.capabilities.compare, false)
 })
 
 test('1000-trial first page stays paginated and within the local latency budget', async () => {
@@ -107,4 +107,181 @@ test('dashboard treats a missing jobs directory as onboarding state', async () =
   const snapshot = await readDashboardSnapshot(config(projectRoot))
   assert.deepEqual(snapshot.jobs, [])
   assert.equal(snapshot.checks.jobsDir.status, 'warning')
+})
+
+test('running Trial lifecycle stays in Dataset order and is safe before assessment exists', async () => {
+  const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-running-'))
+  const job = path.join(projectRoot, 'jobs', 'running-job')
+  await mkdir(job, { recursive: true })
+  await writeFile(path.join(job, 'evaluation-context.json'), JSON.stringify({ schema_version: 2, digest: 'sha256:running', mode: 'diagnostic', dataset: { task_count: 3 } }))
+  const now = new Date().toISOString()
+  await writeFile(path.join(job, 'trial-lifecycle.json'), JSON.stringify({
+    schema_version: 1, job: 'running-job', updated_at: now, dataset_total: 3, attempt_count: 3,
+    counts: { completed: 1, 'running-agent': 1, queued: 1 },
+    trials: [
+      { dataset_order: 0, dataset_trial: 'query/a', trial: 'query/a', execution_id: 'exec-a', trial_name: 'trial-a', phase: 'completed', terminal: true, attempt: 1, updated_at: now, score: { value: 1, valid: true, invalid_reasons: [] } },
+      { dataset_order: 1, dataset_trial: 'query/b', trial: 'query/b', execution_id: 'exec-b', trial_name: 'trial-b', phase: 'running-agent', terminal: false, attempt: 1, updated_at: now, score: { value: null, valid: false, invalid_reasons: ['not-evaluated'] } },
+      { dataset_order: 2, dataset_trial: 'query/c', trial: 'query/c', execution_id: null, trial_name: null, phase: 'queued', terminal: false, attempt: 1, updated_at: now, score: { value: null, valid: false, invalid_reasons: ['not-evaluated'] } },
+    ],
+  }))
+  const page = await readTrialsPage(config(projectRoot), { job: 'running-job', limit: 100 })
+  assert.equal(page.datasetTotal, 3)
+  assert.deepEqual(page.items.map(item => item.datasetTrial), ['query/a', 'query/b', 'query/c'])
+  assert.deepEqual(page.items.map(item => item.id), ['exec-a', 'exec-b', 'dataset-2'])
+  const detail = await readTrialDetail(config(projectRoot), { job: 'running-job', trial: 'exec-b' })
+  assert.equal(detail.capability, 'running-evidence-not-yet-available')
+  assert.equal(detail.status, 'running-agent')
+  const progress = await readJobProgress(config(projectRoot), { job: 'running-job' })
+  assert.equal(progress.datasetTotal, 3)
+  assert.equal(progress.changed.length, 3)
+})
+
+test('Trial list uses Dataset queries and repairs callback-order metadata by task identity', async () => {
+  const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-trial-labels-'))
+  const job = path.join(projectRoot, 'jobs', 'parallel-job')
+  const now = new Date().toISOString()
+  await mkdir(job, { recursive: true })
+  await writeFile(path.join(job, 'dataset-preview.json'), JSON.stringify({
+    schema_version: 1,
+    task_count: 2,
+    tasks: [
+      { id: '01-color', path: '01-color', query: '什么是颜色？' },
+      { id: '10-scientific-method', path: '10-scientific-method', query: '什么是科学方法？' },
+    ],
+  }))
+  await writeFile(path.join(job, 'evaluation-summary.json'), JSON.stringify({
+    schema_version: 2,
+    n_trials: 2,
+    trials: [
+      { id: 'execution-science', name: '10-scientific-method__random', datasetTrial: 'concepts/10-scientific-method', score: { value: 1, valid: true } },
+      { id: 'execution-color', name: '01-color__random', datasetTrial: 'concepts/01-color', score: { value: 1, valid: true } },
+    ],
+  }))
+  // Simulate historical lifecycle metadata produced by parallel callbacks in completion order.
+  await writeFile(path.join(job, 'trial-lifecycle.json'), JSON.stringify({
+    schema_version: 1,
+    job: 'parallel-job',
+    updated_at: now,
+    dataset_total: 2,
+    attempt_count: 2,
+    trials: [
+      { dataset_order: 0, dataset_trial: '01-color', execution_id: 'execution-science', trial_name: '10-scientific-method__random', phase: 'completed', terminal: true, attempt: 1, updated_at: now },
+      { dataset_order: 1, dataset_trial: '10-scientific-method', execution_id: 'execution-color', trial_name: '01-color__random', phase: 'completed', terminal: true, attempt: 1, updated_at: now },
+    ],
+  }))
+
+  const page = await readTrialsPage(config(projectRoot), { job: 'parallel-job', limit: 100 })
+  assert.deepEqual(page.items.map(item => item.displayName), ['什么是颜色？', '什么是科学方法？'])
+  assert.deepEqual(page.items.map(item => item.datasetTrial), ['concepts/01-color', 'concepts/10-scientific-method'])
+  assert.deepEqual(page.items.map(item => item.datasetOrder), [0, 1])
+})
+
+test('Dataset view exposes Agent-visible instruction content for a historical Job', async () => {
+  const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-dataset-'))
+  const source = path.join(projectRoot, 'dataset')
+  const job = path.join(projectRoot, 'jobs', 'dataset-job')
+  await mkdir(source, { recursive: true })
+  await mkdir(path.join(job, 'trial-a'), { recursive: true })
+  await writeFile(path.join(source, 'instruction.md'), 'Research the refund policy and cite doc-1.\n')
+  await writeFile(path.join(job, 'dataset-manifest.json'), JSON.stringify({ schema_version: 1, dataset_id: 'research', version: '1', source_digest: 'sha256:dataset', task_count: 1, tasks: [{ id: 'task-1', path: '.', instruction: 'instruction.md' }] }))
+  await writeFile(path.join(job, 'trial-a', 'result.json'), JSON.stringify({ task_id: { path: source } }))
+  const preview = await readDatasetPreview(config(projectRoot), { job: 'dataset-job' })
+  assert.equal(preview.source, 'historical-source-fallback')
+  assert.equal(preview.tasks[0].instruction, 'Research the refund policy and cite doc-1.\n')
+})
+
+test('Trial view falls back to the ACP final response when old assessments contain only runtime metadata', async () => {
+  const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-preview-'))
+  const job = path.join(projectRoot, 'jobs', 'preview-job')
+  const now = new Date().toISOString()
+  await mkdir(path.join(job, 'trial-assessments'), { recursive: true })
+  await mkdir(path.join(job, 'trial-a', 'agent'), { recursive: true })
+  await writeFile(path.join(job, 'trial-lifecycle.json'), JSON.stringify({ schema_version: 1, job: 'preview-job', updated_at: now, dataset_total: 1, attempt_count: 1, counts: { completed: 1 }, trials: [{ dataset_order: 0, dataset_trial: 'task/a', execution_id: 'exec-a', trial_name: 'trial-a', phase: 'completed', terminal: true, attempt: 1, updated_at: now, score: { value: 1, valid: true, invalid_reasons: [] } }] }))
+  await writeFile(path.join(job, 'trial-assessments', 'exec-a.json'), JSON.stringify({ schema_version: 2, trial_id: 'exec-a', status: 'completed', output: { metadata: { acp: {} } }, evidence_provenance: [{ label: 'Agent Result Metadata' }] }))
+  await writeFile(path.join(job, 'trial-a', 'agent', 'trajectory.json'), JSON.stringify({ steps: [{ source: 'user', message: 'question' }, { source: 'agent', message: 'Generated research document.' }] }))
+  const detail = await readTrialDetail(config(projectRoot), { job: 'preview-job', trial: 'exec-a' })
+  assert.equal(detail.preview.kind, 'document')
+  assert.equal(detail.preview.content, 'Generated research document.')
+  assert.equal(detail.preview.provenance[0].label, 'ACP Final Response')
+})
+
+test('Trial view prefers a collected business artifact over an ACP summary', async () => {
+  const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-artifact-'))
+  const job = path.join(projectRoot, 'jobs', 'artifact-job')
+  const now = new Date().toISOString()
+  await mkdir(path.join(job, 'trial-assessments'), { recursive: true })
+  await mkdir(path.join(job, 'trial-a', 'artifacts', 'app'), { recursive: true })
+  await mkdir(path.join(job, 'trial-a', 'verifier'), { recursive: true })
+  await writeFile(path.join(job, 'trial-lifecycle.json'), JSON.stringify({ schema_version: 1, job: 'artifact-job', updated_at: now, dataset_total: 1, attempt_count: 1, counts: { completed: 1 }, trials: [{ dataset_order: 0, dataset_trial: 'task/a', execution_id: 'exec-a', trial_name: 'trial-a', phase: 'completed', terminal: true, attempt: 1, updated_at: now, score: { value: 1, valid: true, invalid_reasons: [] } }] }))
+  await writeFile(path.join(job, 'trial-assessments', 'exec-a.json'), JSON.stringify({ schema_version: 2, trial_id: 'exec-a', status: 'completed', score: { value: 0.5, valid: true, invalid_reasons: [] }, criteria: [{ id: 'quality', label: 'Quality', score: 0.5 }], recommendations: [], output: { kind: 'document', format: 'text', source: 'acp-final-response', content: 'Short ACP summary.' }, evidence_provenance: [{ kind: 'acp-final-response', label: 'ACP Final Response' }] }))
+  await writeFile(path.join(job, 'trial-a', 'verifier', 'evaluation-result.json'), JSON.stringify({ schema_version: 1, protocol: 'evaluation-result/v1', criteria: [{ id: 'quality', score: 0.5, reason: 'One required concept is missing.', recommendation: 'Add the missing concept and rerun.' }] }))
+  await writeFile(path.join(job, 'trial-a', 'artifacts', 'manifest.json'), JSON.stringify([{ destination: 'artifacts/app/research.json', status: 'ok' }]))
+  await writeFile(path.join(job, 'trial-a', 'artifacts', 'app', 'research.json'), JSON.stringify({ answer: 'Full generated research document.', citations: [{ source_id: 'doc-1' }] }))
+  const detail = await readTrialDetail(config(projectRoot), { job: 'artifact-job', trial: 'exec-a' })
+  assert.equal(detail.preview.content.answer, 'Full generated research document.')
+  assert.equal(detail.preview.provenance[0].label, 'Agent Artifact')
+  assert.equal(detail.assessment.criteria[0].reason, 'One required concept is missing.')
+  assert.equal(detail.assessment.criteria[0].recommendation, 'Add the missing concept and rerun.')
+})
+
+test('read-only compare reports comparability and never claims an automatic Gate', async () => {
+  const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-compare-'))
+  await makeJob(projectRoot, 'baseline', 2)
+  await makeJob(projectRoot, 'candidate', 2)
+  const candidatePath = path.join(projectRoot, 'jobs', 'candidate', 'evaluation-summary.json')
+  const candidate = JSON.parse(await readFile(candidatePath, 'utf8'))
+  candidate.metrics.reward = 0.92
+  candidate.trials[0].rewards.reward = 0.5
+  await writeFile(candidatePath, JSON.stringify(candidate))
+  const comparison = await readComparison(config(projectRoot), { baseline: 'baseline', candidate: 'candidate' })
+  assert.equal(comparison.comparable, true)
+  assert.ok(Math.abs(comparison.metrics.reward.delta - 0.1) < 1e-9)
+  assert.equal(comparison.gateEligibility, 'requires-explicit-gate')
+  assert.match(comparison.note, /never runs Gate/)
+})
+
+test('Evaluator governance is read-only, source-contained, and redacts credential assignments', async () => {
+  const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-governance-'))
+  const job = path.join(projectRoot, 'jobs', 'governed')
+  await mkdir(path.join(projectRoot, 'stack'), { recursive: true })
+  await mkdir(job, { recursive: true })
+  await writeFile(path.join(projectRoot, 'stack', 'rubric.md'), 'score evidence\napi_key=do-not-show\n')
+  await writeFile(path.join(job, 'evaluation-stack-manifest.json'), JSON.stringify({ schema_version: 1, stack_id: 'search', version: '2', digest: 'sha256:stack', components: { rubric: { id: 'rubric', version: '2', entry: 'stack/rubric.md', digest: 'sha256:rubric', reward_affecting: true } }, judge: { provider: 'local', model: 'judge', version: '1' } }))
+  await writeFile(path.join(job, 'evaluation-contract.json'), JSON.stringify({ schema_version: 1, contract_id: 'search', version: '2', primary_metric: 'reward', metrics: [{ id: 'reward' }] }))
+  await writeFile(path.join(job, 'evaluation-context.json'), JSON.stringify({ schema_version: 2, digest: 'sha256:context' }))
+  const governance = await readEvaluatorGovernance(config(projectRoot), { job: 'governed' })
+  assert.match(governance.components.rubric.source.text, /api_key=\[REDACTED\]/)
+  assert.doesNotMatch(governance.components.rubric.source.text, /do-not-show/)
+  assert.equal(governance.editingPolicy.browserWriteEnabled, false)
+  assert.equal(governance.editingPolicy.automaticGate, false)
+  assert.equal(governance.upgradeWorkflow.steps.length, 5)
+  assert.match(governance.upgradeWorkflow.skillPrompt, /new immutable evaluator identity/)
+})
+
+test('Evaluator meta-evaluation is a separate Ground Truth flow with provenance and metrics', async () => {
+  const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-meta-'))
+  await mkdir(path.join(projectRoot, 'examples', 'research', '.harbor'), { recursive: true })
+  await writeFile(path.join(projectRoot, 'examples', 'research', '.harbor', 'ground-truth.json'), JSON.stringify({
+    schema_version: 1,
+    protocol: 'ground-truth/v1',
+    ground_truth_id: 'research-gt',
+    version: '1.0.0',
+    source: { kind: 'model', description: 'Pinned independent adjudicator', provenance: 'provider/model/template', independent_of_candidate: true },
+    criteria: [{ id: 'quality', label: 'Quality' }],
+    cases: [{ id: 'bad', artifact_ref: 'fixtures/bad.json', badcase: true, criteria: [{ id: 'quality', score: 0, weight: 1, reason: 'Empty' }] }],
+  }))
+  await writeFile(path.join(projectRoot, 'examples', 'research', '.harbor', 'meta-evaluation-report.json'), JSON.stringify({
+    schema_version: 1,
+    protocol: 'meta-evaluation-report/v1',
+    evaluator: { id: 'judge', version: '2.0.0' },
+    coverage: { rate: 1 },
+    metrics: { esf: 0.9, sce: 0.1, rcr: 1 },
+    disagreements: [],
+  }))
+  const meta = await readMetaEvaluation(config(projectRoot), { evaluationRoot: 'examples/research' })
+  assert.equal(meta.status, 'evaluated')
+  assert.equal(meta.groundTruth.source.kind, 'model')
+  assert.equal(meta.groundTruth.badcaseCount, 1)
+  assert.equal(meta.report.metrics.esf, 0.9)
+  assert.match(meta.workflow.nextAction, /fresh Agent baseline/)
 })

@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "cie-color",
+      "title": "CIE International Lighting Vocabulary: colour",
+      "url": "https://cie.co.at/eilvterm/17-22-072",
+      "content": "颜色不是物体中孤立存在的标签，而是光的光谱组成、物体对光的反射或吸收，以及人类视觉系统共同产生的知觉属性。不同波长组合会刺激视锥细胞，再由大脑形成颜色体验。",
+      "keywords": [
+        "颜色",
+        "色彩",
+        "光",
+        "波长",
+        "视觉"
+      ]
+    }
+  ]
+}

@@ -49,127 +49,398 @@ var harbor_ocean_default = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD/4
 // src/client/index.jsx
 var NS = "harbor-evolution";
 var API = "/_dsh/harbor-evolution";
+var STAGES = ["candidate", "dataset", "integration", "renderer", "judge", "meta", "reporter", "optimizer", "gate"];
+var REPORT_PAGE_SIZE = 10;
 var dictionaries = {
   zh: {
     tab: "Harbor",
     settings: "Harbor \u81EA\u8FDB\u5316",
     eyebrow: "EVALUATION WORKBENCH",
-    heroTitle: "\u7A33\u5B9A\u5730\u770B\u89C1 Agent \u662F\u5426\u771F\u7684\u8FDB\u6B65",
-    heroBody: "Evaluation Stack \u56FA\u5B9A\u8BC4\u6D4B\u542B\u4E49\uFF0CContext v2 \u56FA\u5B9A\u53EF\u6BD4\u8F83\u6027\uFF0CPromotion Gate \u53EA\u63A5\u53D7\u6709\u8BC1\u636E\u4E14\u65E0\u56DE\u5F52\u7684 Candidate\u3002",
+    heroTitle: "\u770B\u89C1 Agent \u7684\u6BCF\u4E00\u6B21\u8FDB\u6B65\uFF0C\u4E5F\u770B\u89C1\u5206\u6570\u662F\u5426\u503C\u5F97\u76F8\u4FE1",
+    heroBody: "Harbor \u56FA\u5B9A\u5B9E\u9A8C\u8FB9\u754C\uFF1BTrial Lifecycle \u5C55\u793A\u771F\u5B9E\u8FD0\u884C\u8FC7\u7A0B\uFF1BScore Validity \u963B\u6B62\u57FA\u7840\u8BBE\u65BD\u6545\u969C\u4F2A\u88C5\u6210\u4E1A\u52A1 0 \u5206\u3002",
     refresh: "\u5237\u65B0",
     jobs: "\u8BC4\u6D4B\u6279\u6B21",
-    jobsHint: "\u8F7B\u91CF\u603B\u89C8\uFF1B\u70B9\u51FB Job \u6253\u5F00\u5B8C\u6574\u8BC4\u6D4B\u5DE5\u4F5C\u53F0\u3002",
-    empty: "\u8FD8\u6CA1\u6709 Context v2 Job\u3002\u5148\u8C03\u7528\u5B98\u65B9 Skill \u5B8C\u6210\u67B6\u6784\u6F84\u6E05\u548C\u521D\u59CB\u5316\u3002",
-    completed: "\u5B8C\u6210",
-    partial: "\u5E26\u5F02\u5E38",
-    failed: "\u5931\u8D25",
-    pending: "\u8FD0\u884C\u4E2D",
-    candidate: "Candidate",
+    jobsHint: "\u70B9\u51FB Job \u540E\uFF0C\u6700\u591A\u518D\u70B9\u4E00\u6B21\u5373\u53EF\u8FDB\u5165\u5BF9\u5E94 Trial \u7684\u8BC1\u636E\u3002",
+    empty: "\u8FD8\u6CA1\u6709\u53EF\u8BFB\u53D6\u7684 Harbor Job\u3002\u8BF7\u7528\u5B98\u65B9 Skill \u5B8C\u6210\u9700\u6C42\u6F84\u6E05\u548C\u521D\u59CB\u5316\u3002",
+    completed: "\u5DF2\u5B8C\u6210",
+    partial: "\u5B8C\u6210\u4F46\u6709\u5F02\u5E38",
+    failed: "\u8BFB\u53D6\u5931\u8D25",
+    pending: "\u7B49\u5F85\u8FD0\u884C",
+    running: "\u8FD0\u884C\u4E2D",
+    attention: "\u9700\u6838\u67E5",
+    candidate: "\u5019\u9009\u7248\u672C",
+    dataset: "\u8BC4\u6D4B\u96C6",
+    integration: "\u96C6\u6210",
+    renderer: "\u4EA7\u7269\u5448\u73B0",
+    judge: "\u8BC4\u6D4B\u5668",
+    meta: "\u8BC4\u6D4B\u5668\u5143\u8BC4\u6D4B",
+    reporter: "\u8BC4\u6D4B\u62A5\u544A",
+    optimizer: "\u4F18\u5316\u5668",
+    gate: "\u664B\u7EA7\u95E8\u7981",
     context: "Context v2",
     trials: "Trials",
     exceptions: "\u5F02\u5E38",
     mode: "\u6A21\u5F0F",
-    result: "\u7ED3\u679C\u6458\u8981",
-    process: "\u8BC4\u6D4B\u8FC7\u7A0B",
-    contract: "\u8BC4\u6D4B\u5951\u7EA6",
-    stack: "Evaluation Stack",
-    dataset: "Dataset",
-    assessments: "Trial \u8BC4\u6D4B",
-    reasons: "\u539F\u56E0\u4E0E\u8BC1\u636E",
-    optimization: "\u4F18\u5316\u5EFA\u8BAE",
-    promotion: "\u664B\u7EA7\u51B3\u7B56",
-    audit: "\u5BA1\u8BA1\u4EA7\u7269",
     close: "\u5173\u95ED",
-    search: "\u641C\u7D22 Trial",
+    retry: "\u91CD\u8BD5",
+    loading: "\u6B63\u5728\u8BFB\u53D6\u2026",
+    noData: "\u6682\u65E0\u6570\u636E",
+    currentStatus: "\u5F53\u524D\u72B6\u6001",
+    score: "\u4E1A\u52A1\u5206\u6570",
+    valid: "\u5206\u6570\u6709\u6548",
+    validScores: "\u6709\u6548\u5206\u6570",
+    invalid: "\u5206\u6570\u65E0\u6548",
+    unavailable: "\u4E0D\u53EF\u7528",
+    validity: "Score Validity",
+    progress: "\u8FDB\u5EA6",
+    health: "\u5065\u5EB7\u5EA6",
+    evidence: "\u8BC1\u636E",
+    capabilityUnavailable: "\u6B64 Job \u672A\u4EA7\u51FA\u8BE5\u7248\u672C\u80FD\u529B\uFF1B\u4EC5\u6309\u5386\u53F2\u4EA7\u7269\u53EA\u8BFB\u5C55\u793A\u3002",
+    search: "\u641C\u7D22 Query / Trial",
     all: "\u5168\u90E8",
-    assessed: "\u5DF2\u8BC4\u6D4B",
-    infra: "\u57FA\u7840\u8BBE\u65BD\u5F02\u5E38",
     previous: "\u4E0A\u4E00\u9875",
     next: "\u4E0B\u4E00\u9875",
-    noData: "\u6682\u65E0\u4EA7\u7269",
-    validation: "\u4EA7\u7269\u6821\u9A8C",
-    ready: "\u53EF\u7528\u4E8E\u6B63\u5F0F\u8BC4\u6D4B",
-    blocked: "\u5B58\u5728\u963B\u65AD\u9879",
-    doctor: "Architecture Doctor",
-    primaryMetric: "\u4E3B\u6307\u6807",
-    population: "\u6837\u672C\u5206\u5E03",
-    component: "\u7EC4\u4EF6",
-    version: "\u7248\u672C",
-    digest: "Digest",
-    source: "\u8BC1\u636E",
-    findings: "Findings",
-    output: "\u8F93\u51FA\u4E0E\u4E2D\u95F4\u7ED3\u679C",
+    datasetOrder: "Dataset \u987A\u5E8F",
+    latest: "\u6700\u8FD1\u5B8C\u6210",
+    lowest: "\u6700\u4F4E\u5206",
+    errorsFirst: "\u9519\u8BEF\u4F18\u5148",
+    findings: "\u4E3B\u8981\u53D1\u73B0",
+    recommendations: "\u5EFA\u8BAE",
+    output: "\u7528\u6237\u53EF\u89C1\u8F93\u51FA",
+    criteria: "\u8BC4\u5206\u7EF4\u5EA6",
+    provenance: "\u8BC1\u636E\u6765\u6E90",
+    timing: "\u6267\u884C\u65F6\u95F4",
+    audit: "\u5BA1\u8BA1\u539F\u6587",
+    compare: "\u56DE\u5F52\u6BD4\u8F83",
+    baseline: "Baseline Job",
+    comparable: "\u53EF\u6BD4\u8F83",
+    notComparable: "\u4E0D\u53EF\u6BD4\u8F83",
+    improved: "\u6539\u5584\u6837\u672C",
+    regressed: "\u56DE\u5F52\u6837\u672C",
+    explicitGate: "\u53EA\u8BFB\u6BD4\u8F83\u4E0D\u4F1A\u81EA\u52A8 Gate\uFF1B\u9700\u8981\u663E\u5F0F\u6388\u6743\u540E\u8FD0\u884C\u786E\u5B9A\u6027 Gate\u3002",
+    governance: "\u8BC4\u6D4B\u5668\u6CBB\u7406",
+    governanceHint: "\u8BFB\u53D6 Rubric / Evaluator / Judge \u8EAB\u4EFD\u4E0E\u6E90\u7801\u3002\u8BED\u4E49\u6539\u52A8\u5FC5\u987B\u521B\u5EFA\u65B0\u8EAB\u4EFD\uFF0C\u5E76\u5EFA\u7ACB\u65B0 Baseline\u3002",
+    artifacts: "Artifact Registry",
     setupDoctor: "\u5B89\u88C5\u4E0E\u67B6\u6784\u68C0\u67E5",
-    setupHint: "\u8FD9\u91CC\u4EC5\u5C55\u793A\u72B6\u6001\uFF0C\u4E0D\u4F1A\u4ECE\u6D4F\u89C8\u5668\u6539\u5199 Cordis \u914D\u7F6E\u3002",
-    retry: "\u91CD\u8BD5",
-    loading: "\u6B63\u5728\u8BFB\u53D6\u2026"
+    setupHint: "\u6D4F\u89C8\u5668\u4EC5\u80FD\u6539\u5199 Evaluator \u58F0\u660E\u4E2D\u660E\u786E\u6388\u6743\u7684\u6587\u4EF6\uFF1B\u4E0D\u4F1A\u6539\u5199 Candidate \u6216\u81EA\u52A8\u53D1\u8D77\u8BC4\u6D4B\u3002",
+    stageNav: "\u8BC4\u6D4B\u9636\u6BB5",
+    datasetTasks: "\u8BC4\u6D4B\u4EFB\u52A1",
+    datasetSource: "\u4EFB\u52A1\u6765\u6E90",
+    taskInstruction: "\u5177\u4F53\u4EFB\u52A1\u8981\u6C42",
+    instructionFile: "\u6307\u4EE4\u6587\u4EF6",
+    snapshot: "Job \u56FA\u5316\u5FEB\u7167",
+    historicalFallback: "\u5386\u53F2 Job \u6E90\u6587\u4EF6\u56DE\u8BFB",
+    generatedOutput: "\u751F\u6210\u4EA7\u7269",
+    selectTrial: "\u9009\u62E9 Trial",
+    noRenderableOutput: "\u8FD9\u4E2A Trial \u6CA1\u6709\u53EF\u5448\u73B0\u7684\u9875\u9762\u3001\u6587\u6863\u6216\u7ED3\u6784\u5316\u4EA7\u7269\u3002\u8BF7\u8BA9 Agent \u5C06\u4E1A\u52A1\u7ED3\u679C\u5199\u5165 Harbor artifacts\u3002",
+    previewSource: "\u4EA7\u7269\u6765\u6E90",
+    pagePreview: "\u9875\u9762\u9884\u89C8",
+    documentPreview: "\u6587\u6863\u9884\u89C8",
+    structuredOutput: "\u7ED3\u6784\u5316\u4EA7\u7269",
+    rawOutput: "\u539F\u59CB\u4EA7\u7269",
+    currentEvaluator: "\u5F53\u524D\u8BC4\u6D4B\u5668",
+    evaluator: "Evaluator",
+    rubric: "Rubric",
+    judgeParameters: "Judge \u53C2\u6570",
+    scoringContract: "\u8BC4\u5206\u5408\u540C",
+    primaryMetric: "\u4E3B\u6307\u6807",
+    metricSemantics: "\u6307\u6807\u8BED\u4E49",
+    sourceCode: "\u67E5\u770B\u6E90\u7801",
+    upgradeEvaluator: "\u5982\u4F55\u5347\u7EA7\u8BC4\u6D4B\u5668",
+    upgradeHint: "\u8BC4\u6D4B\u5668\u5347\u7EA7\u4F1A\u6539\u53D8\u5206\u6570\u8BED\u4E49\u3002\u521B\u5EFA\u65B0\u8EAB\u4EFD\uFF0C\u5148\u505A\u5143\u8BC4\u6D4B\uFF0C\u518D\u5EFA\u7ACB\u65B0\u7684 Agent Baseline\u3002",
+    copyPrompt: "\u590D\u5236\u7ED9 Agent",
+    copied: "\u5DF2\u590D\u5236",
+    freshBaseline: "\u9700\u8981\u65B0 Baseline",
+    metaEvaluation: "\u5143\u8BC4\u6D4B\u8981\u6C42",
+    evaluatorImplementation: "\u8BC4\u6D4B\u5668\u5B9E\u73B0",
+    evaluatorKind: "\u5B9E\u73B0\u7C7B\u578B",
+    evaluatorProtocol: "\u63A5\u53E3\u534F\u8BAE",
+    editableFiles: "\u5141\u8BB8\u4FEE\u6539\u7684\u6587\u4EF6",
+    openFile: "\u6253\u5F00",
+    editingFile: "\u6B63\u5728\u4FEE\u6539",
+    editSource: "\u76F4\u63A5\u4FEE\u6539\u5F53\u524D\u6587\u4EF6",
+    evaluatorVersion: "\u65B0 Evaluator \u7248\u672C",
+    stackVersion: "\u65B0 Stack \u7248\u672C",
+    saveEvaluator: "\u4FDD\u5B58\u4E3A\u65B0\u8EAB\u4EFD",
+    saving: "\u6B63\u5728\u4FDD\u5B58\u2026",
+    saved: "\u5DF2\u4FDD\u5B58\uFF1B\u4E0B\u4E00\u6B65\u8BF7\u505A\u5143\u8BC4\u6D4B\u5E76\u5EFA\u7ACB\u65B0 Baseline\u3002",
+    reloadBeforeSave: "\u6E90\u7801\u5DF2\u53D8\u5316\uFF0C\u8BF7\u5237\u65B0\u540E\u518D\u4FDD\u5B58\u3002",
+    noEvaluatorInterface: "\u5F53\u524D Stack \u8FD8\u6CA1\u6709 harbor-dsh-evaluator/v1 \u63A5\u53E3\uFF0C\u4E0D\u80FD\u4ECE UI \u5B89\u5168\u7F16\u8F91\u3002",
+    editWarning: "\u4FDD\u5B58\u53EA\u66F4\u65B0\u6E90\u7801\u4E0E\u8EAB\u4EFD\uFF0C\u4E0D\u4F1A\u81EA\u52A8\u8FD0\u884C\u8BC4\u6D4B\u6216 Gate\u3002",
+    upgradeStep1: "\u67E5\u770B\u5F53\u524D Evaluator\u3001Rubric\u3001Judge\u3001\u8BC4\u5206\u5408\u540C\u548C\u4EE3\u8868\u6027\u8BEF\u5224\u6837\u672C\u3002",
+    upgradeStep2: "\u521B\u5EFA\u65B0\u7684\u8BC4\u6D4B\u5668\u8EAB\u4EFD\u3001\u7248\u672C\u548C\u6E90\u6587\u4EF6\uFF1B\u4E0D\u8986\u76D6\u5386\u53F2\u8BC4\u6D4B\u5668\u3002",
+    upgradeStep3: "\u4F7F\u7528\u72EC\u7ACB\u3001\u53EF\u8FFD\u6EAF\u7684 GT \u8FD0\u884C\u5143\u8BC4\u6D4B\uFF0C\u68C0\u67E5 ESF\u3001SCE\u3001RCR\u3001\u5EF6\u8FDF\u548C\u6210\u672C\u3002",
+    upgradeStep4: "\u66F4\u65B0 Evaluation Stack \u8EAB\u4EFD\uFF0C\u5E76\u9884\u89C8 Context v2 \u53D8\u5316\u3002",
+    upgradeStep5: "\u5728\u65B0\u5206\u6570\u8BED\u4E49\u4E0B\u5EFA\u7ACB\u5168\u65B0 Agent Baseline\uFF0C\u518D\u6BD4\u8F83\u540E\u7EED Candidate\u3002",
+    evaluatorPrompt: "\u8BF7\u4F7F\u7528 evolve-agent-with-harbor \u5347\u7EA7\u5F53\u524D\u8BC4\u6D4B\u5668\u3002\u5148\u8BFB\u53D6 governance \u8BC1\u636E\uFF0C\u6F84\u6E05 GT \u7684\u6765\u6E90\u7C7B\u578B\u3001provenance\u3001\u7EF4\u62A4\u8005\u548C\u76EE\u6807\u5143\u6307\u6807\uFF0C\u518D\u63D0\u51FA\u65B0\u7684\u4E0D\u53EF\u53D8\u8BC4\u6D4B\u5668\u8EAB\u4EFD\u4E0E fresh-baseline \u65B9\u6848\u3002\u5728\u6211\u6279\u51C6\u53D7\u63A7\u6539\u52A8\u524D\uFF0C\u4E0D\u8981\u4FEE\u6539\u6587\u4EF6\u6216\u53D1\u8D77\u8BC4\u6D4B\u3002",
+    queryTrial: "\u4EFB\u52A1 / Trial",
+    statusLabel: "\u72B6\u6001",
+    attempt: "\u5C1D\u8BD5",
+    population: "\u4EFB\u52A1\u6570\u91CF",
+    experimentIdentity: "\u672C\u6B21\u5B9E\u9A8C\u56FA\u5B9A\u4E86\u4EC0\u4E48",
+    experimentIdentityHint: "Candidate\u3001Dataset\u3001Evaluation Stack \u4E0E Runtime \u5171\u540C\u5B9A\u4E49\u53EF\u590D\u73B0\u3001\u53EF\u6BD4\u8F83\u7684\u5B9E\u9A8C\u8EAB\u4EFD\u3002",
+    immutableCandidateFiles: "\u5019\u9009\u7248\u672C\u5185\u5BB9",
+    file: "\u6587\u4EF6",
+    size: "\u5927\u5C0F",
+    digest: "\u5185\u5BB9\u6307\u7EB9",
+    runtime: "\u8FD0\u884C\u65F6",
+    evaluationStack: "Evaluation Stack",
+    integrationBoundary: "\u6267\u884C\u4E0E\u8BC4\u5206\u8FB9\u754C",
+    hardRequirements: "\u5206\u6570\u751F\u6548\u524D\u5FC5\u987B\u6EE1\u8DB3",
+    populationEvidence: "\u603B\u4F53\u8BC4\u6D4B\u8BC1\u636E",
+    metric: "\u6307\u6807",
+    aggregate: "\u603B\u4F53\u503C",
+    coverage: "\u6709\u6548\u8986\u76D6",
+    trialGroups: "Trial \u72B6\u6001\u5206\u7EC4",
+    controlledHypotheses: "\u53D7\u63A7\u4F18\u5316\u5047\u8BBE",
+    rootCause: "\u8BC1\u636E\u6307\u5411",
+    affectedTrials: "\u5F71\u54CD\u6837\u672C",
+    expectedEffect: "\u9884\u671F\u6307\u6807\u53D8\u5316",
+    mutationSurface: "\u5141\u8BB8\u6539\u52A8",
+    forbiddenSurface: "\u7981\u6B62\u6539\u52A8",
+    guardrails: "\u4FDD\u62A4\u6761\u4EF6",
+    rollback: "\u56DE\u6EDA\u6761\u4EF6",
+    nextExperiment: "\u4E0B\u4E00\u6B21\u53D7\u63A7\u5B9E\u9A8C",
+    noHypotheses: "\u672C\u6279\u6B21\u6CA1\u6709\u751F\u6210\u53D7\u63A7\u4F18\u5316\u5047\u8BBE\u3002",
+    gateEvidence: "\u5DF2\u6267\u884C\u7684\u664B\u7EA7\u95E8\u7981",
+    decision: "\u95E8\u7981\u7ED3\u679C",
+    policy: "\u95E8\u7981\u7B56\u7565",
+    eligible: "\u6EE1\u8DB3\u95E8\u7981\u524D\u63D0",
+    notEligible: "\u4E0D\u6EE1\u8DB3\u95E8\u7981\u524D\u63D0",
+    metricDeltas: "\u6307\u6807\u53D8\u5316",
+    newExceptions: "\u65B0\u589E\u5F02\u5E38",
+    artifactRegressions: "\u4EA7\u7269\u56DE\u5F52",
+    reasons: "\u95E8\u7981\u4F9D\u636E",
+    trialAssessments: "\u9010 Trial \u8BC4\u6D4B",
+    trialAssessmentsHint: "\u6BCF\u4E00\u884C\u5BF9\u5E94\u4E00\u4E2A\u4E1A\u52A1\u4EA7\u7269\uFF1B\u9009\u62E9\u4EFB\u52A1\u540E\u53EF\u5E76\u6392\u67E5\u770B\u4EA7\u7269\u3001\u9010\u7EF4\u5206\u6570\u3001\u539F\u56E0\u548C\u8BC4\u6D4B\u5668\u5EFA\u8BAE\u3002",
+    overallScore: "\u7EFC\u5408\u5206",
+    artifact: "\u8BC4\u6D4B\u4EA7\u7269",
+    assessmentReason: "\u8BC4\u5206\u539F\u56E0",
+    assessmentRecommendation: "\u6539\u8FDB\u5EFA\u8BAE",
+    assessmentDetails: "\u8BC4\u6D4B\u8BE6\u60C5",
+    noAssessmentReason: "\u8BC4\u6D4B\u5668\u6CA1\u6709\u8FD4\u56DE\u8BC4\u5206\u539F\u56E0\uFF1B\u8BE5\u7ED3\u679C\u4E0D\u5E94\u8FDB\u5165\u6709\u6548\u603B\u4F53\u5206\u3002",
+    noAssessmentRecommendation: "\u8BC4\u6D4B\u5668\u6CA1\u6709\u8FD4\u56DE\u6539\u8FDB\u5EFA\u8BAE\uFF1B\u8BE5\u7ED3\u679C\u4E0D\u5E94\u8FDB\u5165\u6709\u6548\u603B\u4F53\u5206\u3002",
+    evaluatorAdvice: "\u8BC4\u6D4B\u5668\u5EFA\u8BAE",
+    reportPage: "\u62A5\u544A\u5206\u9875",
+    groundTruth: "Ground Truth\uFF08\u91D1\u6807\uFF09",
+    groundTruthRequired: "\u9700\u8981\u5148\u5EFA\u7ACB\u72EC\u7ACB Ground Truth",
+    gtSource: "GT \u6765\u6E90",
+    gtProvenance: "\u6765\u6E90\u8BC1\u660E",
+    gtCases: "\u91D1\u6807\u6837\u672C",
+    gtBadcases: "Badcase",
+    gtKinds: "\u53EF\u9009\u6765\u6E90\uFF1A\u4EBA\u5DE5\u3001\u7A0B\u5E8F\u3001\u591A\u65B9\u5171\u8BC6\u3001\u72EC\u7ACB\u6A21\u578B\u6216\u5916\u90E8\u6807\u51C6\u3002\u5173\u952E\u662F\u7248\u672C\u5316\u3001\u53EF\u8FFD\u6EAF\uFF0C\u5E76\u72EC\u7ACB\u4E8E\u5F85\u6D4B\u8BC4\u6D4B\u5668\u3002",
+    metaWorkflow: "\u72EC\u7ACB\u5143\u8BC4\u6D4B\u6D41\u7A0B",
+    metaWorkflowHint: "Evaluator \u662F Candidate\uFF1B\u56FA\u5B9A\u4EA7\u7269\u4E0E GT \u662F Dataset\uFF1B\u91CD\u590D\u89C2\u6D4B\u540E\u8BA1\u7B97 ESF\u3001SCE\u3001RCR\u3002",
+    metaNext: "\u4E0B\u4E00\u6B65",
+    disagreements: "\u5206\u6B67\u6837\u672C",
+    hookExecution: "\u7EC4\u4EF6\u6267\u884C\u72B6\u6001",
+    configuredHookNotRun: "Evaluation Stack \u5DF2\u914D\u7F6E\u8BE5\u4E1A\u52A1\u7EC4\u4EF6\uFF0C\u4F46\u672C\u6B21\u5E76\u672A\u6267\u884C\uFF1B\u5F53\u524D\u5185\u5BB9\u7531\u63D2\u4EF6\u5185\u7F6E\u786E\u5B9A\u6027 fallback \u751F\u6210\u3002",
+    configuredHookRun: "\u672C\u6B21\u6267\u884C\u4E86 Evaluation Stack \u914D\u7F6E\u7684\u4E1A\u52A1\u7EC4\u4EF6\u3002",
+    pluginFallback: "\u63D2\u4EF6\u5185\u7F6E fallback",
+    badcase: "Badcase"
   },
   en: {
     tab: "Harbor",
     settings: "Harbor Evolution",
     eyebrow: "EVALUATION WORKBENCH",
-    heroTitle: "See whether the Agent actually improved",
-    heroBody: "Evaluation Stack fixes meaning, Context v2 fixes comparability, and the Promotion Gate accepts only evidenced, non-regressing Candidates.",
+    heroTitle: "See every Agent improvement\u2014and whether the score is trustworthy",
+    heroBody: "Harbor fixes the experiment boundary. Trial Lifecycle shows real execution, while Score Validity keeps infrastructure failures out of quality metrics.",
     refresh: "Refresh",
     jobs: "Evaluation jobs",
-    jobsHint: "Lightweight overview; open a Job for the full workbench.",
-    empty: "No Context v2 Jobs yet. Use the official Skill to clarify and initialize the architecture.",
+    jobsHint: "Open a Job, then reach Trial evidence in at most one more interaction.",
+    empty: "No readable Harbor Jobs yet. Use the official Skill to clarify and initialize the project.",
     completed: "Completed",
-    partial: "Partial",
-    failed: "Failed",
-    pending: "Running",
+    partial: "Completed with errors",
+    failed: "Read failed",
+    pending: "Queued",
+    running: "Running",
+    attention: "Needs review",
     candidate: "Candidate",
+    dataset: "Dataset",
+    integration: "Integration",
+    renderer: "Renderer",
+    judge: "Judge",
+    meta: "Evaluator meta-evaluation",
+    reporter: "Reporter",
+    optimizer: "Optimizer",
+    gate: "Gate",
     context: "Context v2",
     trials: "Trials",
     exceptions: "Exceptions",
     mode: "Mode",
-    result: "Outcome",
-    process: "Evaluation process",
-    contract: "Evaluation contract",
-    stack: "Evaluation Stack",
-    dataset: "Dataset",
-    assessments: "Trial assessments",
-    reasons: "Reasons and evidence",
-    optimization: "Optimization",
-    promotion: "Promotion",
-    audit: "Audit artifacts",
     close: "Close",
-    search: "Search trials",
+    retry: "Retry",
+    loading: "Loading\u2026",
+    noData: "No data",
+    currentStatus: "Current status",
+    score: "Quality score",
+    valid: "Score valid",
+    validScores: "Valid scores",
+    invalid: "Score invalid",
+    unavailable: "Unavailable",
+    validity: "Score Validity",
+    progress: "Progress",
+    health: "Health",
+    evidence: "Evidence",
+    capabilityUnavailable: "This historical Job did not produce this capability; available artifacts remain read-only.",
+    search: "Search Query / Trial",
     all: "All",
-    assessed: "Assessed",
-    infra: "Infrastructure error",
     previous: "Previous",
     next: "Next",
-    noData: "No artifact",
-    validation: "Artifact validation",
-    ready: "Promotion ready",
-    blocked: "Blocked",
-    doctor: "Architecture Doctor",
-    primaryMetric: "Primary metric",
-    population: "Population",
-    component: "Component",
-    version: "Version",
-    digest: "Digest",
-    source: "Evidence",
+    datasetOrder: "Dataset order",
+    latest: "Latest completed",
+    lowest: "Lowest score",
+    errorsFirst: "Errors first",
     findings: "Findings",
-    output: "Output and intermediate results",
+    recommendations: "Recommendations",
+    output: "User-visible output",
+    criteria: "Criteria",
+    provenance: "Evidence provenance",
+    timing: "Timing",
+    audit: "Raw audit",
+    compare: "Regression comparison",
+    baseline: "Baseline Job",
+    comparable: "Comparable",
+    notComparable: "Not comparable",
+    improved: "Improved trials",
+    regressed: "Regressed trials",
+    explicitGate: "A read-only comparison never runs Gate. Run the deterministic Gate only with explicit authority.",
+    governance: "Evaluator governance",
+    governanceHint: "Read Rubric, Evaluator, Judge identity, and source. Semantic edits create a new identity and require a fresh baseline.",
+    artifacts: "Artifact Registry",
     setupDoctor: "Installation and architecture checks",
-    setupHint: "Read-only status; the browser never rewrites Cordis configuration.",
-    retry: "Retry",
-    loading: "Loading\u2026"
+    setupHint: "The browser may only update files explicitly authorized by the Evaluator descriptor; it never rewrites a Candidate or launches evaluation automatically.",
+    stageNav: "Evaluation stages",
+    datasetTasks: "Evaluation tasks",
+    datasetSource: "Task source",
+    taskInstruction: "Task instruction",
+    instructionFile: "Instruction file",
+    snapshot: "Job snapshot",
+    historicalFallback: "Historical source fallback",
+    generatedOutput: "Generated output",
+    selectTrial: "Select Trial",
+    noRenderableOutput: "This Trial has no renderable page, document, or structured artifact. Publish the business result through Harbor artifacts.",
+    previewSource: "Output provenance",
+    pagePreview: "Page preview",
+    documentPreview: "Document preview",
+    structuredOutput: "Structured output",
+    rawOutput: "Raw output",
+    currentEvaluator: "Current evaluator",
+    evaluator: "Evaluator",
+    rubric: "Rubric",
+    judgeParameters: "Judge parameters",
+    scoringContract: "Scoring contract",
+    primaryMetric: "Primary metric",
+    metricSemantics: "Metric semantics",
+    sourceCode: "View source",
+    upgradeEvaluator: "How to upgrade the evaluator",
+    upgradeHint: "Evaluator upgrades change score semantics. Create a new identity, meta-evaluate it, then establish a fresh Agent baseline.",
+    copyPrompt: "Copy for Agent",
+    copied: "Copied",
+    freshBaseline: "Fresh baseline required",
+    metaEvaluation: "Meta-evaluation requirements",
+    evaluatorImplementation: "Evaluator implementation",
+    evaluatorKind: "Implementation kind",
+    evaluatorProtocol: "Interface protocol",
+    editableFiles: "Files you can modify",
+    openFile: "Open",
+    editingFile: "Editing",
+    editSource: "Edit the current file directly",
+    evaluatorVersion: "New Evaluator version",
+    stackVersion: "New Stack version",
+    saveEvaluator: "Save as new identity",
+    saving: "Saving\u2026",
+    saved: "Saved. Meta-evaluate it and establish a fresh Baseline next.",
+    reloadBeforeSave: "The source changed; reload before saving.",
+    noEvaluatorInterface: "This Stack has no harbor-dsh-evaluator/v1 interface, so safe UI editing is unavailable.",
+    editWarning: "Saving updates source and identities only. It never runs an evaluation or Gate.",
+    upgradeStep1: "Inspect the current Evaluator, Rubric, Judge, Contract, and representative false-positive or false-negative Trials.",
+    upgradeStep2: "Create a new evaluator identity, version, and source file; never overwrite the historical evaluator.",
+    upgradeStep3: "Meta-evaluate against independently maintained, provenance-bearing GT using ESF, SCE, RCR, latency, and cost as appropriate.",
+    upgradeStep4: "Update the Evaluation Stack identity and preview the Context v2 impact.",
+    upgradeStep5: "Establish a fresh Agent baseline under the new score semantics before comparing later Candidates.",
+    evaluatorPrompt: "Use evolve-agent-with-harbor to upgrade this evaluator. First inspect governance evidence, clarify GT source type, provenance, ownership, and target meta-metrics, then propose a new immutable evaluator identity and fresh-baseline plan. Do not edit files or run an evaluation until I approve the controlled change.",
+    queryTrial: "Task / Trial",
+    statusLabel: "Status",
+    attempt: "Attempt",
+    population: "Population",
+    experimentIdentity: "Fixed experiment identity",
+    experimentIdentityHint: "Candidate, Dataset, Evaluation Stack, and Runtime jointly define a reproducible and comparable experiment.",
+    immutableCandidateFiles: "Candidate contents",
+    file: "File",
+    size: "Size",
+    digest: "Digest",
+    runtime: "Runtime",
+    evaluationStack: "Evaluation Stack",
+    integrationBoundary: "Execution and scoring boundary",
+    hardRequirements: "Required before a score is valid",
+    populationEvidence: "Population evidence",
+    metric: "Metric",
+    aggregate: "Aggregate",
+    coverage: "Valid coverage",
+    trialGroups: "Trial status groups",
+    controlledHypotheses: "Controlled optimization hypotheses",
+    rootCause: "Evidence points to",
+    affectedTrials: "Affected trials",
+    expectedEffect: "Expected metric effect",
+    mutationSurface: "Allowed mutation",
+    forbiddenSurface: "Forbidden mutation",
+    guardrails: "Guardrails",
+    rollback: "Rollback condition",
+    nextExperiment: "Next controlled experiment",
+    noHypotheses: "No controlled optimization hypothesis was generated for this Job.",
+    gateEvidence: "Executed promotion gate",
+    decision: "Gate result",
+    policy: "Gate policy",
+    eligible: "Gate prerequisites satisfied",
+    notEligible: "Gate prerequisites not satisfied",
+    metricDeltas: "Metric deltas",
+    newExceptions: "New exceptions",
+    artifactRegressions: "Artifact regressions",
+    reasons: "Gate evidence",
+    trialAssessments: "Per-Trial assessments",
+    trialAssessmentsHint: "Each row represents one business artifact. Select a task to compare the artifact with criterion scores, reasons, and evaluator recommendations side by side.",
+    overallScore: "Overall score",
+    artifact: "Assessed artifact",
+    assessmentReason: "Scoring reason",
+    assessmentRecommendation: "Recommendation",
+    assessmentDetails: "Assessment details",
+    noAssessmentReason: "The evaluator returned no scoring reason; this result should not enter valid aggregates.",
+    noAssessmentRecommendation: "The evaluator returned no recommendation; this result should not enter valid aggregates.",
+    evaluatorAdvice: "Evaluator recommendation",
+    reportPage: "Report page",
+    groundTruth: "Ground Truth",
+    groundTruthRequired: "Independent Ground Truth is required",
+    gtSource: "GT source",
+    gtProvenance: "Provenance",
+    gtCases: "GT cases",
+    gtBadcases: "Badcases",
+    gtKinds: "Allowed sources: human, programmatic, consensus, independently pinned model, or external standard. Versioning, provenance, and independence from the Candidate evaluator are mandatory.",
+    metaWorkflow: "Independent meta-evaluation flow",
+    metaWorkflowHint: "Evaluator is the Candidate; fixed artifacts plus GT form the Dataset; repeated observations produce ESF, SCE, and RCR.",
+    metaNext: "Next action",
+    disagreements: "Disagreements",
+    hookExecution: "Component execution",
+    configuredHookNotRun: "The Evaluation Stack configured this business component, but it did not run in this Job. The current content came from the plugin deterministic fallback.",
+    configuredHookRun: "The configured Evaluation Stack component executed in this Job.",
+    pluginFallback: "Plugin fallback",
+    badcase: "Badcase"
   }
 };
 var CSS = `
-.hse-root{--blue:#2769ff;--cyan:#44d9ff;--deep:#061b44;height:100%;min-height:0;overflow:auto;color:var(--dsw-alias-label-primary,#172033);background:var(--dsw-alias-bg-layer-1,#f4f7fc);font-family:inherit}.hse-page{width:min(1240px,calc(100% - 36px));margin:auto;padding:24px 0 56px}
-.hse-hero{position:relative;isolation:isolate;overflow:hidden;min-height:230px;padding:30px;border-radius:24px;color:#fff;background:#061b44 var(--ocean) center/cover no-repeat;box-shadow:0 20px 60px rgba(4,27,74,.23)}.hse-hero:before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(3,17,48,.96),rgba(4,31,79,.82) 52%,rgba(4,31,79,.2))}.hse-hero h1{max-width:650px;margin:16px 0 10px;font-size:clamp(28px,4vw,45px);line-height:1.08;letter-spacing:-.04em}.hse-hero p{max-width:670px;margin:0;color:#dceeff;font-size:14px;line-height:1.7}.hse-eyebrow{color:#76e4ff;font-size:11px;font-weight:800;letter-spacing:.17em}.hse-refresh{position:absolute;right:22px;top:22px;padding:8px 12px;border:1px solid #ffffff4a;border-radius:999px;color:#fff;background:#06245e99;cursor:pointer}
-.hse-stats{display:flex;gap:9px;margin-top:25px;flex-wrap:wrap}.hse-stat{min-width:125px;padding:11px 13px;border:1px solid #ffffff26;border-radius:13px;background:#031a41a3;backdrop-filter:blur(8px)}.hse-stat span{display:block;color:#cde5fa;font-size:10px}.hse-stat b{display:block;margin-top:4px;font-size:20px}.hse-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin:28px 0 12px}.hse-head h2{margin:0;font-size:18px}.hse-head p{margin:4px 0 0;color:#748096;font-size:12px}
-.hse-list{display:grid;gap:10px}.hse-job{display:block;width:100%;padding:0;border:1px solid var(--dsw-alias-border-l1,#dce4f0);border-radius:16px;color:inherit;background:var(--dsw-alias-bg-layer-2,#fff);text-align:left;cursor:pointer;overflow:hidden;box-shadow:0 5px 18px #1b365d0d}.hse-job:hover{border-color:#78a3ff;transform:translateY(-1px)}.hse-job-body{padding:16px 18px}.hse-job-top{display:flex;justify-content:space-between;gap:14px}.hse-job-title{min-width:0}.hse-job-title strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}.hse-job-title small{display:block;margin-top:4px;color:#7b879c;font-size:10px}.hse-status{flex:none;padding:5px 9px;border-radius:999px;color:#126d50;background:#23ba8318;font-size:10px;font-weight:700}.hse-status[data-status=failed]{color:#b5283d;background:#ed5b6c18}.hse-status[data-status=partial]{color:#9c620e;background:#f1a23c1c}.hse-status[data-status=pending]{color:#225cce;background:#2769ff18}.hse-meta-grid{display:grid;grid-template-columns:1.5fr 1.2fr .55fr .55fr .8fr;gap:7px;margin-top:13px}.hse-meta{min-width:0;padding:8px 9px;border-radius:9px;background:var(--dsw-alias-bg-layer-1,#f4f7fb)}.hse-meta span{display:block;color:#7b879c;font-size:9px}.hse-meta b,.hse-meta code{display:block;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.hse-metrics{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.hse-pill{padding:5px 7px;border:1px solid var(--dsw-alias-border-l1,#dce4f0);border-radius:7px;font-size:10px}.hse-pill b{margin-left:5px;color:var(--blue)}
-.hse-empty,.hse-error{padding:34px;border:1px dashed #cbd6e6;border-radius:16px;text-align:center;background:var(--dsw-alias-bg-layer-2,#fff);color:#748096;font-size:12px}.hse-spin{width:25px;height:25px;margin:0 auto 10px;border:3px solid #2769ff22;border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
-.hse-overlay{position:fixed;inset:0;z-index:1000;display:flex;justify-content:flex-end;background:#06142c7a;backdrop-filter:blur(3px)}.hse-drawer{width:min(1040px,94vw);height:100%;overflow:auto;background:var(--dsw-alias-bg-layer-1,#f4f7fc);box-shadow:-24px 0 70px #04142c52}.hse-drawer-head{position:sticky;top:0;z-index:3;display:flex;justify-content:space-between;gap:15px;padding:18px 22px;border-bottom:1px solid var(--dsw-alias-border-l1,#dce4f0);background:color-mix(in srgb,var(--dsw-alias-bg-layer-2,#fff) 92%,transparent);backdrop-filter:blur(12px)}.hse-drawer-head h2{margin:0;font-size:18px}.hse-drawer-head p{margin:5px 0 0;color:#748096;font-size:10px}.hse-close,.hse-button{border:0;border-radius:9px;padding:8px 11px;color:#fff;background:var(--blue);cursor:pointer}.hse-close{align-self:flex-start;background:#142a4f}.hse-workbench{padding:18px 22px 45px}.hse-section{margin-bottom:14px;padding:16px;border:1px solid var(--dsw-alias-border-l1,#dce4f0);border-radius:14px;background:var(--dsw-alias-bg-layer-2,#fff)}.hse-section h3{margin:0 0 11px;font-size:14px}.hse-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.hse-kpi{padding:11px;border-radius:10px;background:linear-gradient(135deg,#2769ff12,#44d9ff0a)}.hse-kpi span{display:block;color:#748096;font-size:9px}.hse-kpi b{display:block;margin-top:4px;font-size:17px}.hse-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.hse-card{min-width:0;padding:11px;border-radius:10px;background:var(--dsw-alias-bg-layer-1,#f4f7fb)}.hse-card span,.hse-card b,.hse-card code{display:block}.hse-card span{color:#748096;font-size:9px}.hse-card b,.hse-card code{margin-top:4px;overflow-wrap:anywhere;font-size:10px}.hse-findings{display:grid;gap:6px}.hse-finding{padding:9px 10px;border-left:3px solid #6d9cff;border-radius:7px;background:#2769ff0c;font-size:10px}.hse-finding[data-level=error]{border-color:#e75267;background:#e752670c}.hse-finding[data-level=warning]{border-color:#e6a036;background:#e6a0360c}.hse-finding b{margin-right:7px}.hse-components{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.hse-component{padding:9px;border-radius:9px;background:#0b2e6421}.hse-component span{display:block;color:#748096;font-size:9px}.hse-component b,.hse-component code{display:block;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px}
-.hse-trial-tools{display:flex;gap:7px;margin-bottom:9px}.hse-input,.hse-select{min-width:0;padding:8px 9px;border:1px solid #cad6e7;border-radius:8px;color:inherit;background:transparent;font:inherit;font-size:10px}.hse-input{flex:1}.hse-table{width:100%;border-collapse:collapse;font-size:10px}.hse-table th,.hse-table td{padding:8px;border-bottom:1px solid #e4eaf2;text-align:left}.hse-table button{border:0;color:var(--blue);background:none;cursor:pointer;font:inherit}.hse-pager{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:9px;font-size:10px}.hse-pager button{padding:5px 8px;border:1px solid #cad6e7;border-radius:7px;background:transparent;color:inherit;cursor:pointer}.hse-trial-detail{margin-top:10px;padding:12px;border-radius:10px;background:#071d48;color:#dcecff}.hse-trial-detail pre,.hse-audit pre{max-height:340px;overflow:auto;margin:8px 0 0;white-space:pre-wrap;word-break:break-word;font-size:9px;line-height:1.5}.hse-reasons{margin:0;padding-left:18px;font-size:10px;line-height:1.6}.hse-audit summary{cursor:pointer;font-size:11px;font-weight:700}.hse-valid{color:#14815d}.hse-invalid{color:#c33148}
-.hse-settings{width:min(850px,calc(100% - 32px));margin:auto;padding:28px 0}.hse-checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:16px}.hse-check{padding:12px;border:1px solid #dce4f0;border-radius:10px;background:var(--dsw-alias-bg-layer-2,#fff)}.hse-check b,.hse-check small{display:block}.hse-check small{margin-top:4px;color:#748096}.hse-tool{border:1px solid #dce4f0;border-radius:11px;background:var(--dsw-alias-bg-layer-2,#fff);overflow:hidden}.hse-tool button{display:flex;gap:8px;width:100%;padding:10px;border:0;color:inherit;background:transparent;text-align:left;cursor:pointer}.hse-tool strong{font-size:11px}.hse-tool small{margin-left:auto}.hse-tool pre{max-height:260px;overflow:auto;margin:0;padding:11px;border-top:1px solid #e3e9f1;white-space:pre-wrap;font-size:9px}
-@media(max-width:800px){.hse-page{width:calc(100% - 20px)}.hse-hero{padding:24px 18px}.hse-meta-grid,.hse-kpis{grid-template-columns:repeat(2,1fr)}.hse-components{grid-template-columns:repeat(2,1fr)}.hse-grid,.hse-checks{grid-template-columns:1fr}.hse-drawer{width:100vw}.hse-workbench{padding:12px}.hse-drawer-head{padding:14px}.hse-table th:nth-child(3),.hse-table td:nth-child(3){display:none}}
-@media(prefers-reduced-motion:reduce){.hse-spin{animation:none}.hse-job:hover{transform:none}}
+.hse-root{--ocean-950:#03152f;--ocean-800:#07366f;--ocean-600:#1464c8;--ocean-300:#75b7ff;--foam-50:#f4fbff;--whale-500:#2875ff;--coral-500:#ee6478;--amber-500:#e4a23b;--kelp-500:#1f9b72;height:100%;min-height:0;overflow:auto;color:var(--dsw-alias-label-primary,#142038);background:var(--dsw-alias-bg-layer-1,#f2f7fc);font-family:inherit}.hse-page{width:min(1320px,calc(100% - 36px));margin:auto;padding:24px 0 56px}
+.hse-hero{position:relative;isolation:isolate;overflow:hidden;min-height:225px;padding:32px;border-radius:24px;color:#fff;background:var(--ocean-950) var(--ocean-image) center/cover no-repeat;box-shadow:0 22px 65px #03152f38}.hse-hero:before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,#02132fea,#062b62d6 55%,#0e6dc42e)}.hse-hero:after{content:"";position:absolute;width:220px;height:220px;right:8%;bottom:-170px;border:1px solid #8be9ff66;border-radius:50%;box-shadow:0 0 0 28px #68dfff0b,0 0 0 60px #68dfff08;animation:hse-ripple 5s ease-out infinite}.hse-hero h1{max-width:780px;margin:15px 0 10px;font-size:clamp(28px,4vw,46px);line-height:1.08;letter-spacing:-.04em}.hse-hero p{max-width:760px;margin:0;color:#d9eeff;font-size:14px;line-height:1.75}.hse-eyebrow{color:#86e8ff;font-size:11px;font-weight:800;letter-spacing:.17em}.hse-whale{margin-right:8px;font-size:17px}.hse-refresh{position:absolute;right:22px;top:22px;padding:8px 13px;border:1px solid #ffffff52;border-radius:999px;color:#fff;background:#06245eb8;cursor:pointer}.hse-stats{display:flex;gap:9px;margin-top:24px;flex-wrap:wrap}.hse-stat{min-width:130px;padding:11px 13px;border:1px solid #ffffff29;border-radius:13px;background:#031a41a8;backdrop-filter:blur(8px)}.hse-stat span{display:block;color:#cde7fb;font-size:10px}.hse-stat b{display:block;margin-top:4px;font-size:20px}.hse-head{margin:28px 0 12px}.hse-head h2{margin:0;font-size:18px}.hse-head p{margin:4px 0 0;color:#728097;font-size:12px}
+.hse-list{display:grid;gap:10px}.hse-job{display:block;width:100%;padding:0;border:1px solid var(--dsw-alias-border-l1,#d7e2ef);border-radius:16px;color:inherit;background:var(--dsw-alias-bg-layer-2,#fff);text-align:left;cursor:pointer;overflow:hidden;box-shadow:0 5px 18px #1736600d;transition:.18s ease}.hse-job:hover,.hse-job:focus-visible{border-color:var(--ocean-300);transform:translateY(-1px);outline:3px solid #2875ff20}.hse-job-body{padding:16px 18px}.hse-job-top{display:flex;justify-content:space-between;gap:14px}.hse-job-title{min-width:0}.hse-job-title strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}.hse-job-title small{display:block;margin-top:4px;color:#7b879c;font-size:10px}.hse-status{flex:none;padding:5px 9px;border-radius:999px;color:#126d50;background:#23ba8318;font-size:10px;font-weight:700}.hse-status:before{content:"\u2713 ";}.hse-status[data-status=running],.hse-status[data-status=pending]{color:#245dcc;background:#2875ff18}.hse-status[data-status=running]:before{content:"\u25CF ";animation:hse-pulse 1.6s ease-in-out infinite}.hse-status[data-status=partial],.hse-status[data-status=attention]{color:#8e5b0c;background:#e4a23b1b}.hse-status[data-status=partial]:before,.hse-status[data-status=attention]:before{content:"\u25B3 "}.hse-status[data-status=failed]{color:#b52f45;background:#ee647818}.hse-status[data-status=failed]:before{content:"\xD7 "}.hse-meta-grid{display:grid;grid-template-columns:1.35fr 1fr .9fr .65fr .75fr .75fr;gap:7px;margin-top:13px}.hse-meta{min-width:0;padding:8px 9px;border-radius:9px;background:var(--dsw-alias-bg-layer-1,#f3f7fb)}.hse-meta span{display:block;color:#7b879c;font-size:9px}.hse-meta b,.hse-meta code{display:block;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.hse-progress{height:5px;margin-top:11px;border-radius:99px;background:#dbe8f5;overflow:hidden}.hse-progress i{display:block;height:100%;background:linear-gradient(90deg,var(--ocean-600),#54d7f5);transition:width .3s}.hse-metrics{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.hse-pill{padding:5px 7px;border:1px solid var(--dsw-alias-border-l1,#dce4f0);border-radius:7px;font-size:10px}.hse-pill b{margin-left:5px;color:var(--ocean-600)}
+.hse-empty,.hse-error{padding:34px;border:1px dashed #c4d3e5;border-radius:16px;text-align:center;background:var(--dsw-alias-bg-layer-2,#fff);color:var(--dsw-alias-label-secondary,#728097);font-size:12px}.hse-spin{width:25px;height:25px;margin:0 auto 10px;border:3px solid #2875ff22;border-top-color:var(--whale-500);border-radius:50%;animation:hse-spin .8s linear infinite}.hse-button,.hse-close{border:0;border-radius:9px;padding:8px 11px;color:#fff;background:var(--whale-500);cursor:pointer}.hse-overlay{position:fixed;inset:0;z-index:1000;display:flex;justify-content:flex-end;background:#03152f8c;backdrop-filter:blur(3px)}.hse-drawer{width:min(1180px,96vw);height:100%;overflow:auto;background:var(--dsw-alias-bg-layer-1,#f2f7fc);box-shadow:-24px 0 70px #03152f52}.hse-drawer-head{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;gap:15px;padding:16px 20px;border-bottom:1px solid var(--dsw-alias-border-l1,#dce4f0);background:color-mix(in srgb,var(--dsw-alias-bg-layer-2,#fff) 94%,transparent);backdrop-filter:blur(12px)}.hse-drawer-head h2{margin:0;font-size:18px}.hse-drawer-head p{margin:5px 0 0;color:var(--dsw-alias-label-secondary,#748096);font-size:10px}.hse-close{align-self:flex-start;background:var(--ocean-950)}.hse-workbench{padding:14px 20px 48px}.hse-stage-nav{position:sticky;top:67px;z-index:4;display:grid;grid-template-columns:repeat(8,minmax(88px,1fr));gap:5px;margin:-1px -1px 14px;padding:8px;border:1px solid var(--dsw-alias-border-l1,#d7e2ef);border-radius:13px;background:color-mix(in srgb,var(--dsw-alias-bg-layer-2,#fff) 94%,transparent);backdrop-filter:blur(10px);overflow:auto}.hse-stage-nav button{padding:9px 7px;border:0;border-radius:8px;color:var(--dsw-alias-label-secondary,#52627b);background:transparent;font:inherit;font-size:10px;cursor:pointer;white-space:nowrap}.hse-stage-nav button[data-active=true]{color:#fff;background:var(--ocean-600)}.hse-stage-nav button:focus-visible{outline:3px solid #2875ff2f}.hse-capability{margin-bottom:12px;padding:10px 12px;border-left:3px solid var(--amber-500);border-radius:8px;background:#e4a23b14;color:var(--dsw-alias-label-primary,#75500f);font-size:11px}.hse-section{margin-bottom:13px;padding:16px;border:1px solid var(--dsw-alias-border-l1,#d7e2ef);border-radius:14px;background:var(--dsw-alias-bg-layer-2,#fff)}.hse-section h3{margin:0 0 11px;font-size:14px}.hse-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.hse-kpi{padding:11px;border-radius:10px;background:color-mix(in srgb,var(--dsw-alias-bg-layer-1,#edf7ff) 88%,var(--ocean-600) 12%)}.hse-kpi span{display:block;color:var(--dsw-alias-label-secondary,#748096);font-size:9px}.hse-kpi b{display:block;margin-top:4px;font-size:17px}.hse-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.hse-card{min-width:0;padding:11px;border-radius:10px;background:var(--dsw-alias-bg-layer-1,#f3f7fb)}.hse-card span,.hse-card b,.hse-card code{display:block}.hse-card span{color:var(--dsw-alias-label-secondary,#748096);font-size:9px}.hse-card b,.hse-card code{margin-top:4px;overflow-wrap:anywhere;font-size:10px}.hse-valid{color:var(--kelp-500)}.hse-invalid{color:#bd3148}.hse-muted{color:var(--dsw-alias-label-secondary,#75839a)}.hse-findings{display:grid;gap:6px}.hse-finding{padding:9px 10px;border-left:3px solid var(--ocean-300);border-radius:7px;background:#2875ff0c;font-size:10px}.hse-finding[data-level=error]{border-color:var(--coral-500);background:#ee64780d}.hse-finding[data-level=warning]{border-color:var(--amber-500);background:#e4a23b0d}.hse-components{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.hse-component{padding:10px;border-radius:9px;background:#0b4c9c12}.hse-component span{display:block;color:var(--dsw-alias-label-secondary,#748096);font-size:9px}.hse-component b,.hse-component code{display:block;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px}
+.hse-trial-layout{display:grid;grid-template-columns:minmax(380px,1fr) minmax(360px,.9fr);gap:10px;align-items:start}.hse-trial-list,.hse-trial-detail{min-width:0}.hse-trial-tools{display:grid;grid-template-columns:minmax(150px,1fr) auto auto auto;gap:6px;margin-bottom:9px}.hse-input,.hse-select{min-width:0;padding:8px 9px;border:1px solid #c8d6e7;border-radius:8px;color:inherit;background:transparent;font:inherit;font-size:10px}.hse-table-wrap{overflow:auto}.hse-table{width:100%;border-collapse:collapse;font-size:10px}.hse-table th,.hse-table td{padding:8px;border-bottom:1px solid #e2eaf3;text-align:left;white-space:nowrap}.hse-table button{border:0;color:var(--ocean-600);background:none;cursor:pointer;font:inherit}.hse-table tr[data-selected=true]{background:#2875ff0c}.hse-pager{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:9px;font-size:10px}.hse-pager button{padding:5px 8px;border:1px solid #c8d6e7;border-radius:7px;background:transparent;color:inherit;cursor:pointer}.hse-trial-detail{position:sticky;top:132px;max-height:calc(100vh - 160px);overflow:auto;padding:14px;border-radius:12px;color:#dcecff;background:var(--ocean-950)}.hse-trial-score{display:flex;justify-content:space-between;gap:12px;padding-bottom:12px;border-bottom:1px solid #ffffff1f}.hse-trial-score b{font-size:25px}.hse-trial-score span{font-size:10px}.hse-detail-group{padding:11px 0;border-bottom:1px solid #ffffff16}.hse-detail-group h4{margin:0 0 7px;color:#8fe8ff;font-size:10px;text-transform:uppercase;letter-spacing:.08em}.hse-detail-group pre{max-height:280px;overflow:auto;margin:0;white-space:pre-wrap;word-break:break-word;font-size:9px;line-height:1.55}.hse-detail-group ul{margin:0;padding-left:17px;font-size:10px;line-height:1.6}.hse-criteria{display:grid;gap:5px}.hse-criterion{display:flex;justify-content:space-between;gap:8px;padding:7px;border-radius:6px;background:#ffffff0b;font-size:10px}.hse-provenance{display:flex;gap:5px;flex-wrap:wrap}.hse-provenance span{padding:5px 7px;border:1px solid #70cfff4a;border-radius:999px;font-size:9px}.hse-audit summary{cursor:pointer;font-size:11px;font-weight:700}.hse-audit pre,.hse-source{max-height:360px;overflow:auto;white-space:pre-wrap;word-break:break-word;font-size:9px;line-height:1.55}.hse-compare-select{display:flex;gap:7px;margin-bottom:10px}.hse-compare-select select{flex:1}.hse-delta{font-variant-numeric:tabular-nums}.hse-delta[data-positive=true]{color:var(--kelp-500)}.hse-delta[data-positive=false]{color:var(--coral-500)}.hse-source{padding:10px;border-radius:8px;color:#d9edff;background:var(--ocean-950)}.hse-settings{width:min(850px,calc(100% - 32px));margin:auto;padding:28px 0}.hse-checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:16px}.hse-check{padding:12px;border:1px solid #dce4f0;border-radius:10px;background:var(--dsw-alias-bg-layer-2,#fff)}.hse-check b,.hse-check small{display:block}.hse-check small{margin-top:4px;color:#748096}.hse-tool{border:1px solid #dce4f0;border-radius:11px;background:var(--dsw-alias-bg-layer-2,#fff);overflow:hidden}.hse-tool button{display:flex;gap:8px;width:100%;padding:10px;border:0;color:inherit;background:transparent;text-align:left;cursor:pointer}.hse-tool strong{font-size:11px}.hse-tool small{margin-left:auto}.hse-tool pre{max-height:260px;overflow:auto;margin:0;padding:11px;border-top:1px solid #e3e9f1;white-space:pre-wrap;font-size:9px}
+.hse-task-list{display:grid;gap:10px}.hse-task{border:1px solid var(--dsw-alias-border-l1,#d7e2ef);border-radius:12px;background:var(--dsw-alias-bg-layer-1,#f3f7fb);overflow:hidden}.hse-task summary{display:flex;align-items:center;gap:9px;padding:12px 14px;cursor:pointer;font-size:11px;font-weight:700}.hse-task summary span{margin-left:auto;color:var(--dsw-alias-label-secondary,#748096);font-size:9px;font-weight:400}.hse-task-body{padding:0 14px 14px}.hse-instruction{min-height:80px;margin:0;padding:15px;border-radius:10px;color:#e3f3ff;background:linear-gradient(145deg,#03152f,#07366f);white-space:pre-wrap;word-break:break-word;font:inherit;font-size:12px;line-height:1.75}.hse-inline-meta{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0 0;color:var(--dsw-alias-label-secondary,#748096);font-size:9px}.hse-output-layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:10px;align-items:start}.hse-output-list{display:grid;gap:6px}.hse-output-item{width:100%;padding:10px;border:1px solid var(--dsw-alias-border-l1,#d7e2ef);border-radius:9px;color:inherit;background:var(--dsw-alias-bg-layer-1,#f3f7fb);text-align:left;cursor:pointer}.hse-output-item[data-active=true]{border-color:var(--ocean-300);background:#2875ff16}.hse-output-item b,.hse-output-item span{display:block}.hse-output-item span{margin-top:3px;color:var(--dsw-alias-label-secondary,#748096);font-size:9px}.hse-preview{min-width:0;border:1px solid var(--dsw-alias-border-l1,#d7e2ef);border-radius:12px;overflow:hidden}.hse-preview-head{display:flex;justify-content:space-between;gap:12px;padding:12px 14px;background:var(--dsw-alias-bg-layer-1,#f3f7fb)}.hse-preview-head b,.hse-preview-head span{display:block}.hse-preview-head span{margin-top:3px;color:var(--dsw-alias-label-secondary,#748096);font-size:9px}.hse-document{min-height:210px;padding:22px;background:var(--dsw-alias-bg-layer-2,#fff);font-size:13px;line-height:1.8}.hse-document pre{margin:0;white-space:pre-wrap;word-break:break-word;font:inherit}.hse-document h4{margin:0 0 12px;font-size:17px}.hse-page-frame{display:block;width:100%;height:520px;border:0;background:#fff}.hse-output-structured{max-height:520px;overflow:auto;margin:0;padding:16px;color:#dcecff;background:var(--ocean-950);white-space:pre-wrap;word-break:break-word;font-size:10px}.hse-preview-empty{padding:60px 20px;text-align:center;color:var(--dsw-alias-label-secondary,#748096)}.hse-governance-id{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.hse-source-details{margin-top:9px;border-top:1px solid var(--dsw-alias-border-l1,#d7e2ef);padding-top:9px}.hse-source-details summary{cursor:pointer;font-size:10px;font-weight:700}.hse-upgrade{border-color:#2875ff55;background:linear-gradient(145deg,#2875ff0f,#44d9ff08)}.hse-upgrade ol{margin:10px 0;padding-left:20px;font-size:11px;line-height:1.75}.hse-prompt{margin-top:10px;padding:12px;border-radius:9px;color:#dcecff;background:var(--ocean-950);white-space:pre-wrap;font-size:10px;line-height:1.6}.hse-prompt-actions{display:flex;justify-content:flex-end;margin-top:8px}.hse-editor-head{display:flex;justify-content:space-between;gap:10px;align-items:start}.hse-editor-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 8px}.hse-editor-tab{display:grid;gap:2px;padding:8px 10px;border:1px solid var(--dsw-alias-border-l1,#d7e2ef);border-radius:8px;color:inherit;background:transparent;text-align:left;cursor:pointer}.hse-editor-tab b{font-size:10px}.hse-editor-tab span{color:var(--dsw-alias-label-secondary,#748096);font-size:8px}.hse-editor-tab[data-active=true]{border-color:var(--ocean-600);color:#fff;background:var(--ocean-600)}.hse-editor-tab[data-active=true] span{color:#dcecff}.hse-editor-current{display:grid;gap:3px;margin:8px 0;padding:9px 11px;border-left:3px solid var(--ocean-600);border-radius:8px;background:var(--dsw-alias-bg-layer-1,#f3f7fb)}.hse-editor-current span{color:var(--dsw-alias-label-secondary,#748096);font-size:9px}.hse-editor-current b{font-size:11px}.hse-editor-current code{overflow-wrap:anywhere;font-size:9px}.hse-editor{display:block;width:100%;min-height:360px;box-sizing:border-box;padding:14px;border:1px solid #1f73ca;border-radius:10px;color:#dcecff;background:var(--ocean-950);resize:vertical;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace}.hse-editor-versions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}.hse-editor-actions{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-top:9px}.hse-editor-actions p{margin:0;font-size:10px}.hse-editor-actions button:disabled{opacity:.45;cursor:not-allowed}.hse-editor-error{color:#bd3148}.hse-editor-success{color:var(--kelp-500)}
+.hse-identity-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.hse-evidence-table{width:100%;border-collapse:collapse;font-size:10px}.hse-evidence-table th,.hse-evidence-table td{padding:9px;border-bottom:1px solid var(--dsw-alias-border-l1,#dce4f0);text-align:left;vertical-align:top}.hse-evidence-table th{color:var(--dsw-alias-label-secondary,#748096);font-weight:500}.hse-evidence-table code{overflow-wrap:anywhere}.hse-chip-list{display:flex;gap:6px;flex-wrap:wrap}.hse-chip-list span{padding:6px 8px;border-radius:999px;background:#2875ff12;font-size:9px}.hse-hypotheses{display:grid;gap:10px}.hse-hypothesis{padding:14px;border:1px solid #2875ff3d;border-radius:12px;background:linear-gradient(145deg,#2875ff0c,#44d9ff05)}.hse-hypothesis h4{margin:0 0 10px;font-size:13px}.hse-hypothesis dl{display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px 12px;margin:0;font-size:10px}.hse-hypothesis dt{color:var(--dsw-alias-label-secondary,#748096)}.hse-hypothesis dd{margin:0;overflow-wrap:anywhere}.hse-gate-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.hse-decision{padding:8px 12px;border-radius:999px;color:#126d50;background:#23ba8318;font-weight:800}.hse-decision[data-pass=false]{color:#b52f45;background:#ee647818}
+.hse-report-table button{border:0;color:var(--ocean-600);background:none;text-align:left;cursor:pointer;font:inherit}.hse-report-table tr[data-selected=true]{background:#2875ff10}.hse-report-score{font-size:15px;font-weight:800}.hse-report-score[data-valid=false]{color:var(--coral-500)}.hse-report-detail{margin-top:12px;border:1px solid #2875ff40;border-radius:13px;overflow:hidden}.hse-report-detail-head{display:flex;justify-content:space-between;gap:12px;padding:14px 16px;background:linear-gradient(145deg,#2875ff14,#44d9ff08)}.hse-report-detail-head h4{margin:0;font-size:14px}.hse-report-detail-head span,.hse-report-detail-head code{display:block;margin-top:4px;color:var(--dsw-alias-label-secondary,#748096);font-size:9px}.hse-report-detail-head b{font-size:25px}.hse-report-criteria{display:grid;gap:9px;padding:14px}.hse-report-criterion{padding:12px;border-radius:10px;background:var(--dsw-alias-bg-layer-1,#f3f7fb)}.hse-report-criterion header{display:flex;justify-content:space-between;gap:10px}.hse-report-criterion header b:last-child{font-size:17px}.hse-report-criterion dl{display:grid;grid-template-columns:92px minmax(0,1fr);gap:8px 10px;margin:10px 0 0;font-size:10px;line-height:1.55}.hse-report-criterion dt{color:var(--dsw-alias-label-secondary,#748096)}.hse-report-criterion dd{margin:0;overflow-wrap:anywhere}.hse-report-recommendation{color:var(--ocean-600)}
+.hse-stage-nav{grid-template-columns:repeat(9,minmax(88px,1fr))}.hse-report-compare{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;padding:14px;align-items:start}.hse-report-compare .hse-report-criteria{padding:0}.hse-meta-flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.hse-meta-flow div{position:relative;padding:13px;border-radius:10px;background:#2875ff0f;font-size:10px}.hse-meta-flow div:not(:last-child):after{content:'\u2192';position:absolute;right:-8px;top:50%;z-index:1;color:var(--ocean-600);font-weight:800}.hse-badcase{color:#b52f45;background:#ee647817!important}.hse-hook-state{margin-bottom:12px;padding:11px 13px;border-left:3px solid var(--ocean-600);border-radius:8px;background:#2875ff0d;font-size:10px}.hse-hook-state[data-executed=false]{border-color:var(--amber-500);background:#e4a23b12}
+@keyframes hse-spin{to{transform:rotate(360deg)}}@keyframes hse-pulse{50%{opacity:.38}}@keyframes hse-ripple{0%{transform:scale(.75);opacity:.4}70%,100%{transform:scale(1.12);opacity:0}}
+@media(max-width:900px){.hse-page{width:calc(100% - 20px)}.hse-meta-grid,.hse-kpis,.hse-identity-grid{grid-template-columns:repeat(2,1fr)}.hse-trial-layout,.hse-output-layout{grid-template-columns:1fr}.hse-trial-detail{position:static;max-height:none}.hse-components,.hse-governance-id{grid-template-columns:repeat(2,1fr)}.hse-drawer{width:100vw}.hse-workbench{padding:12px}.hse-stage-nav{top:62px}.hse-trial-tools{grid-template-columns:1fr 1fr}.hse-grid,.hse-checks{grid-template-columns:1fr}.hse-hypothesis dl{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.hse-spin,.hse-status:before,.hse-hero:after{animation:none}.hse-job{transition:none}.hse-job:hover{transform:none}}
+@media(max-width:900px){.hse-report-compare,.hse-meta-flow{grid-template-columns:1fr}.hse-meta-flow div:after{display:none}}
 `;
 function installStyles() {
   const id = "dsh-harbor-evolution/client";
@@ -188,10 +459,14 @@ function format(value) {
   return typeof value === "number" ? value.toFixed(4).replace(/0+$/, "").replace(/\.$/, "") : String(value ?? "\u2014");
 }
 function short(value) {
-  return typeof value === "string" && value.length > 22 ? `${value.slice(0, 15)}\u2026${value.slice(-5)}` : value ?? "\u2014";
+  return typeof value === "string" && value.length > 25 ? `${value.slice(0, 17)}\u2026${value.slice(-6)}` : value ?? "\u2014";
 }
-function reasonText(reason) {
-  return isRecord(reason) ? `${reason.code}: ${reason.message}` : String(reason);
+function pretty(value) {
+  return JSON.stringify(value, null, 2);
+}
+function gateReasonText(value) {
+  if (!isRecord(value)) return String(value ?? "\u2014");
+  return [value.code, value.message].filter(Boolean).join(" \xB7 ") || pretty(value);
 }
 async function api(route, params = {}) {
   const query = new URLSearchParams(Object.entries(params).filter(([, value]) => value !== void 0 && value !== ""));
@@ -199,6 +474,22 @@ async function api(route, params = {}) {
   const body = await response.json();
   if (!response.ok || !body?.ok) throw new Error(body?.error?.message ?? `HTTP ${response.status}`);
   return body.value;
+}
+async function mutate(route, value) {
+  const response = await fetch(`${API}/${route}`, {
+    method: "POST",
+    credentials: "same-origin",
+    cache: "no-store",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(value)
+  });
+  const body = await response.json();
+  if (!response.ok || !body?.ok) throw new Error(body?.error?.message ?? `HTTP ${response.status}`);
+  return body.value;
+}
+function nextVersion(value) {
+  const match = String(value ?? "").match(/^(\d+)\.(\d+)\.(\d+)$/);
+  return match ? `${match[1]}.${match[2]}.${Number(match[3]) + 1}` : "";
 }
 function useDashboard(poll = true) {
   const [state, setState] = (0, import_react.useState)({ status: "loading" });
@@ -215,8 +506,7 @@ function useDashboard(poll = true) {
   }, [load]);
   (0, import_react.useEffect)(() => {
     if (!poll || !state.value) return void 0;
-    const interval = state.value.overview?.activeJobs ? 3e3 : 15e3;
-    const timer = window.setTimeout(() => void load(true), interval);
+    const timer = window.setTimeout(() => void load(true), state.value.overview?.activeJobs ? 2500 : 15e3);
     return () => window.clearTimeout(timer);
   }, [load, poll, state.value]);
   return { ...state, load };
@@ -226,58 +516,349 @@ function MetricPills({ metrics }) {
 }
 function JobCard({ job, t, open }) {
   const candidate = job.candidate ?? {};
-  const context = job.evaluationContext ?? {};
-  return /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-job", onClick: () => open(job.name) }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-job-body" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-job-top" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-job-title" }, /* @__PURE__ */ import_react.default.createElement("strong", null, job.name), /* @__PURE__ */ import_react.default.createElement("small", null, new Date(job.updatedAt).toLocaleString())), /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-status", "data-status": job.status }, t(job.status))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("candidate")), /* @__PURE__ */ import_react.default.createElement("b", null, candidate.candidate_id ?? "\u2014", " \xB7 ", candidate.version ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("context")), /* @__PURE__ */ import_react.default.createElement("code", { title: context.digest }, short(context.digest))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("trials")), /* @__PURE__ */ import_react.default.createElement("b", null, job.nTrials)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("exceptions")), /* @__PURE__ */ import_react.default.createElement("b", null, job.nExceptions)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("mode")), /* @__PURE__ */ import_react.default.createElement("b", null, job.mode ?? "\u2014"))), /* @__PURE__ */ import_react.default.createElement(MetricPills, { metrics: job.metrics })));
+  const progress = job.progress ?? {};
+  return /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-job", onClick: () => open(job.name) }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-job-body" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-job-top" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-job-title" }, /* @__PURE__ */ import_react.default.createElement("strong", null, job.name), /* @__PURE__ */ import_react.default.createElement("small", null, new Date(job.updatedAt).toLocaleString(), " \xB7 ", progress.health ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-status", "data-status": job.status }, t(job.status))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("candidate")), /* @__PURE__ */ import_react.default.createElement("b", null, candidate.candidate_id ?? "\u2014", " \xB7 ", candidate.version ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("dataset")), /* @__PURE__ */ import_react.default.createElement("b", null, job.dataset?.dataset_id ?? "\u2014", " \xB7 ", job.dataset?.version ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("mode")), /* @__PURE__ */ import_react.default.createElement("b", null, job.mode ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("progress")), /* @__PURE__ */ import_react.default.createElement("b", null, progress.completed ?? 0, "/", progress.total ?? job.nTrials ?? 0)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("validity")), /* @__PURE__ */ import_react.default.createElement("b", null, typeof job.nValidScores === "number" ? `${t("validScores")} ${job.nValidScores}` : t("unavailable"))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("exceptions")), /* @__PURE__ */ import_react.default.createElement("b", null, job.nExceptions))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-progress", "aria-label": `${progress.percent ?? 0}%` }, /* @__PURE__ */ import_react.default.createElement("i", { style: { width: `${progress.percent ?? 0}%` } })), /* @__PURE__ */ import_react.default.createElement(MetricPills, { metrics: job.metrics })));
 }
-function ArtifactSection({ title, value, children }) {
-  return /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, title), children ?? (value ? /* @__PURE__ */ import_react.default.createElement("pre", null, JSON.stringify(value, null, 2)) : /* @__PURE__ */ import_react.default.createElement("span", null, "\u2014")));
+function TrialDetail({ detail, t }) {
+  if (!detail) return /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-trial-detail hse-muted" }, t("evidence"), " \u2014");
+  const assessment = detail.assessment;
+  if (!assessment) return /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-trial-detail" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-trial-score" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("span", null, detail.lifecycle?.name ?? detail.trial), /* @__PURE__ */ import_react.default.createElement("b", null, "\u2014")), /* @__PURE__ */ import_react.default.createElement("span", null, detail.status)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-detail-group" }, /* @__PURE__ */ import_react.default.createElement("h4", null, t("currentStatus")), /* @__PURE__ */ import_react.default.createElement("pre", null, pretty(detail.lifecycle))));
+  const score = assessment.score ?? { value: assessment.rewards?.reward, valid: assessment.status === "assessed" };
+  return /* @__PURE__ */ import_react.default.createElement("article", { className: "hse-trial-detail", "aria-live": "polite" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-trial-score" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("span", null, t("score")), /* @__PURE__ */ import_react.default.createElement("b", null, score.valid ? format(score.value) : "\u2014")), /* @__PURE__ */ import_react.default.createElement("span", { className: score.valid ? "hse-valid" : "hse-invalid" }, score.valid ? `\u2713 ${t("valid")}` : `\xD7 ${t("invalid")}`)), !score.valid ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-detail-group" }, /* @__PURE__ */ import_react.default.createElement("h4", null, t("validity")), /* @__PURE__ */ import_react.default.createElement("ul", null, (score.invalid_reasons ?? []).map((reason) => /* @__PURE__ */ import_react.default.createElement("li", { key: reason }, reason)))) : null, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-detail-group" }, /* @__PURE__ */ import_react.default.createElement("h4", null, t("findings")), /* @__PURE__ */ import_react.default.createElement("ul", null, (assessment.findings ?? []).length ? assessment.findings.map((item, index) => /* @__PURE__ */ import_react.default.createElement("li", { key: index }, item.code ? `${item.code}: ` : "", item.message ?? String(item))) : /* @__PURE__ */ import_react.default.createElement("li", null, "\u2014"))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-detail-group" }, /* @__PURE__ */ import_react.default.createElement("h4", null, t("recommendations")), /* @__PURE__ */ import_react.default.createElement("ul", null, (assessment.recommendations ?? []).length ? assessment.recommendations.map((item, index) => /* @__PURE__ */ import_react.default.createElement("li", { key: index }, item.message ?? String(item))) : /* @__PURE__ */ import_react.default.createElement("li", null, "\u2014"))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-detail-group" }, /* @__PURE__ */ import_react.default.createElement("h4", null, t("output")), /* @__PURE__ */ import_react.default.createElement("pre", null, pretty(assessment.output))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-detail-group" }, /* @__PURE__ */ import_react.default.createElement("h4", null, t("criteria")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-criteria" }, (assessment.criteria ?? Object.entries(assessment.rewards ?? {}).map(([id, value]) => ({ id, score: value }))).map((item) => /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-criterion", key: item.id }, /* @__PURE__ */ import_react.default.createElement("span", null, item.label ?? item.id), /* @__PURE__ */ import_react.default.createElement("b", null, format(item.score)))))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-detail-group" }, /* @__PURE__ */ import_react.default.createElement("h4", null, t("provenance")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-provenance" }, (assessment.evidence_provenance ?? assessment.evidence ?? []).map((item, index) => /* @__PURE__ */ import_react.default.createElement("span", { key: item.id ?? index, title: item.artifact_ref }, item.label ?? item.kind ?? "Evidence")))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-detail-group" }, /* @__PURE__ */ import_react.default.createElement("h4", null, t("timing")), /* @__PURE__ */ import_react.default.createElement("pre", null, pretty(assessment.process))), /* @__PURE__ */ import_react.default.createElement("details", { className: "hse-detail-group" }, /* @__PURE__ */ import_react.default.createElement("summary", null, t("audit")), /* @__PURE__ */ import_react.default.createElement("pre", null, pretty(assessment))));
 }
-function TrialTable({ job, t }) {
+function TrialExplorer({ job, active, t }) {
   const [query, setQuery] = (0, import_react.useState)("");
   const [status, setStatus] = (0, import_react.useState)("");
+  const [validity, setValidity] = (0, import_react.useState)("");
+  const [sort, setSort] = (0, import_react.useState)("dataset-order");
   const [offset, setOffset] = (0, import_react.useState)(0);
   const [page, setPage] = (0, import_react.useState)();
+  const [selected, setSelected] = (0, import_react.useState)();
   const [detail, setDetail] = (0, import_react.useState)();
   (0, import_react.useEffect)(() => {
-    const timer = window.setTimeout(() => {
-      void api("trials", { job, offset, limit: 50, query, status }).then(setPage);
-    }, 180);
-    return () => window.clearTimeout(timer);
-  }, [job, offset, query, status]);
-  const choose = async (trial) => setDetail(await api("trial", { job, trial }));
-  return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-trial-tools" }, /* @__PURE__ */ import_react.default.createElement("input", { className: "hse-input", value: query, placeholder: t("search"), onChange: (event) => {
+    let cancelled = false;
+    const load = () => api("trials", { job, offset, limit: 100, query, status, validity, sort }).then((value) => {
+      if (!cancelled) setPage(value);
+    });
+    const debounce = window.setTimeout(() => void load(), 120);
+    const poll = active ? window.setInterval(() => void load(), 2500) : void 0;
+    return () => {
+      cancelled = true;
+      window.clearTimeout(debounce);
+      if (poll) window.clearInterval(poll);
+    };
+  }, [job, offset, query, status, validity, sort, active]);
+  const choose = async (trial) => {
+    setSelected(trial);
+    setDetail(await api("trial", { job, trial }));
+  };
+  return /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-trial-layout" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-trial-list" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-trial-tools" }, /* @__PURE__ */ import_react.default.createElement("input", { className: "hse-input", value: query, placeholder: t("search"), onChange: (event) => {
     setQuery(event.target.value);
     setOffset(0);
   } }), /* @__PURE__ */ import_react.default.createElement("select", { className: "hse-select", value: status, onChange: (event) => {
     setStatus(event.target.value);
     setOffset(0);
-  } }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, t("all")), /* @__PURE__ */ import_react.default.createElement("option", { value: "assessed" }, t("assessed")), /* @__PURE__ */ import_react.default.createElement("option", { value: "infrastructure-error" }, t("infra")))), /* @__PURE__ */ import_react.default.createElement("table", { className: "hse-table" }, /* @__PURE__ */ import_react.default.createElement("thead", null, /* @__PURE__ */ import_react.default.createElement("tr", null, /* @__PURE__ */ import_react.default.createElement("th", null, "Trial"), /* @__PURE__ */ import_react.default.createElement("th", null, "Status"), /* @__PURE__ */ import_react.default.createElement("th", null, "Metrics"))), /* @__PURE__ */ import_react.default.createElement("tbody", null, page?.items?.map((trial) => /* @__PURE__ */ import_react.default.createElement("tr", { key: trial.id }, /* @__PURE__ */ import_react.default.createElement("td", null, /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => void choose(trial.id) }, trial.name ?? trial.id)), /* @__PURE__ */ import_react.default.createElement("td", null, trial.status), /* @__PURE__ */ import_react.default.createElement("td", null, Object.entries(trial.rewards ?? {}).map(([key, value]) => `${key} ${format(value)}`).join(" \xB7 ")))))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-pager" }, /* @__PURE__ */ import_react.default.createElement("span", null, offset + 1, "\u2013", Math.min(offset + (page?.items?.length ?? 0), page?.total ?? 0), " / ", page?.total ?? 0), /* @__PURE__ */ import_react.default.createElement("button", { disabled: !offset, onClick: () => setOffset(Math.max(0, offset - 50)) }, t("previous")), /* @__PURE__ */ import_react.default.createElement("button", { disabled: !page?.hasMore, onClick: () => setOffset(offset + 50) }, t("next"))), detail ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-trial-detail" }, /* @__PURE__ */ import_react.default.createElement("b", null, t("output")), /* @__PURE__ */ import_react.default.createElement("pre", null, JSON.stringify(detail.assessment, null, 2))) : null);
+  } }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, t("all")), /* @__PURE__ */ import_react.default.createElement("option", { value: "completed" }, "completed"), /* @__PURE__ */ import_react.default.createElement("option", { value: "candidate-quality-failed" }, "candidate-quality-failed"), /* @__PURE__ */ import_react.default.createElement("option", { value: "infrastructure-error" }, "infrastructure-error"), /* @__PURE__ */ import_react.default.createElement("option", { value: "evaluation-error" }, "evaluation-error"), /* @__PURE__ */ import_react.default.createElement("option", { value: "running-agent" }, "running-agent"), /* @__PURE__ */ import_react.default.createElement("option", { value: "evaluating" }, "evaluating")), /* @__PURE__ */ import_react.default.createElement("select", { className: "hse-select", value: validity, onChange: (event) => {
+    setValidity(event.target.value);
+    setOffset(0);
+  } }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, t("validity")), /* @__PURE__ */ import_react.default.createElement("option", { value: "true" }, t("valid")), /* @__PURE__ */ import_react.default.createElement("option", { value: "false" }, t("invalid"))), /* @__PURE__ */ import_react.default.createElement("select", { className: "hse-select", value: sort, onChange: (event) => setSort(event.target.value) }, /* @__PURE__ */ import_react.default.createElement("option", { value: "dataset-order" }, t("datasetOrder")), /* @__PURE__ */ import_react.default.createElement("option", { value: "latest-completed" }, t("latest")), /* @__PURE__ */ import_react.default.createElement("option", { value: "lowest-score" }, t("lowest")), /* @__PURE__ */ import_react.default.createElement("option", { value: "errors" }, t("errorsFirst")))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-table-wrap" }, /* @__PURE__ */ import_react.default.createElement("table", { className: "hse-table" }, /* @__PURE__ */ import_react.default.createElement("thead", null, /* @__PURE__ */ import_react.default.createElement("tr", null, /* @__PURE__ */ import_react.default.createElement("th", null, "#"), /* @__PURE__ */ import_react.default.createElement("th", null, t("queryTrial")), /* @__PURE__ */ import_react.default.createElement("th", null, t("statusLabel")), /* @__PURE__ */ import_react.default.createElement("th", null, t("score")), /* @__PURE__ */ import_react.default.createElement("th", null, t("attempt")))), /* @__PURE__ */ import_react.default.createElement("tbody", null, page?.items?.map((trial) => /* @__PURE__ */ import_react.default.createElement("tr", { key: `${trial.id}-${trial.attempt}`, "data-selected": String(selected) === String(trial.id) }, /* @__PURE__ */ import_react.default.createElement("td", null, trial.datasetOrder + 1), /* @__PURE__ */ import_react.default.createElement("td", null, /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => void choose(trial.id ?? trial.datasetTrial) }, trial.displayName ?? trial.datasetTrial ?? trial.name)), /* @__PURE__ */ import_react.default.createElement("td", null, trial.status), /* @__PURE__ */ import_react.default.createElement("td", null, trial.score?.valid ? format(trial.score.value ?? trial.rewards?.reward) : "\u2014"), /* @__PURE__ */ import_react.default.createElement("td", null, trial.attempt)))))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-pager" }, /* @__PURE__ */ import_react.default.createElement("span", null, page?.total ? `${offset + 1}\u2013${Math.min(offset + (page.items?.length ?? 0), page.total)} / ${page.total}` : "0 / 0"), /* @__PURE__ */ import_react.default.createElement("button", { disabled: !offset, onClick: () => setOffset(Math.max(0, offset - 100)) }, t("previous")), /* @__PURE__ */ import_react.default.createElement("button", { disabled: !page?.hasMore, onClick: () => setOffset(offset + 100) }, t("next")))), /* @__PURE__ */ import_react.default.createElement(TrialDetail, { detail, t }));
 }
-function Workbench({ job, close, t }) {
+function DatasetPanel({ job, artifacts, t }) {
   const [state, setState] = (0, import_react.useState)({ status: "loading" });
   (0, import_react.useEffect)(() => {
-    let active = true;
-    void api("job", { job }).then((value) => active && setState({ status: "ready", value }), (error) => active && setState({ status: "error", error: error.message }));
+    let alive = true;
+    void api("dataset", { job }).then((value) => alive && setState({ status: "ready", value }), (error) => alive && setState({ status: "error", error: error.message }));
     return () => {
-      active = false;
+      alive = false;
     };
   }, [job]);
+  const dataset = state.value ?? artifacts.datasetPreview ?? artifacts.dataset;
+  const badcases = (dataset?.tasks ?? []).filter((task) => task.metadata?.badcase).length;
+  return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, "ID / version"), /* @__PURE__ */ import_react.default.createElement("b", null, artifacts.dataset?.dataset_id ?? "\u2014", " \xB7 ", artifacts.dataset?.version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, short(artifacts.dataset?.source_digest))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("population")), /* @__PURE__ */ import_react.default.createElement("b", null, artifacts.dataset?.task_count ?? dataset?.task_count ?? 0), /* @__PURE__ */ import_react.default.createElement("code", null, badcases, " ", t("badcase"), " \xB7 ", dataset?.source === "job-snapshot" ? t("snapshot") : dataset?.source === "historical-source-fallback" ? t("historicalFallback") : "\u2014")))), /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("datasetTasks")), state.status === "loading" ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-empty" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-spin" }), t("loading")) : state.status === "error" ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-capability" }, state.error) : /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-task-list" }, (dataset?.tasks ?? []).map((task, index) => /* @__PURE__ */ import_react.default.createElement("details", { className: "hse-task", key: task.id ?? index, open: index === 0 }, /* @__PURE__ */ import_react.default.createElement("summary", null, index + 1, ". ", task.query || task.id || `task-${index + 1}`, /* @__PURE__ */ import_react.default.createElement("span", { className: task.metadata?.badcase ? "hse-badcase" : void 0 }, task.metadata?.badcase ? `${t("badcase")} \xB7 ${task.metadata?.case_type}` : task.metadata?.topic ?? task.id ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-task-body" }, /* @__PURE__ */ import_react.default.createElement("h4", null, t("taskInstruction")), task.instruction ? /* @__PURE__ */ import_react.default.createElement("pre", { className: "hse-instruction" }, task.instruction) : /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-capability" }, task.instruction_error ?? t("noData")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-inline-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, "ID: ", task.id ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("span", null, t("instructionFile"), ": ", task.instruction_file ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("span", null, t("datasetSource"), ": ", dataset.source === "job-snapshot" ? t("snapshot") : t("historicalFallback")), task.instruction_truncated ? /* @__PURE__ */ import_react.default.createElement("span", null, t("attention")) : null)))))));
+}
+function metricLabelMap(artifacts) {
+  return Object.fromEntries((artifacts.contract?.metrics ?? []).map((metric) => [metric.id, metric.label ?? metric.id]));
+}
+function CandidatePanel({ artifacts, t }) {
+  const candidate = artifacts.candidate ?? {};
+  const context = artifacts.context ?? {};
+  const dataset = context.dataset ?? artifacts.dataset ?? {};
+  const stack = context.evaluation_stack ?? artifacts.stack ?? {};
+  const runtime = context.runtime ?? candidate.runtime ?? {};
+  return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("experimentIdentity")), /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-muted" }, t("experimentIdentityHint")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-identity-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("candidate")), /* @__PURE__ */ import_react.default.createElement("b", null, candidate.candidate_id ?? "\u2014", " \xB7 ", candidate.version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, short(candidate.digest))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("dataset")), /* @__PURE__ */ import_react.default.createElement("b", null, dataset.dataset_id ?? "\u2014", " \xB7 ", dataset.version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, dataset.task_count ?? "\u2014", " Tasks \xB7 ", short(dataset.source_digest))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("evaluationStack")), /* @__PURE__ */ import_react.default.createElement("b", null, stack.stack_id ?? "\u2014", " \xB7 ", stack.version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, short(stack.comparison_digest ?? stack.digest))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("runtime")), /* @__PURE__ */ import_react.default.createElement("b", null, "Harbor ", runtime.harbor_version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, candidate.runtime?.kind ?? "\u2014", " \xB7 ", candidate.runtime?.version ?? "\u2014", " \xB7 ", context.mode ?? "\u2014")))), /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("immutableCandidateFiles")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-table-wrap" }, /* @__PURE__ */ import_react.default.createElement("table", { className: "hse-evidence-table" }, /* @__PURE__ */ import_react.default.createElement("thead", null, /* @__PURE__ */ import_react.default.createElement("tr", null, /* @__PURE__ */ import_react.default.createElement("th", null, t("file")), /* @__PURE__ */ import_react.default.createElement("th", null, t("size")), /* @__PURE__ */ import_react.default.createElement("th", null, t("digest")))), /* @__PURE__ */ import_react.default.createElement("tbody", null, (candidate.files ?? []).map((file) => /* @__PURE__ */ import_react.default.createElement("tr", { key: file.path }, /* @__PURE__ */ import_react.default.createElement("td", null, file.path), /* @__PURE__ */ import_react.default.createElement("td", null, file.size), /* @__PURE__ */ import_react.default.createElement("td", null, /* @__PURE__ */ import_react.default.createElement("code", null, short(file.sha256))))))))));
+}
+function ContractPanel({ artifacts, component, t }) {
+  const contract = artifacts.contract ?? {};
+  return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("integrationBoundary")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("integration")), /* @__PURE__ */ import_react.default.createElement("b", null, component?.id ?? "\u2014", " \xB7 ", component?.version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, short(component?.digest))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("scoringContract")), /* @__PURE__ */ import_react.default.createElement("b", null, contract.contract_id ?? "\u2014", " \xB7 ", contract.version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, t("primaryMetric"), ": ", contract.primary_metric ?? "\u2014")))), /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("hardRequirements")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-chip-list" }, (contract.hard_requirements ?? []).map((item) => /* @__PURE__ */ import_react.default.createElement("span", { key: item.id ?? item }, item.id ?? item)))));
+}
+function ArtifactPreview({ detail, t }) {
+  const preview = detail?.preview;
+  if (!preview) return /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-preview" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-preview-empty" }, t("noRenderableOutput")));
+  const content = preview.content;
+  const provenance = preview.provenance ?? [];
+  let body;
+  if (preview.kind === "page" && preview.format === "url" && preview.url) body = /* @__PURE__ */ import_react.default.createElement("iframe", { className: "hse-page-frame", title: preview.title ?? t("pagePreview"), src: preview.url, sandbox: "", referrerPolicy: "no-referrer" });
+  else if (preview.kind === "page" && preview.format === "html" && typeof content === "string") body = /* @__PURE__ */ import_react.default.createElement("iframe", { className: "hse-page-frame", title: preview.title ?? t("pagePreview"), srcDoc: content, sandbox: "", referrerPolicy: "no-referrer" });
+  else if (preview.kind === "document") {
+    const primary = typeof content === "string" ? content : content?.answer ?? content?.report ?? content?.markdown ?? content?.content ?? content?.text;
+    const remainder = isRecord(content) ? Object.fromEntries(Object.entries(content).filter(([key]) => !["answer", "report", "markdown", "content", "text"].includes(key))) : void 0;
+    body = /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-document" }, /* @__PURE__ */ import_react.default.createElement("h4", null, t("documentPreview")), /* @__PURE__ */ import_react.default.createElement("pre", null, primary ?? pretty(content)), remainder && Object.keys(remainder).length ? /* @__PURE__ */ import_react.default.createElement("details", { className: "hse-source-details" }, /* @__PURE__ */ import_react.default.createElement("summary", null, t("rawOutput")), /* @__PURE__ */ import_react.default.createElement("pre", { className: "hse-output-structured" }, pretty(remainder))) : null);
+  } else body = /* @__PURE__ */ import_react.default.createElement("pre", { className: "hse-output-structured" }, pretty(content));
+  return /* @__PURE__ */ import_react.default.createElement("article", { className: "hse-preview" }, /* @__PURE__ */ import_react.default.createElement("header", { className: "hse-preview-head" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("b", null, preview.title ?? t("generatedOutput")), /* @__PURE__ */ import_react.default.createElement("span", null, preview.kind, " \xB7 ", preview.format)), /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("b", null, t("previewSource")), /* @__PURE__ */ import_react.default.createElement("span", null, provenance.map((item) => item.label ?? item.kind).join(" \xB7 ") || preview.source || "\u2014"))), body);
+}
+function RendererPanel({ job, active, component, t }) {
+  const [page, setPage] = (0, import_react.useState)();
+  const [selected, setSelected] = (0, import_react.useState)();
+  const [detail, setDetail] = (0, import_react.useState)();
+  (0, import_react.useEffect)(() => {
+    let alive = true;
+    const load = () => api("trials", { job, offset: 0, limit: 100, sort: "dataset-order" }).then((value) => {
+      if (!alive) return;
+      setPage(value);
+      if (value.items?.length) setSelected((current) => current ?? value.items[0].id ?? value.items[0].datasetTrial);
+    });
+    void load();
+    const poll = active ? window.setInterval(() => void load(), 2500) : void 0;
+    return () => {
+      alive = false;
+      if (poll) window.clearInterval(poll);
+    };
+  }, [job, active]);
+  (0, import_react.useEffect)(() => {
+    if (!selected) return;
+    let alive = true;
+    void api("trial", { job, trial: selected }).then((value) => alive && setDetail(value));
+    return () => {
+      alive = false;
+    };
+  }, [job, selected]);
+  return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("renderer")), /* @__PURE__ */ import_react.default.createElement("b", null, component?.id ?? "\u2014", " \xB7 ", component?.version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, short(component?.digest))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("generatedOutput")), /* @__PURE__ */ import_react.default.createElement("b", null, page?.items?.length ?? 0, " Trials"), /* @__PURE__ */ import_react.default.createElement("code", null, t("previewSource"), ": ", detail?.preview?.provenance?.map((item) => item.label ?? item.kind).join(" \xB7 ") || "\u2014")))), /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("generatedOutput")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-output-layout" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-output-list" }, (page?.items ?? []).map((trial, index) => /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-output-item", "data-active": String(selected) === String(trial.id ?? trial.datasetTrial), key: `${trial.id}-${trial.attempt}`, onClick: () => setSelected(trial.id ?? trial.datasetTrial) }, /* @__PURE__ */ import_react.default.createElement("b", null, index + 1, ". ", trial.displayName ?? trial.datasetTrial ?? trial.name), /* @__PURE__ */ import_react.default.createElement("span", null, trial.status, " \xB7 attempt ", trial.attempt)))), /* @__PURE__ */ import_react.default.createElement(ArtifactPreview, { detail, t }))));
+}
+function TrialAssessmentReport({ job, active, artifacts, t }) {
+  const [offset, setOffset] = (0, import_react.useState)(0);
+  const [page, setPage] = (0, import_react.useState)();
+  const [selected, setSelected] = (0, import_react.useState)();
+  const [detailState, setDetailState] = (0, import_react.useState)({ status: "idle" });
+  (0, import_react.useEffect)(() => {
+    let alive = true;
+    const load = () => api("trials", { job, offset, limit: REPORT_PAGE_SIZE, sort: "dataset-order" }).then((value) => {
+      if (!alive) return;
+      setPage(value);
+      if (value.items?.length) setSelected((current) => value.items.some((item) => String(item.id ?? item.datasetTrial) === String(current)) ? current : value.items[0].id ?? value.items[0].datasetTrial);
+      else setSelected(void 0);
+    });
+    void load();
+    const poll = active ? window.setInterval(() => void load(), 2500) : void 0;
+    return () => {
+      alive = false;
+      if (poll) window.clearInterval(poll);
+    };
+  }, [job, active, offset]);
+  (0, import_react.useEffect)(() => {
+    setOffset(0);
+  }, [job]);
+  (0, import_react.useEffect)(() => {
+    if (!selected) return;
+    let alive = true;
+    setDetailState({ status: "loading" });
+    void api("trial", { job, trial: selected }).then((value) => alive && setDetailState({ status: "ready", value }), (error) => alive && setDetailState({ status: "error", error: error.message }));
+    return () => {
+      alive = false;
+    };
+  }, [job, selected]);
+  const labels = metricLabelMap(artifacts);
+  const primary = artifacts.contract?.primary_metric ?? "reward";
+  const declared = (artifacts.contract?.metrics ?? []).map((item) => item.id).filter((id) => id !== primary);
+  const metricIds = declared.length ? declared : Object.keys(page?.items?.[0]?.rewards ?? {}).filter((id) => id !== primary);
+  const selectedTrial = page?.items?.find((item) => String(item.id ?? item.datasetTrial) === String(selected));
+  const detail = detailState.value;
+  const assessment = detail?.assessment;
+  const score = assessment?.score;
+  const artifactTitle = assessment?.output?.title ?? detail?.preview?.title ?? "\u2014";
+  return /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("trialAssessments")), /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-muted" }, t("trialAssessmentsHint")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-table-wrap" }, /* @__PURE__ */ import_react.default.createElement("table", { className: "hse-evidence-table hse-report-table" }, /* @__PURE__ */ import_react.default.createElement("thead", null, /* @__PURE__ */ import_react.default.createElement("tr", null, /* @__PURE__ */ import_react.default.createElement("th", null, "#"), /* @__PURE__ */ import_react.default.createElement("th", null, t("queryTrial")), /* @__PURE__ */ import_react.default.createElement("th", null, t("overallScore")), metricIds.map((id) => /* @__PURE__ */ import_react.default.createElement("th", { key: id }, labels[id] ?? id)))), /* @__PURE__ */ import_react.default.createElement("tbody", null, (page?.items ?? []).map((trial) => /* @__PURE__ */ import_react.default.createElement("tr", { key: `${trial.id}-${trial.attempt}`, "data-selected": String(selected) === String(trial.id ?? trial.datasetTrial) }, /* @__PURE__ */ import_react.default.createElement("td", null, trial.datasetOrder + 1), /* @__PURE__ */ import_react.default.createElement("td", null, /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => setSelected(trial.id ?? trial.datasetTrial) }, trial.displayName ?? trial.datasetTrial ?? trial.name)), /* @__PURE__ */ import_react.default.createElement("td", null, /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-report-score", "data-valid": trial.score?.valid }, trial.score?.valid ? format(trial.score.value ?? trial.rewards?.[primary]) : "\u2014")), metricIds.map((id) => /* @__PURE__ */ import_react.default.createElement("td", { key: id }, format(trial.rewards?.[id])))))))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-pager" }, /* @__PURE__ */ import_react.default.createElement("span", null, page?.total ? `${offset + 1}\u2013${Math.min(offset + (page.items?.length ?? 0), page.total)} / ${page.total}` : "0 / 0"), /* @__PURE__ */ import_react.default.createElement("button", { disabled: !offset, onClick: () => setOffset(Math.max(0, offset - REPORT_PAGE_SIZE)) }, t("previous")), /* @__PURE__ */ import_react.default.createElement("button", { disabled: !page?.hasMore, onClick: () => setOffset(offset + REPORT_PAGE_SIZE) }, t("next"))), detailState.status === "loading" ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-empty" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-spin" }), t("loading")) : detailState.status === "error" ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-error" }, detailState.error) : assessment ? /* @__PURE__ */ import_react.default.createElement("article", { className: "hse-report-detail" }, /* @__PURE__ */ import_react.default.createElement("header", { className: "hse-report-detail-head" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("h4", null, selectedTrial?.displayName ?? assessment.query ?? assessment.trial_name), /* @__PURE__ */ import_react.default.createElement("span", null, t("artifact"), ": ", artifactTitle), /* @__PURE__ */ import_react.default.createElement("code", null, assessment.dataset_trial ?? selectedTrial?.datasetTrial)), /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("span", null, t("overallScore")), /* @__PURE__ */ import_react.default.createElement("b", { className: score?.valid ? "hse-valid" : "hse-invalid" }, score?.valid ? format(score.value) : "\u2014"))), !score?.valid ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-capability" }, (score?.invalid_reasons ?? []).join(" \xB7 ")) : null, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-report-compare" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-report-criteria" }, (assessment.criteria ?? []).map((criterion) => /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-report-criterion", key: criterion.id }, /* @__PURE__ */ import_react.default.createElement("header", null, /* @__PURE__ */ import_react.default.createElement("b", null, criterion.label ?? labels[criterion.id] ?? criterion.id), /* @__PURE__ */ import_react.default.createElement("b", null, format(criterion.score))), /* @__PURE__ */ import_react.default.createElement("dl", null, /* @__PURE__ */ import_react.default.createElement("dt", null, t("assessmentReason")), /* @__PURE__ */ import_react.default.createElement("dd", null, criterion.reason || t("noAssessmentReason")), /* @__PURE__ */ import_react.default.createElement("dt", null, t("assessmentRecommendation")), /* @__PURE__ */ import_react.default.createElement("dd", { className: "hse-report-recommendation" }, criterion.recommendation || t("noAssessmentRecommendation")))))), /* @__PURE__ */ import_react.default.createElement(ArtifactPreview, { detail, t }))) : null);
+}
+function ReporterPanel({ job, active, artifacts, t }) {
+  const summary = artifacts.summary ?? {};
+  const population = artifacts.population ?? {};
+  const metrics = population.metrics ?? summary.metrics ?? {};
+  const labels = metricLabelMap(artifacts);
+  const total = summary.n_trials ?? population.population_size ?? 0;
+  const valid = summary.n_valid_scores ?? population.valid_population_size;
+  const groups = Array.isArray(population.groups) ? population.groups : Object.entries(population.groups ?? {}).map(([id, count]) => ({ id, count }));
+  const configured = population.hook?.configured_component;
+  return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("populationEvidence")), configured ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-hook-state", "data-executed": Boolean(configured.executed) }, /* @__PURE__ */ import_react.default.createElement("b", null, t("hookExecution"), ": ", configured.id ?? "\u2014", " \xB7 ", configured.version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("br", null), configured.executed ? t("configuredHookRun") : t("configuredHookNotRun")) : null, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpis" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("trials")), /* @__PURE__ */ import_react.default.createElement("b", null, total)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("valid")), /* @__PURE__ */ import_react.default.createElement("b", { className: "hse-valid" }, valid ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("invalid")), /* @__PURE__ */ import_react.default.createElement("b", { className: "hse-invalid" }, summary.n_invalid_scores ?? population.invalid_population_size ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("exceptions")), /* @__PURE__ */ import_react.default.createElement("b", null, summary.n_exceptions ?? 0)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("health")), /* @__PURE__ */ import_react.default.createElement("b", null, summary.artifact_validation?.valid ? "VALID" : "CHECK")))), /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-table-wrap" }, /* @__PURE__ */ import_react.default.createElement("table", { className: "hse-evidence-table" }, /* @__PURE__ */ import_react.default.createElement("thead", null, /* @__PURE__ */ import_react.default.createElement("tr", null, /* @__PURE__ */ import_react.default.createElement("th", null, t("metric")), /* @__PURE__ */ import_react.default.createElement("th", null, t("aggregate")), /* @__PURE__ */ import_react.default.createElement("th", null, t("coverage")))), /* @__PURE__ */ import_react.default.createElement("tbody", null, Object.entries(metrics).map(([id, value]) => /* @__PURE__ */ import_react.default.createElement("tr", { key: id }, /* @__PURE__ */ import_react.default.createElement("td", null, /* @__PURE__ */ import_react.default.createElement("b", null, labels[id] ?? id), /* @__PURE__ */ import_react.default.createElement("br", null), /* @__PURE__ */ import_react.default.createElement("code", null, id)), /* @__PURE__ */ import_react.default.createElement("td", null, format(value)), /* @__PURE__ */ import_react.default.createElement("td", null, valid ?? "\u2014", " / ", total))))))), /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("trialGroups")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-chip-list" }, groups.map((group) => /* @__PURE__ */ import_react.default.createElement("span", { key: group.id }, group.id, ": ", group.count)))), /* @__PURE__ */ import_react.default.createElement(TrialAssessmentReport, { job, active, artifacts, t }));
+}
+function TrialDeltaTable({ title, items }) {
+  return /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, title, " \xB7 ", items?.length ?? 0), items?.length ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-table-wrap" }, /* @__PURE__ */ import_react.default.createElement("table", { className: "hse-evidence-table" }, /* @__PURE__ */ import_react.default.createElement("thead", null, /* @__PURE__ */ import_react.default.createElement("tr", null, /* @__PURE__ */ import_react.default.createElement("th", null, "Trial"), /* @__PURE__ */ import_react.default.createElement("th", null, "Baseline"), /* @__PURE__ */ import_react.default.createElement("th", null, "Candidate"), /* @__PURE__ */ import_react.default.createElement("th", null, "Delta"))), /* @__PURE__ */ import_react.default.createElement("tbody", null, items.map((item) => /* @__PURE__ */ import_react.default.createElement("tr", { key: item.trial }, /* @__PURE__ */ import_react.default.createElement("td", null, item.trial), /* @__PURE__ */ import_react.default.createElement("td", null, format(item.baseline)), /* @__PURE__ */ import_react.default.createElement("td", null, format(item.candidate)), /* @__PURE__ */ import_react.default.createElement("td", { className: "hse-delta", "data-positive": (item.delta ?? 0) >= 0 }, item.delta >= 0 ? "+" : "", format(item.delta))))))) : /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-muted" }, "0"));
+}
+function ComparePanel({ job, jobs, artifacts, t }) {
+  const current = jobs.find((item) => item.name === job);
+  const all = jobs.filter((item) => item.name !== job);
+  const matched = all.filter((item) => item.candidate?.candidate_id === current?.candidate?.candidate_id && item.dataset?.dataset_id === current?.dataset?.dataset_id && item.dataset?.version === current?.dataset?.version && item.mode === current?.mode);
+  const candidates = matched.length ? matched : all;
+  const [baseline, setBaseline] = (0, import_react.useState)(candidates[0]?.name ?? "");
+  const [state, setState] = (0, import_react.useState)();
+  (0, import_react.useEffect)(() => {
+    if (!baseline) return;
+    let alive = true;
+    void api("compare", { baseline, candidate: job }).then((value) => alive && setState({ value }), (error) => alive && setState({ error: error.message }));
+    return () => {
+      alive = false;
+    };
+  }, [baseline, job]);
+  const labels = metricLabelMap(artifacts);
+  return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("compare")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-compare-select" }, /* @__PURE__ */ import_react.default.createElement("select", { className: "hse-select", value: baseline, onChange: (event) => setBaseline(event.target.value) }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, t("baseline")), candidates.map((item) => /* @__PURE__ */ import_react.default.createElement("option", { key: item.name, value: item.name }, item.name)))), state?.error ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-error" }, state.error) : state?.value ? /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("div", { className: state.value.comparable ? "hse-valid" : "hse-invalid" }, state.value.comparable ? `\u2713 ${t("comparable")}` : `\xD7 ${t("notComparable")}`), /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-muted" }, state.value.note), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-grid" }, Object.entries(state.value.metrics ?? {}).map(([metric, values]) => /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card", key: metric }, /* @__PURE__ */ import_react.default.createElement("span", null, labels[metric] ?? metric, " \xB7 ", values.direction), /* @__PURE__ */ import_react.default.createElement("b", null, format(values.baseline), " \u2192 ", format(values.candidate)), /* @__PURE__ */ import_react.default.createElement("code", { className: "hse-delta", "data-positive": (values.improvement ?? values.delta ?? 0) >= 0 }, typeof values.delta === "number" ? `${values.delta >= 0 ? "+" : ""}${format(values.delta)}` : "\u2014"))))) : /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-muted" }, t("noData"))), state?.value ? /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(TrialDeltaTable, { title: t("improved"), items: state.value.improvedTrials }), /* @__PURE__ */ import_react.default.createElement(TrialDeltaTable, { title: t("regressed"), items: state.value.regressedTrials })) : null, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-capability" }, t("explicitGate")));
+}
+function OptimizerPanel({ artifacts, t }) {
+  const diagnosis = artifacts.diagnosis ?? {};
+  const optimization = artifacts.optimization ?? {};
+  const hypotheses = optimization.hypotheses ?? [];
+  const diagnoses = diagnosis.diagnoses ?? [];
+  const configured = optimization.hook?.configured_component;
+  return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("controlledHypotheses")), configured ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-hook-state", "data-executed": Boolean(configured.executed) }, /* @__PURE__ */ import_react.default.createElement("b", null, t("hookExecution"), ": ", configured.id ?? "\u2014", " \xB7 ", configured.version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("br", null), configured.executed ? t("configuredHookRun") : t("configuredHookNotRun")) : null, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, "Diagnoser"), /* @__PURE__ */ import_react.default.createElement("b", null, diagnosis.hook?.id ?? "\u2014", " \xB7 ", diagnosis.hook?.version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, diagnoses.length, " diagnoses \xB7 non-reward-affecting")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("pluginFallback")), /* @__PURE__ */ import_react.default.createElement("b", null, optimization.hook?.id ?? "\u2014", " \xB7 ", optimization.hook?.version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, hypotheses.length, " hypotheses \xB7 non-reward-affecting")))), diagnoses.length ? /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, "Diagnoses"), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-findings" }, diagnoses.map((item, index) => /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-finding", key: item.id ?? index }, item.message ?? item.root_cause ?? pretty(item))))) : null, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-hypotheses" }, hypotheses.length ? hypotheses.map((item) => /* @__PURE__ */ import_react.default.createElement("article", { className: "hse-hypothesis", key: item.id }, /* @__PURE__ */ import_react.default.createElement("h4", null, item.id), /* @__PURE__ */ import_react.default.createElement("dl", null, /* @__PURE__ */ import_react.default.createElement("dt", null, t("rootCause")), /* @__PURE__ */ import_react.default.createElement("dd", null, item.root_cause ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("dt", null, t("affectedTrials")), /* @__PURE__ */ import_react.default.createElement("dd", null, item.affected_trials?.length ?? 0), /* @__PURE__ */ import_react.default.createElement("dt", null, t("expectedEffect")), /* @__PURE__ */ import_react.default.createElement("dd", null, item.expected_metric_effect ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("dt", null, t("mutationSurface")), /* @__PURE__ */ import_react.default.createElement("dd", null, item.mutation_surface?.join(" \xB7 ") || "\u2014"), /* @__PURE__ */ import_react.default.createElement("dt", null, t("forbiddenSurface")), /* @__PURE__ */ import_react.default.createElement("dd", null, item.forbidden_surface?.join(" \xB7 ") || "\u2014"), /* @__PURE__ */ import_react.default.createElement("dt", null, t("guardrails")), /* @__PURE__ */ import_react.default.createElement("dd", null, item.guardrails?.join(" \xB7 ") || "\u2014"), /* @__PURE__ */ import_react.default.createElement("dt", null, t("rollback")), /* @__PURE__ */ import_react.default.createElement("dd", null, item.rollback_condition ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("dt", null, t("nextExperiment")), /* @__PURE__ */ import_react.default.createElement("dd", null, item.next_experiment ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("details", { className: "hse-source-details" }, /* @__PURE__ */ import_react.default.createElement("summary", null, t("provenance"), " \xB7 ", item.evidence_refs?.length ?? 0), /* @__PURE__ */ import_react.default.createElement("pre", { className: "hse-source" }, pretty(item.evidence_refs))))) : /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-empty" }, t("noHypotheses")))));
+}
+function GateEvidencePanel({ artifacts, t }) {
+  const report = artifacts.promotion;
+  if (!report) return /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("gateEvidence")), /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-muted" }, t("noData")));
+  const labels = metricLabelMap(artifacts);
+  const pass = report.decision === "PROMOTE";
+  const population = report.population ?? {};
+  return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-gate-head" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("h3", null, t("gateEvidence")), /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-muted" }, report.baseline_job ?? "\u2014", " \u2192 ", report.candidate_job ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-decision", "data-pass": pass }, report.decision ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("comparable")), /* @__PURE__ */ import_react.default.createElement("b", { className: report.comparable ? "hse-valid" : "hse-invalid" }, report.comparable ? "\u2713 TRUE" : "\xD7 FALSE"), /* @__PURE__ */ import_react.default.createElement("code", null, short(report.baseline_evaluation_context?.digest), " = ", short(report.candidate_evaluation_context?.digest))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, report.gate_eligible ? t("eligible") : t("notEligible")), /* @__PURE__ */ import_react.default.createElement("b", { className: report.gate_eligible ? "hse-valid" : "hse-invalid" }, population.baseline_valid ?? "\u2014", " / ", population.baseline ?? "\u2014", " \u2192 ", population.candidate_valid ?? "\u2014", " / ", population.candidate ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, t("policy"), ": ", report.policy?.policy_id ?? "\u2014", " \xB7 ", report.policy?.version ?? "\u2014")))), /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("metricDeltas")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-table-wrap" }, /* @__PURE__ */ import_react.default.createElement("table", { className: "hse-evidence-table" }, /* @__PURE__ */ import_react.default.createElement("thead", null, /* @__PURE__ */ import_react.default.createElement("tr", null, /* @__PURE__ */ import_react.default.createElement("th", null, t("metric")), /* @__PURE__ */ import_react.default.createElement("th", null, "Baseline"), /* @__PURE__ */ import_react.default.createElement("th", null, "Candidate"), /* @__PURE__ */ import_react.default.createElement("th", null, "Delta"))), /* @__PURE__ */ import_react.default.createElement("tbody", null, Object.entries(report.metric_deltas ?? {}).map(([id, delta]) => /* @__PURE__ */ import_react.default.createElement("tr", { key: id }, /* @__PURE__ */ import_react.default.createElement("td", null, labels[id] ?? id), /* @__PURE__ */ import_react.default.createElement("td", null, format(report.baseline_metrics?.[id])), /* @__PURE__ */ import_react.default.createElement("td", null, format(report.candidate_metrics?.[id])), /* @__PURE__ */ import_react.default.createElement("td", { className: "hse-delta", "data-positive": delta >= 0 }, delta >= 0 ? "+" : "", format(delta)))))))), /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpis" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("improved")), /* @__PURE__ */ import_react.default.createElement("b", null, report.improved_trials?.length ?? 0)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("regressed")), /* @__PURE__ */ import_react.default.createElement("b", null, report.regressed_trials?.length ?? 0)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("newExceptions")), /* @__PURE__ */ import_react.default.createElement("b", null, report.new_exceptions?.length ?? 0)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("artifactRegressions")), /* @__PURE__ */ import_react.default.createElement("b", null, report.artifact_regressions?.length ?? 0)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("reasons")), /* @__PURE__ */ import_react.default.createElement("b", null, report.reasons?.length ?? 0))), report.reasons?.length ? /* @__PURE__ */ import_react.default.createElement("ul", null, report.reasons.map((reason, index) => /* @__PURE__ */ import_react.default.createElement("li", { key: `${gateReasonText(reason)}-${index}` }, gateReasonText(reason)))) : null));
+}
+function EvaluatorEditor({ value, reload, t }) {
+  const active = value.evaluatorInterface;
+  const evaluator = active?.evaluator;
+  const files = evaluator?.editable_files ?? [];
+  const [selectedPath, setSelectedPath] = (0, import_react.useState)(files[0]?.path ?? "");
+  const selected = files.find((item) => item.path === selectedPath) ?? files[0];
+  const [draft, setDraft] = (0, import_react.useState)(selected?.text ?? "");
+  const [evaluatorVersion, setEvaluatorVersion] = (0, import_react.useState)(nextVersion(evaluator?.version));
+  const [stackVersion, setStackVersion] = (0, import_react.useState)(nextVersion(active?.stack?.version));
+  const [saveState, setSaveState] = (0, import_react.useState)({ status: "idle" });
+  (0, import_react.useEffect)(() => {
+    const first = files[0];
+    setSelectedPath((current) => files.some((item) => item.path === current) ? current : first?.path ?? "");
+    setEvaluatorVersion(nextVersion(evaluator?.version));
+    setStackVersion(nextVersion(active?.stack?.version));
+  }, [evaluator?.digest]);
+  (0, import_react.useEffect)(() => {
+    setDraft(selected?.text ?? "");
+    setSaveState({ status: "idle" });
+  }, [selected?.path, selected?.digest]);
+  if (active?.error || !evaluator) return /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("evaluatorImplementation")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-capability" }, active?.error ?? t("noEvaluatorInterface")));
+  const changed = selected && draft !== selected.text;
+  const save = async () => {
+    setSaveState({ status: "saving" });
+    try {
+      await mutate("evaluator", {
+        stackPath: active.stack.path,
+        filePath: selected.path,
+        content: draft,
+        expectedDigest: selected.digest,
+        newEvaluatorVersion: evaluatorVersion,
+        newStackVersion: stackVersion
+      });
+      setSaveState({ status: "saved" });
+      await reload();
+    } catch (error) {
+      setSaveState({ status: "error", message: error.message });
+    }
+  };
+  return /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-editor-head" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("h3", null, t("evaluatorImplementation")), /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-muted" }, evaluator.evaluator_id, " \xB7 ", evaluator.version)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("evaluatorKind")), /* @__PURE__ */ import_react.default.createElement("b", null, evaluator.kind), /* @__PURE__ */ import_react.default.createElement("code", null, evaluator.interface))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("evaluatorProtocol")), /* @__PURE__ */ import_react.default.createElement("b", null, evaluator.protocol?.input, " \u2192 ", evaluator.protocol?.output), /* @__PURE__ */ import_react.default.createElement("code", null, evaluator.implementation?.language, " \xB7 ", evaluator.implementation?.callable)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("criteria")), /* @__PURE__ */ import_react.default.createElement("b", null, (evaluator.criteria ?? []).map((item) => item.label).join(" \xB7 ")), /* @__PURE__ */ import_react.default.createElement("code", null, "0 \xB7 0.5 \xB7 1"))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-editor-tabs", "aria-label": t("editableFiles") }, files.map((file) => /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-editor-tab", "data-active": file.path === selected?.path, key: file.path, onClick: () => setSelectedPath(file.path) }, /* @__PURE__ */ import_react.default.createElement("b", null, t("openFile"), " ", file.path.split("/").at(-1)), /* @__PURE__ */ import_react.default.createElement("span", null, file.role, " \xB7 ", file.path)))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-editor-current" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("editingFile")), /* @__PURE__ */ import_react.default.createElement("b", null, selected?.path.split("/").at(-1)), /* @__PURE__ */ import_react.default.createElement("code", null, selected?.path)), /* @__PURE__ */ import_react.default.createElement("textarea", { className: "hse-editor", "aria-label": t("editSource"), spellCheck: "false", value: draft, onChange: (event) => setDraft(event.target.value) }), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-editor-versions" }, /* @__PURE__ */ import_react.default.createElement("label", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("evaluatorVersion")), /* @__PURE__ */ import_react.default.createElement("input", { className: "hse-input", value: evaluatorVersion, onChange: (event) => setEvaluatorVersion(event.target.value) })), /* @__PURE__ */ import_react.default.createElement("label", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("stackVersion")), /* @__PURE__ */ import_react.default.createElement("input", { className: "hse-input", value: stackVersion, onChange: (event) => setStackVersion(event.target.value) }))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-editor-actions" }, /* @__PURE__ */ import_react.default.createElement("p", { className: saveState.status === "error" ? "hse-editor-error" : saveState.status === "saved" ? "hse-editor-success" : "hse-muted" }, saveState.status === "error" ? saveState.message : saveState.status === "saved" ? t("saved") : t("editWarning")), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-button", disabled: !changed || !evaluatorVersion || !stackVersion || saveState.status === "saving", onClick: () => void save() }, saveState.status === "saving" ? t("saving") : t("saveEvaluator"))));
+}
+function GovernancePanel({ job, t }) {
+  const [state, setState] = (0, import_react.useState)({ status: "loading" });
+  const [copied, setCopied] = (0, import_react.useState)(false);
+  const load = (0, import_react.useCallback)(async () => {
+    try {
+      setState({ status: "ready", value: await api("governance", { job }) });
+    } catch (error) {
+      setState({ status: "error", error: error.message });
+    }
+  }, [job]);
+  (0, import_react.useEffect)(() => {
+    void load();
+  }, [load]);
+  if (state.status === "loading") return /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-empty" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-spin" }), t("loading"));
+  if (state.status === "error") return /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-capability" }, state.error);
+  const value = state.value;
+  const evaluator = value.components?.evaluator;
+  const rubric = value.components?.rubric;
+  const workflow = value.upgradeWorkflow ?? {};
+  const prompt = t("evaluatorPrompt");
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(prompt);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setCopied(false);
+    }
+  };
+  return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("currentEvaluator")), /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-muted" }, t("governanceHint")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-governance-id" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("evaluator")), /* @__PURE__ */ import_react.default.createElement("b", null, evaluator?.id ?? "\u2014", " \xB7 ", evaluator?.version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, evaluator?.entry ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("rubric")), /* @__PURE__ */ import_react.default.createElement("b", null, rubric?.id ?? "\u2014", " \xB7 ", rubric?.version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, rubric?.entry ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, "Judge"), /* @__PURE__ */ import_react.default.createElement("b", null, value.judge?.provider ?? "\u2014", " / ", value.judge?.model ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, value.judge?.version ?? "\u2014")))), /* @__PURE__ */ import_react.default.createElement(EvaluatorEditor, { value, reload: load, t }), [["evaluator", evaluator], ["rubric", rubric]].map(([role, component]) => /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section", key: role }, /* @__PURE__ */ import_react.default.createElement("h3", null, role === "evaluator" ? t("evaluator") : t("rubric"), " \xB7 ", component?.id ?? "\u2014", " \xB7 ", component?.version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("sourceCode")), /* @__PURE__ */ import_react.default.createElement("b", null, component?.entry ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, short(component?.digest))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, "Reward semantics"), /* @__PURE__ */ import_react.default.createElement("b", null, component?.reward_affecting ? "reward-affecting" : "non-reward"), /* @__PURE__ */ import_react.default.createElement("code", null, component?.source?.error ?? "read-only"))), component?.source?.text ? /* @__PURE__ */ import_react.default.createElement("details", { className: "hse-source-details" }, /* @__PURE__ */ import_react.default.createElement("summary", null, t("sourceCode")), /* @__PURE__ */ import_react.default.createElement("pre", { className: "hse-source" }, component.source.text)) : /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-capability" }, component?.source?.error))), /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section hse-upgrade" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("upgradeEvaluator")), /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-muted" }, t("upgradeHint")), /* @__PURE__ */ import_react.default.createElement("ol", null, [1, 2, 3, 4, 5].map((index) => /* @__PURE__ */ import_react.default.createElement("li", { key: index }, t(`upgradeStep${index}`)))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("freshBaseline")), /* @__PURE__ */ import_react.default.createElement("b", null, "Evaluator / Rubric / Judge identity"), /* @__PURE__ */ import_react.default.createElement("code", null, (workflow.freshBaselineRequiredWhen ?? []).join(" \xB7 "))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("metaEvaluation")), /* @__PURE__ */ import_react.default.createElement("b", null, "Independent GT \xB7 ESF \xB7 SCE \xB7 RCR"), /* @__PURE__ */ import_react.default.createElement("code", null, "No automatic evaluation or Gate"))), /* @__PURE__ */ import_react.default.createElement("pre", { className: "hse-prompt" }, prompt), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-prompt-actions" }, /* @__PURE__ */ import_react.default.createElement("button", { className: "hse-button", type: "button", onClick: () => void copy() }, copied ? t("copied") : t("copyPrompt")))));
+}
+function MetaEvaluationPanel({ job, t }) {
+  const [state, setState] = (0, import_react.useState)({ status: "loading" });
+  (0, import_react.useEffect)(() => {
+    let alive = true;
+    void api("meta", { job }).then((value2) => alive && setState({ status: "ready", value: value2 }), (error) => alive && setState({ status: "error", error: error.message }));
+    return () => {
+      alive = false;
+    };
+  }, [job]);
+  if (state.status === "loading") return /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-empty" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-spin" }), t("loading"));
+  if (state.status === "error") return /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-error" }, state.error);
+  const value = state.value ?? {};
+  const groundTruth = value.groundTruth;
+  const report = value.report;
+  const metrics = report?.metrics ?? {};
+  return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("metaWorkflow")), /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-muted" }, t("metaWorkflowHint")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta-flow" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("b", null, "1. Evaluator Candidate"), /* @__PURE__ */ import_react.default.createElement("br", null), value.workflow?.candidate), /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("b", null, "2. Fixed artifacts + GT"), /* @__PURE__ */ import_react.default.createElement("br", null), value.workflow?.dataset), /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("b", null, "3. Repeated observations"), /* @__PURE__ */ import_react.default.createElement("br", null), value.workflow?.output), /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("b", null, "4. ESF / SCE / RCR"), /* @__PURE__ */ import_react.default.createElement("br", null), value.workflow?.verifier))), /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("groundTruth")), groundTruth ? /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, "ID / version"), /* @__PURE__ */ import_react.default.createElement("b", null, groundTruth.id, " \xB7 ", groundTruth.version), /* @__PURE__ */ import_react.default.createElement("code", null, groundTruth.path)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("gtSource")), /* @__PURE__ */ import_react.default.createElement("b", null, groundTruth.source?.kind), /* @__PURE__ */ import_react.default.createElement("code", null, groundTruth.source?.description)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("gtCases")), /* @__PURE__ */ import_react.default.createElement("b", null, groundTruth.caseCount), /* @__PURE__ */ import_react.default.createElement("code", null, groundTruth.criteria?.map((item) => item.label ?? item.id).join(" \xB7 "))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("gtBadcases")), /* @__PURE__ */ import_react.default.createElement("b", null, groundTruth.badcaseCount), /* @__PURE__ */ import_react.default.createElement("code", null, t("gtProvenance"), ": ", groundTruth.source?.provenance)))) : /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-capability" }, /* @__PURE__ */ import_react.default.createElement("b", null, t("groundTruthRequired")), /* @__PURE__ */ import_react.default.createElement("br", null), t("gtKinds")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-hook-state", "data-executed": Boolean(report) }, /* @__PURE__ */ import_react.default.createElement("b", null, t("metaNext")), /* @__PURE__ */ import_react.default.createElement("br", null), value.workflow?.nextAction)), report ? /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, "Evaluator \xB7 ", report.evaluator?.id, " \xB7 ", report.evaluator?.version), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpis" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, "ESF \u2191"), /* @__PURE__ */ import_react.default.createElement("b", null, format(metrics.esf))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, "SCE \u2193"), /* @__PURE__ */ import_react.default.createElement("b", null, format(metrics.sce))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, "RCR \u2191"), /* @__PURE__ */ import_react.default.createElement("b", null, format(metrics.rcr))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("coverage")), /* @__PURE__ */ import_react.default.createElement("b", null, format(report.coverage?.rate))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("disagreements")), /* @__PURE__ */ import_react.default.createElement("b", null, report.disagreements?.length ?? 0)))), report.disagreements?.length ? /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("disagreements")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-table-wrap" }, /* @__PURE__ */ import_react.default.createElement("table", { className: "hse-evidence-table" }, /* @__PURE__ */ import_react.default.createElement("thead", null, /* @__PURE__ */ import_react.default.createElement("tr", null, /* @__PURE__ */ import_react.default.createElement("th", null, "Case"), /* @__PURE__ */ import_react.default.createElement("th", null, "Criterion"), /* @__PURE__ */ import_react.default.createElement("th", null, "GT"), /* @__PURE__ */ import_react.default.createElement("th", null, "Observed"))), /* @__PURE__ */ import_react.default.createElement("tbody", null, report.disagreements.slice(0, 20).map((item, index) => /* @__PURE__ */ import_react.default.createElement("tr", { key: `${item.case_id}-${item.repeat}-${item.criterion_id}-${index}` }, /* @__PURE__ */ import_react.default.createElement("td", null, item.case_id), /* @__PURE__ */ import_react.default.createElement("td", null, item.criterion_id), /* @__PURE__ */ import_react.default.createElement("td", null, format(item.ground_truth)), /* @__PURE__ */ import_react.default.createElement("td", null, format(item.observed)))))))) : null) : null);
+}
+function Workbench({ job, jobs, close, t }) {
+  const [state, setState] = (0, import_react.useState)({ status: "loading" });
+  const [stage, setStage] = (0, import_react.useState)("candidate");
+  const activeJob = jobs.find((item) => item.name === job);
+  const load = (0, import_react.useCallback)(async () => {
+    try {
+      setState({ status: "ready", value: await api("job", { job }) });
+    } catch (error) {
+      setState({ status: "error", error: error.message });
+    }
+  }, [job]);
+  (0, import_react.useEffect)(() => {
+    void load();
+  }, [load]);
+  (0, import_react.useEffect)(() => {
+    if (!activeJob?.progress?.active) return void 0;
+    const timer = window.setInterval(() => void load(), 2500);
+    return () => window.clearInterval(timer);
+  }, [activeJob?.progress?.active, load]);
+  (0, import_react.useEffect)(() => {
+    const escape = (event) => event.key === "Escape" && close();
+    window.addEventListener("keydown", escape);
+    return () => window.removeEventListener("keydown", escape);
+  }, [close]);
   const detail = state.value;
-  const a = detail?.artifacts ?? {};
-  const summary = a.summary ?? {};
-  const context = a.context ?? {};
-  const doctor = a.doctor ?? {};
-  const contract = a.contract ?? {};
-  const stack = a.stack ?? {};
-  const reasons = a.promotion?.reasons ?? summary.exceptions ?? [];
-  return /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-overlay", role: "presentation", onMouseDown: (event) => event.target === event.currentTarget && close() }, /* @__PURE__ */ import_react.default.createElement("aside", { className: "hse-drawer", role: "dialog", "aria-modal": "true", "aria-label": job }, /* @__PURE__ */ import_react.default.createElement("header", { className: "hse-drawer-head" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("h2", null, job), /* @__PURE__ */ import_react.default.createElement("p", null, summary.candidate?.candidate_id ?? "\u2014", " \xB7 ", summary.candidate?.version ?? "\u2014", " \xB7 ", context.mode ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-close", onClick: close }, t("close"))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-workbench" }, state.status === "loading" ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-empty" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-spin" }), t("loading")) : state.status === "error" ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-error" }, state.error) : /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(ArtifactSection, { title: t("result") }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpis" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("primaryMetric")), /* @__PURE__ */ import_react.default.createElement("b", null, format(summary.metrics?.[contract.primary_metric]))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("trials")), /* @__PURE__ */ import_react.default.createElement("b", null, summary.n_trials ?? 0)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("exceptions")), /* @__PURE__ */ import_react.default.createElement("b", null, summary.n_exceptions ?? 0)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("validation")), /* @__PURE__ */ import_react.default.createElement("b", { className: summary.artifact_validation?.valid ? "hse-valid" : "hse-invalid" }, summary.artifact_validation?.valid ? "VALID" : "INVALID"))), /* @__PURE__ */ import_react.default.createElement(MetricPills, { metrics: summary.metrics })), /* @__PURE__ */ import_react.default.createElement(ArtifactSection, { title: t("process") }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("doctor")), /* @__PURE__ */ import_react.default.createElement("b", { className: doctor.promotion_ready ? "hse-valid" : "hse-invalid" }, doctor.promotion_ready ? t("ready") : t("blocked"))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("context")), /* @__PURE__ */ import_react.default.createElement("code", null, short(context.digest)))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-findings" }, doctor.findings?.map((finding, index) => /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-finding", "data-level": finding.level, key: `${finding.code}-${index}` }, /* @__PURE__ */ import_react.default.createElement("b", null, finding.code), finding.message)))), /* @__PURE__ */ import_react.default.createElement(ArtifactSection, { title: t("contract") }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, "ID / ", t("version")), /* @__PURE__ */ import_react.default.createElement("b", null, contract.contract_id ?? "\u2014", " \xB7 ", contract.version ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("primaryMetric")), /* @__PURE__ */ import_react.default.createElement("b", null, contract.primary_metric ?? "\u2014"))), /* @__PURE__ */ import_react.default.createElement(MetricPills, { metrics: Object.fromEntries((contract.metrics ?? []).map((metric) => [metric.id, metric.direction ?? metric.label ?? "metric"])) })), /* @__PURE__ */ import_react.default.createElement(ArtifactSection, { title: t("stack") }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-components" }, Object.entries(stack.components ?? {}).map(([role, component]) => /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-component", key: role }, /* @__PURE__ */ import_react.default.createElement("span", null, role, component.reward_affecting ? " \xB7 reward" : ""), /* @__PURE__ */ import_react.default.createElement("b", null, component.id, " \xB7 ", component.version), /* @__PURE__ */ import_react.default.createElement("code", { title: component.digest }, short(component.digest)))))), /* @__PURE__ */ import_react.default.createElement(ArtifactSection, { title: t("dataset") }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, "ID / ", t("version")), /* @__PURE__ */ import_react.default.createElement("b", null, a.dataset?.dataset_id ?? "\u2014", " \xB7 ", a.dataset?.version ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("population")), /* @__PURE__ */ import_react.default.createElement("b", null, a.dataset?.task_count ?? 0, " tasks \xB7 ", a.dataset?.file_count ?? 0, " files")))), /* @__PURE__ */ import_react.default.createElement(ArtifactSection, { title: t("assessments") }, /* @__PURE__ */ import_react.default.createElement(TrialTable, { job, t })), /* @__PURE__ */ import_react.default.createElement(ArtifactSection, { title: t("reasons") }, /* @__PURE__ */ import_react.default.createElement("ul", { className: "hse-reasons" }, reasons.length ? reasons.map((reason, index) => /* @__PURE__ */ import_react.default.createElement("li", { key: index }, reasonText(reason))) : /* @__PURE__ */ import_react.default.createElement("li", null, t("noData")))), /* @__PURE__ */ import_react.default.createElement(ArtifactSection, { title: t("optimization"), value: a.optimization }), /* @__PURE__ */ import_react.default.createElement(ArtifactSection, { title: t("promotion"), value: a.promotion }), /* @__PURE__ */ import_react.default.createElement("details", { className: "hse-section hse-audit" }, /* @__PURE__ */ import_react.default.createElement("summary", null, t("audit")), /* @__PURE__ */ import_react.default.createElement("pre", null, JSON.stringify({ validation: detail.validation, candidate: a.candidate, context: a.context, stack: a.stack, dataset: a.dataset, population: a.population }, null, 2)))))));
+  const artifacts = detail?.artifacts ?? {};
+  const component = artifacts.stack?.components?.[stage];
+  let content;
+  if (stage === "candidate") content = /* @__PURE__ */ import_react.default.createElement(CandidatePanel, { artifacts, t });
+  else if (stage === "dataset") content = /* @__PURE__ */ import_react.default.createElement(DatasetPanel, { job, artifacts, t });
+  else if (stage === "renderer") content = /* @__PURE__ */ import_react.default.createElement(RendererPanel, { job, active: Boolean(activeJob?.progress?.active), component, t });
+  else if (stage === "judge") content = /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(GovernancePanel, { job, t }), /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("trials"), " / ", t("evidence")), /* @__PURE__ */ import_react.default.createElement(TrialExplorer, { job, active: Boolean(activeJob?.progress?.active), t })));
+  else if (stage === "meta") content = /* @__PURE__ */ import_react.default.createElement(MetaEvaluationPanel, { job, t });
+  else if (stage === "reporter") content = /* @__PURE__ */ import_react.default.createElement(ReporterPanel, { job, active: Boolean(activeJob?.progress?.active), artifacts, t });
+  else if (stage === "optimizer") content = /* @__PURE__ */ import_react.default.createElement(OptimizerPanel, { artifacts, t });
+  else if (stage === "gate") content = /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(ComparePanel, { job, jobs, artifacts, t }), /* @__PURE__ */ import_react.default.createElement(GateEvidencePanel, { artifacts, t }));
+  else content = stage === "integration" ? /* @__PURE__ */ import_react.default.createElement(ContractPanel, { artifacts, component, t }) : /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-components" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-component" }, /* @__PURE__ */ import_react.default.createElement("span", null, stage, component?.reward_affecting ? " \xB7 reward-affecting" : ""), /* @__PURE__ */ import_react.default.createElement("b", null, component?.id ?? "\u2014", " \xB7 ", component?.version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, short(component?.digest)))));
+  return /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-overlay", role: "presentation", onMouseDown: (event) => event.target === event.currentTarget && close() }, /* @__PURE__ */ import_react.default.createElement("aside", { className: "hse-drawer", role: "dialog", "aria-modal": "true", "aria-label": job }, /* @__PURE__ */ import_react.default.createElement("header", { className: "hse-drawer-head" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("h2", null, job), /* @__PURE__ */ import_react.default.createElement("p", null, activeJob?.candidate?.candidate_id ?? "\u2014", " \xB7 ", activeJob?.candidate?.version ?? "\u2014", " \xB7 ", activeJob?.mode ?? "\u2014", " \xB7 ", activeJob?.progress?.completed ?? 0, "/", activeJob?.progress?.total ?? 0)), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-close", onClick: close }, t("close"))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-workbench" }, /* @__PURE__ */ import_react.default.createElement("nav", { className: "hse-stage-nav", "aria-label": t("stageNav") }, STAGES.map((item) => /* @__PURE__ */ import_react.default.createElement("button", { type: "button", key: item, "data-active": stage === item, "aria-current": stage === item ? "step" : void 0, onClick: () => setStage(item) }, STAGES.indexOf(item) + 1, ". ", t(item)))), state.status === "loading" ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-empty" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-spin" }), t("loading")) : state.status === "error" ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-error" }, state.error, /* @__PURE__ */ import_react.default.createElement("br", null), /* @__PURE__ */ import_react.default.createElement("button", { className: "hse-button", onClick: () => void load() }, t("retry"))) : /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, !detail.capabilities?.contextV2 ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-capability" }, t("capabilityUnavailable")) : null, content, /* @__PURE__ */ import_react.default.createElement("details", { className: "hse-section hse-audit" }, /* @__PURE__ */ import_react.default.createElement("summary", null, t("audit"), " / ", t("artifacts")), /* @__PURE__ */ import_react.default.createElement("pre", null, pretty({ validation: detail.validation, registry: artifacts.registry, context: artifacts.context, doctor: artifacts.doctor })))))));
 }
 function DashboardView({ t }) {
   const state = useDashboard(true);
   const [selected, setSelected] = (0, import_react.useState)();
   const snapshot = state.value;
-  const stats = [[t("jobs"), snapshot?.overview?.totalJobs ?? "\u2014"], [t("completed"), snapshot?.overview?.completedJobs ?? "\u2014"], [t("pending"), snapshot?.overview?.activeJobs ?? "\u2014"], [snapshot?.overview?.latestMetric?.name ?? t("primaryMetric"), format(snapshot?.overview?.latestMetric?.value)]];
-  return /* @__PURE__ */ import_react.default.createElement("main", { className: "hse-root" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-page" }, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-hero", style: { "--ocean": `url(${harbor_ocean_default})` } }, /* @__PURE__ */ import_react.default.createElement("button", { className: "hse-refresh", onClick: () => void state.load() }, t("refresh")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-eyebrow" }, t("eyebrow")), /* @__PURE__ */ import_react.default.createElement("h1", null, t("heroTitle")), /* @__PURE__ */ import_react.default.createElement("p", null, t("heroBody")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-stats" }, stats.map(([label, value]) => /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-stat", key: label }, /* @__PURE__ */ import_react.default.createElement("span", null, label), /* @__PURE__ */ import_react.default.createElement("b", null, value))))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-head" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("h2", null, t("jobs")), /* @__PURE__ */ import_react.default.createElement("p", null, t("jobsHint")))), state.status === "loading" ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-empty" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-spin" }), t("loading")) : state.status === "error" && !snapshot ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-error" }, state.error, /* @__PURE__ */ import_react.default.createElement("br", null), /* @__PURE__ */ import_react.default.createElement("button", { className: "hse-button", onClick: () => void state.load() }, t("retry"))) : !snapshot?.jobs?.length ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-empty" }, t("empty")) : /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-list" }, snapshot.jobs.map((job) => /* @__PURE__ */ import_react.default.createElement(JobCard, { job, t, open: setSelected, key: job.name })))), selected ? /* @__PURE__ */ import_react.default.createElement(Workbench, { job: selected, close: () => setSelected(void 0), t }) : null);
+  const stats = [[t("jobs"), snapshot?.overview?.totalJobs ?? "\u2014"], [t("completed"), snapshot?.overview?.completedJobs ?? "\u2014"], [t("running"), snapshot?.overview?.activeJobs ?? "\u2014"], [snapshot?.overview?.latestMetric?.name ?? t("score"), format(snapshot?.overview?.latestMetric?.value)]];
+  return /* @__PURE__ */ import_react.default.createElement("main", { className: "hse-root" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-page" }, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-hero", style: { "--ocean-image": `url(${harbor_ocean_default})` } }, /* @__PURE__ */ import_react.default.createElement("button", { className: "hse-refresh", onClick: () => void state.load() }, t("refresh")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-eyebrow" }, /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-whale", "aria-hidden": "true" }, "\u{1F433}"), t("eyebrow")), /* @__PURE__ */ import_react.default.createElement("h1", null, t("heroTitle")), /* @__PURE__ */ import_react.default.createElement("p", null, t("heroBody")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-stats" }, stats.map(([label, value]) => /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-stat", key: label }, /* @__PURE__ */ import_react.default.createElement("span", null, label), /* @__PURE__ */ import_react.default.createElement("b", null, value))))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-head" }, /* @__PURE__ */ import_react.default.createElement("h2", null, t("jobs")), /* @__PURE__ */ import_react.default.createElement("p", null, t("jobsHint"))), state.status === "loading" ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-empty" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-spin" }), t("loading")) : state.status === "error" && !snapshot ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-error" }, state.error, /* @__PURE__ */ import_react.default.createElement("br", null), /* @__PURE__ */ import_react.default.createElement("button", { className: "hse-button", onClick: () => void state.load() }, t("retry"))) : !snapshot?.jobs?.length ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-empty" }, t("empty")) : /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-list" }, snapshot.jobs.map((job) => /* @__PURE__ */ import_react.default.createElement(JobCard, { job, t, open: setSelected, key: job.name })))), selected ? /* @__PURE__ */ import_react.default.createElement(Workbench, { job: selected, jobs: snapshot.jobs, close: () => setSelected(void 0), t }) : null);
 }
 function DoctorView({ t }) {
   const state = useDashboard(false);
@@ -300,7 +881,7 @@ function HarborToolView({ block, toolName }) {
   const [open, setOpen] = (0, import_react.useState)(true);
   const value = decodeToolResult(block);
   const running = !isRecord(block) || !("kind" in block);
-  return /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-tool" }, /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => setOpen(!open) }, /* @__PURE__ */ import_react.default.createElement("strong", null, "\u{1F433} ", toolName), /* @__PURE__ */ import_react.default.createElement("small", null, running ? "running" : block.isError ? "error" : "\u2713")), open ? /* @__PURE__ */ import_react.default.createElement("pre", null, value ? JSON.stringify(value, null, 2) : blockText(block) || "Running\u2026") : null);
+  return /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-tool" }, /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => setOpen(!open) }, /* @__PURE__ */ import_react.default.createElement("strong", null, "\u{1F433} ", toolName), /* @__PURE__ */ import_react.default.createElement("small", null, running ? "running" : block.isError ? "error" : "\u2713")), open ? /* @__PURE__ */ import_react.default.createElement("pre", null, value ? pretty(value) : blockText(block) || "Running\u2026") : null);
 }
 var name = "dsh-harbor-evolution";
 var inject = ["slots", "locale"];
@@ -312,7 +893,7 @@ function apply(ctx) {
   ctx.slots.inject("conversation.view", () => ctx.slots.register({ name: "conversation.view", id: "harbor-evolution", order: 30, locale: NS, label: () => t("tab"), inject: injected }, DashboardView));
   ctx.slots.inject("settings.section", () => ctx.slots.register({ name: "settings.section", id: "harbor-evolution", order: 35, label: () => t("settings"), inject: injected }, DoctorView));
   ctx.slots.inject("tool.call.toolview", function* registerTools() {
-    for (const key of ["harbor_candidate_snapshot", "harbor_evolution_init", "harbor_evolution_doctor", "harbor_dataset_validate", "harbor_context_preview", "harbor_eval_run", "harbor_eval_result", "harbor_candidate_compare"]) yield ctx.slots.register({ name: "tool.call.toolview", key, inject: injected }, HarborToolView);
+    for (const key of ["harbor_candidate_snapshot", "harbor_evolution_init", "harbor_evolution_doctor", "harbor_dataset_validate", "harbor_context_preview", "harbor_eval_run", "harbor_eval_result", "harbor_evaluator_inspect", "harbor_evaluator_update", "harbor_ground_truth_init", "harbor_evaluator_meta_evaluate", "harbor_candidate_compare"]) yield ctx.slots.register({ name: "tool.call.toolview", key, inject: injected }, HarborToolView);
   });
 }
 module.exports = { name, inject, apply };

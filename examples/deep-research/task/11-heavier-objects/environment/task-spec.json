@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "id": "11-heavier-objects",
+  "topic": "重物下落",
+  "question": "更重的物体一定下落得更快吗？",
+  "answer_concepts": [
+    [
+      "真空",
+      "同时",
+      "加速度"
+    ],
+    [
+      "空气阻力",
+      "形状",
+      "面积"
+    ],
+    [
+      "质量",
+      "重力",
+      "惯性"
+    ]
+  ],
+  "expected_source_id": "nasa-falling-objects",
+  "badcase": {
+    "kind": "misconception-trap",
+    "risk": "回答容易顺着直觉错误地断言重物一定更快。",
+    "expected_behavior": "区分真空中的自由落体与空气阻力影响。"
+  }
+}

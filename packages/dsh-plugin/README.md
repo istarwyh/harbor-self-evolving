@@ -2,7 +2,7 @@
 
 Installable DeepSeek Harness Plugin + Skill for running stable Harbor evaluation and controlled Agent evolution loops, with a native DSH Web dashboard.
 
-The package gives DSH eight strict Harbor tools, dedicated Tool cards, a paginated Evaluation Workbench, an installation Doctor, and the model- and user-invocable `evolve-agent-with-harbor` Skill. The Skill clarifies and initializes the Evaluation Stack, validates Dataset identity, runs Architecture Doctor and Context v2 preview, establishes a baseline, diagnoses evidence, limits each iteration to one controlled Candidate change, and applies the Promotion Gate.
+The package gives DSH twelve strict Harbor tools, dedicated Tool cards, a nine-stage Evaluation Workbench, an installation Doctor, and the model- and user-invocable `evolve-agent-with-harbor` Skill. The Skill clarifies and initializes the Evaluation Stack, validates Dataset identity, checks Trial Lifecycle and Score Validity, governs independent Ground Truth meta-evaluation, diagnoses evidence provenance, limits each iteration to one controlled Candidate change, and invokes the Promotion Gate only as an explicit action.
 
 ## Install
 
@@ -14,8 +14,8 @@ npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 
 The setup command installs both required runtimes:
 
-- `harbor-dsh-evolution==0.5.0` in a managed Python environment.
-- `dsh-harbor-evolution@0.5.0` in the selected DSH profile.
+- `harbor-dsh-evolution==0.6.0` in a managed Python environment.
+- `dsh-harbor-evolution@0.6.0` in the selected DSH profile.
 
 It then stores the absolute Harbor executable paths and `projectRoot` in the profile's `harbor-evolution` block and verifies the integration. Existing unrelated profile entries are preserved, and rerunning setup updates the same block.
 
@@ -45,13 +45,17 @@ The Plugin registers:
 
 In the `web` profile, the same package also registers:
 
-- a lightweight Harbor Job overview and on-demand Evaluation Workbench for Contract, Stack, Dataset, Doctor, paginated Trials, evidence, optimization, promotion, and audit artifacts;
+- a localized nine-stage Workbench that directly exposes fixed experiment identities, Agent-visible Dataset queries/instructions, safe business-artifact previews, Ground Truth meta-evaluation, paginated per-Trial evidence and recommendations, Population validity/coverage, controlled optimization hypotheses, and Baseline/Gate deltas; raw JSON remains in the audit drawer;
+- descriptor-authorized Evaluator/Rubric source editing for `script` and `llm-as-judge` implementations, with optimistic concurrency and mandatory new identities;
+- a `harbor-dsh-evaluator/v1` interface shared by deterministic scripts and LLM-as-Judge implementations;
 - compact result cards for all Harbor Tool calls;
 - a `Harbor Evolution` Settings section that checks the configured project, Evaluation Stack, Jobs directory, and CLI paths.
 
 The Web UI is intentionally read-only. Starting an evaluation or deciding promotion remains an explicit Agent + Skill workflow, so a page refresh can never launch an expensive Job.
 
 A direct evaluation requires `candidatePath`, `datasetPath`, `stackPath`, and explicit `mode`; `promotion-eligible` additionally requires `policyPath`. Prefer the Skill because it will not run or compare Jobs until the material identities and evaluation contract are resolved.
+
+`harbor_eval_result` defaults to the stable Summary. Use `view=job`, `view=dataset`, `view=progress`, `view=trial` plus a returned `trialId`, or `view=governance` to inspect sanitized instructions, generated output, evidence, and evaluator source without coupling the Agent to artifact file paths.
 
 ## What setup writes
 

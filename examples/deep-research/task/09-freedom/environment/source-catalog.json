@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "un-freedom",
+      "title": "United Nations: Universal Declaration of Human Rights",
+      "url": "https://www.un.org/en/about-us/universal-declaration-of-human-rights",
+      "content": "自由包含形成观点、作出选择和采取行动的空间，也以每个人平等的尊严与权利为基础。现实中的自由并非毫无边界：它与他人的权利、公共责任以及防止伤害的法律安排相互制约。",
+      "keywords": [
+        "自由",
+        "选择",
+        "权利",
+        "责任",
+        "自主"
+      ]
+    }
+  ]
+}

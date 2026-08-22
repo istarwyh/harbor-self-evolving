@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/istarwyh/harbor-self-evolving/schemas/evaluation-summary.schema.json",
+  "title": "Evaluation Summary v3",
+  "type": "object",
+  "required": ["schema_version", "job", "n_trials", "n_discovered_trials", "n_valid_scores", "n_invalid_scores", "metrics", "trials", "artifact_validation"],
+  "properties": {
+    "schema_version": { "const": 3 },
+    "job": { "type": "string" },
+    "n_trials": { "type": "integer", "minimum": 0 },
+    "n_discovered_trials": { "type": "integer", "minimum": 0 },
+    "n_valid_scores": { "type": "integer", "minimum": 0 },
+    "n_invalid_scores": { "type": "integer", "minimum": 0 },
+    "metrics": { "type": "object", "additionalProperties": { "type": "number" } },
+    "trials": { "type": "array", "items": { "type": "object" } },
+    "artifact_validation": { "type": "object" }
+  }
+}

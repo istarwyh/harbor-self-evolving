@@ -33,18 +33,77 @@ export function makeJobName(manifest, now = new Date()) {
   return `${identity}-${suffix}`
 }
 
-async function cliJson(config, args, { allowedExitCodes = [0] } = {}) {
-  const result = await runProcess(config.harborDshBin, args, {
-    cwd: config.projectRoot,
-    timeoutMs: config.timeoutMs,
-    allowedExitCodes,
-    env: { ...process.env, ...(config.pythonPath ? { PYTHONPATH: config.pythonPath } : {}) },
-  })
+async function cliJson(config, args, { allowedExitCodes = [0], input } = {}) {
+  let result
+  try {
+    result = await runProcess(config.harborDshBin, args, {
+      cwd: config.projectRoot,
+      timeoutMs: config.timeoutMs,
+      allowedExitCodes,
+      input,
+      env: { ...process.env, ...(config.pythonPath ? { PYTHONPATH: config.pythonPath } : {}) },
+    })
+  } catch (error) {
+    const detail = error?.result?.stderr?.trim().split('\n').at(-1)?.replace(/^[A-Za-z]+Error:\s*/, '')
+    throw new Error(detail || error.message)
+  }
   try {
     return JSON.parse(result.stdout)
   } catch {
     throw new Error(`harbor-dsh returned invalid JSON for ${args.slice(0, 2).join(' ')}`)
   }
+}
+
+export async function inspectEvaluator(config, args = {}) {
+  const stack = resolveWithin(config.projectRoot, args.stackPath ?? '.harbor/evaluation-stack.yml', 'stackPath')
+  return cliJson(config, [
+    'evaluator', 'inspect',
+    '--project-root', config.projectRoot,
+    '--stack', stack,
+  ])
+}
+
+export async function updateEvaluator(config, args) {
+  const stack = resolveWithin(config.projectRoot, args.stackPath ?? '.harbor/evaluation-stack.yml', 'stackPath')
+  if (typeof args.content !== 'string') throw new Error('content is required')
+  return cliJson(config, [
+    'evaluator', 'update',
+    '--project-root', config.projectRoot,
+    '--stack', stack,
+    '--file', String(args.filePath ?? ''),
+    '--expected-digest', String(args.expectedDigest ?? ''),
+    '--new-evaluator-version', String(args.newEvaluatorVersion ?? ''),
+    '--new-stack-version', String(args.newStackVersion ?? ''),
+    '--content-stdin',
+  ], { input: args.content })
+}
+
+export async function initializeGroundTruth(config, args) {
+  const output = resolveWithin(config.projectRoot, args.outputPath ?? '.harbor/ground-truth.json', 'outputPath')
+  return cliJson(config, [
+    'ground-truth', 'init',
+    '--project-root', config.projectRoot,
+    '--output', output,
+    '--id', String(args.groundTruthId ?? ''),
+    '--version', String(args.version ?? ''),
+    '--source-kind', String(args.sourceKind ?? ''),
+    '--source-description', String(args.sourceDescription ?? ''),
+    '--provenance', String(args.provenance ?? ''),
+    '--criteria', String(args.criteria ?? ''),
+  ])
+}
+
+export async function runMetaEvaluation(config, args) {
+  const groundTruth = resolveWithin(config.projectRoot, args.groundTruthPath ?? '.harbor/ground-truth.json', 'groundTruthPath')
+  const observations = resolveWithin(config.projectRoot, args.observationsPath, 'observationsPath')
+  const output = resolveWithin(config.projectRoot, args.outputPath ?? '.harbor/meta-evaluation-report.json', 'outputPath')
+  return cliJson(config, [
+    'meta-evaluate',
+    '--project-root', config.projectRoot,
+    '--ground-truth', groundTruth,
+    '--observations', observations,
+    '--output', output,
+  ])
 }
 
 function strictInputs(config, args) {

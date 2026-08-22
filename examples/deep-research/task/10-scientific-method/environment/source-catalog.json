@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "berkeley-science",
+      "title": "Understanding Science: How science works",
+      "url": "https://undsci.berkeley.edu/how-science-works/",
+      "content": "科学方法把问题、观察、假设、证据和检验组织成可公开检查的过程。可重复的证据和可被反驳的预测帮助我们识别偏见与偶然性；结论还必须允许在新证据出现时被修正。",
+      "keywords": [
+        "科学方法",
+        "科学",
+        "假设",
+        "证据",
+        "检验"
+      ]
+    }
+  ]
+}

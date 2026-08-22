@@ -1,0 +1,6 @@
+{
+  "answer": "颜色与光和视觉有关，但这里没有进一步展开。",
+  "tool_errors": 1,
+  "searches": [{ "query": "", "status": "invalid", "matched_source_ids": [] }],
+  "citations": [{ "claim": "颜色与视觉有关", "source_id": "unknown-source" }]
+}

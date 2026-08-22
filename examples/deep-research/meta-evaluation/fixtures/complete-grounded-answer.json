@@ -1,0 +1,6 @@
+{
+  "answer": "颜色是光谱、物体反射与视觉系统共同形成的知觉。想象同一件蓝衣服在白光和红光下会呈现不同颜色，这说明颜色不是物体孤立拥有的标签。",
+  "tool_errors": 0,
+  "searches": [{ "query": "什么是颜色", "status": "ok", "matched_source_ids": ["cie-color"] }],
+  "citations": [{ "claim": "颜色由光、物体与视觉系统共同形成", "source_id": "cie-color" }]
+}

@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "id": "01-color",
+  "topic": "颜色",
+  "question": "什么是颜色？",
+  "answer_concepts": [
+    [
+      "光",
+      "波长"
+    ],
+    [
+      "视觉",
+      "眼睛",
+      "大脑"
+    ],
+    [
+      "反射",
+      "吸收",
+      "物体"
+    ]
+  ],
+  "expected_source_id": "cie-color",
+  "badcase": null
+}

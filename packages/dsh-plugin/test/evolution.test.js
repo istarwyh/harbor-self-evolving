@@ -29,3 +29,12 @@ test('a policy rejection can be treated as a structured result', async () => {
   assert.equal(result.code, 1)
   assert.equal(result.stdout, 'REJECT')
 })
+
+test('process input is delivered over stdin without shell interpolation', async () => {
+  const input = 'source with $HOME and `backticks`'
+  const result = await runProcess(process.execPath, ['-e', 'process.stdin.pipe(process.stdout)'], {
+    input,
+    timeoutMs: 1000,
+  })
+  assert.equal(result.stdout, input)
+})

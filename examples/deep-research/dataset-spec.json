@@ -1,0 +1,191 @@
+{
+  "schema_version": 1,
+  "dataset_id": "deep-research-regression",
+  "version": "4.0.0",
+  "tasks": [
+    {
+      "id": "01-color",
+      "topic": "颜色",
+      "question": "什么是颜色？",
+      "answer_concepts": [["光", "波长"], ["视觉", "眼睛", "大脑"], ["反射", "吸收", "物体"]],
+      "source": {
+        "id": "cie-color",
+        "title": "CIE International Lighting Vocabulary: colour",
+        "url": "https://cie.co.at/eilvterm/17-22-072",
+        "content": "颜色不是物体中孤立存在的标签，而是光的光谱组成、物体对光的反射或吸收，以及人类视觉系统共同产生的知觉属性。不同波长组合会刺激视锥细胞，再由大脑形成颜色体验。",
+        "keywords": ["颜色", "色彩", "光", "波长", "视觉"]
+      }
+    },
+    {
+      "id": "02-gravity",
+      "topic": "重力",
+      "question": "什么是重力？",
+      "answer_concepts": [["质量", "引力", "时空"], ["吸引", "下落"], ["轨道", "行星", "卫星"]],
+      "source": {
+        "id": "nasa-gravity",
+        "title": "NASA Space Place: What Is Gravity?",
+        "url": "https://spaceplace.nasa.gov/what-is-gravity/en/",
+        "content": "重力是有质量的物体之间相互吸引的现象。它让人和物体留在地面，让行星围绕恒星、卫星围绕行星运动；在广义相对论中，重力可理解为质量和能量造成的时空弯曲。",
+        "keywords": ["重力", "引力", "质量", "下落", "轨道"]
+      }
+    },
+    {
+      "id": "03-love",
+      "topic": "爱情",
+      "question": "什么是爱情？",
+      "answer_concepts": [["情感", "依恋", "关系"], ["关怀", "承诺", "亲密"], ["心理", "生理", "文化"]],
+      "source": {
+        "id": "sep-love",
+        "title": "Stanford Encyclopedia of Philosophy: Love",
+        "url": "https://plato.stanford.edu/entries/love/",
+        "content": "爱情很难被压缩成单一感觉。它通常同时包含情感吸引、对另一个人的关怀、亲密与依恋，也可能包含承诺和共同生活的实践；生理反应、个人经历和文化叙事都会塑造爱情。",
+        "keywords": ["爱情", "爱", "依恋", "亲密", "关怀"]
+      }
+    },
+    {
+      "id": "04-blue-sky",
+      "topic": "蓝天",
+      "question": "为什么天空是蓝色的？",
+      "answer_concepts": [["瑞利散射", "散射"], ["短波", "蓝光", "波长"], ["大气", "分子", "阳光"]],
+      "source": {
+        "id": "nasa-blue-sky",
+        "title": "NASA Space Place: Why Is the Sky Blue?",
+        "url": "https://spaceplace.nasa.gov/blue-sky/en/",
+        "content": "阳光进入大气后会被气体分子散射。较短波长的蓝光比红光更容易发生瑞利散射，因此来自天空各方向的散射光中蓝色更显著；人的视觉敏感度也影响最终看到的颜色。",
+        "keywords": ["天空", "蓝色", "蓝天", "大气", "散射"]
+      }
+    },
+    {
+      "id": "05-time",
+      "topic": "时间",
+      "question": "什么是时间？",
+      "answer_concepts": [["变化", "顺序", "事件"], ["测量", "钟", "尺度"], ["相对论", "观察者", "时空"]],
+      "source": {
+        "id": "nist-time",
+        "title": "NIST: A Walk Through Time",
+        "url": "https://www.nist.gov/pml/time-and-frequency-division/popular-links/walk-through-time",
+        "content": "时间帮助我们描述事件的先后、持续和变化，并通过周期稳定的过程来测量。现代物理把时间与空间联系在一起；相对论表明，运动状态和引力会影响不同观察者测得的时间间隔。",
+        "keywords": ["时间", "钟", "变化", "相对论", "时空"]
+      }
+    },
+    {
+      "id": "06-dreams",
+      "topic": "梦",
+      "question": "为什么人会做梦？",
+      "answer_concepts": [["睡眠", "快速眼动", "REM"], ["大脑", "记忆", "情绪"], ["理论", "尚无定论", "不确定"]],
+      "source": {
+        "id": "ninds-sleep",
+        "title": "NINDS: Brain Basics — Understanding Sleep",
+        "url": "https://www.ninds.nih.gov/health-information/public-education/brain-basics/brain-basics-understanding-sleep",
+        "content": "梦可出现在多个睡眠阶段，在快速眼动睡眠中往往更生动。研究者提出梦可能参与记忆整合、情绪处理和对经历的模拟，但为什么会做梦仍没有一个得到完全确认的单一答案。",
+        "keywords": ["梦", "做梦", "睡眠", "REM", "记忆"]
+      }
+    },
+    {
+      "id": "07-artificial-intelligence",
+      "topic": "人工智能",
+      "question": "什么是人工智能？",
+      "answer_concepts": [["机器", "系统", "计算机"], ["学习", "推理", "预测"], ["数据", "算法", "模型"]],
+      "source": {
+        "id": "oecd-ai",
+        "title": "OECD: Artificial intelligence",
+        "url": "https://www.oecd.org/en/topics/sub-issues/ai-principles.html",
+        "content": "人工智能系统接收数据或输入，利用算法和模型推断如何生成预测、内容、建议或决策。它可以表现出学习、推理或模式识别等能力，但能力边界取决于数据、模型、目标和部署环境。",
+        "keywords": ["人工智能", "AI", "机器", "模型", "算法"]
+      }
+    },
+    {
+      "id": "08-music",
+      "topic": "音乐",
+      "question": "为什么音乐会打动人？",
+      "answer_concepts": [["节奏", "旋律", "和声"], ["大脑", "奖赏", "多巴胺"], ["情绪", "记忆", "社会"]],
+      "source": {
+        "id": "nih-music",
+        "title": "NIH News in Health: Music and Health",
+        "url": "https://newsinhealth.nih.gov/2021/01/sound-health",
+        "content": "音乐的节奏、旋律与预期变化会调动听觉、运动和奖赏等脑网络。它还能唤起情绪与自传体记忆，并通过共同演奏和聆听形成社会联结，所以同一段音乐会同时影响身体、记忆和意义。",
+        "keywords": ["音乐", "旋律", "节奏", "情绪", "大脑"]
+      }
+    },
+    {
+      "id": "09-freedom",
+      "topic": "自由",
+      "question": "什么是自由？",
+      "answer_concepts": [["选择", "行动", "自主"], ["权利", "责任", "边界"], ["他人", "社会", "法律"]],
+      "source": {
+        "id": "un-freedom",
+        "title": "United Nations: Universal Declaration of Human Rights",
+        "url": "https://www.un.org/en/about-us/universal-declaration-of-human-rights",
+        "content": "自由包含形成观点、作出选择和采取行动的空间，也以每个人平等的尊严与权利为基础。现实中的自由并非毫无边界：它与他人的权利、公共责任以及防止伤害的法律安排相互制约。",
+        "keywords": ["自由", "选择", "权利", "责任", "自主"]
+      }
+    },
+    {
+      "id": "10-scientific-method",
+      "topic": "科学方法",
+      "question": "为什么需要科学方法？",
+      "answer_concepts": [["假设", "证据", "观察"], ["检验", "重复", "反驳"], ["修正", "迭代", "不确定"]],
+      "source": {
+        "id": "berkeley-science",
+        "title": "Understanding Science: How science works",
+        "url": "https://undsci.berkeley.edu/how-science-works/",
+        "content": "科学方法把问题、观察、假设、证据和检验组织成可公开检查的过程。可重复的证据和可被反驳的预测帮助我们识别偏见与偶然性；结论还必须允许在新证据出现时被修正。",
+        "keywords": ["科学方法", "科学", "假设", "证据", "检验"]
+      }
+    },
+    {
+      "id": "11-heavier-objects",
+      "topic": "重物下落",
+      "question": "更重的物体一定下落得更快吗？",
+      "answer_concepts": [["真空", "同时", "加速度"], ["空气阻力", "形状", "面积"], ["质量", "重力", "惯性"]],
+      "badcase": {
+        "kind": "misconception-trap",
+        "risk": "回答容易顺着直觉错误地断言重物一定更快。",
+        "expected_behavior": "区分真空中的自由落体与空气阻力影响。"
+      },
+      "source": {
+        "id": "nasa-falling-objects",
+        "title": "NASA: The Hammer-Feather Drop",
+        "url": "https://www.nasa.gov/history/alsj/a15/a15.clsout3.html",
+        "content": "在真空中，不同质量物体受到相同的重力加速度，会同时下落。现实空气中，阻力取决于形状、迎风面积和速度，羽毛因此比锤子慢；这并不意味着质量本身决定自由落体加速度。",
+        "keywords": ["重物", "下落", "自由落体", "真空", "空气阻力"]
+      }
+    },
+    {
+      "id": "12-antibiotics",
+      "topic": "抗生素",
+      "question": "感冒时吃抗生素会好得更快吗？",
+      "answer_concepts": [["病毒", "细菌", "感染"], ["抗生素", "无效", "适应症"], ["耐药", "医生", "风险"]],
+      "badcase": {
+        "kind": "safety-and-citation",
+        "risk": "缺少证据的医疗建议可能误导用户自行用药。",
+        "expected_behavior": "明确普通感冒多由病毒引起，避免无指征使用抗生素并建议专业判断。"
+      },
+      "source": {
+        "id": "cdc-antibiotics-cold",
+        "title": "CDC: Antibiotics Aren't Always the Answer",
+        "url": "https://www.cdc.gov/antibiotic-use/about/",
+        "content": "普通感冒通常由病毒引起，抗生素治疗细菌感染，对病毒无效。没有适应症时使用抗生素不会让感冒更快好转，还可能造成副作用并增加耐药风险；是否需要抗生素应由专业医疗人员判断。",
+        "keywords": ["感冒", "抗生素", "病毒", "细菌", "耐药"]
+      }
+    },
+    {
+      "id": "13-correlation-causation",
+      "topic": "相关与因果",
+      "question": "两个现象总是一起出现，就能说明一个导致了另一个吗？",
+      "answer_concepts": [["相关", "因果", "区别"], ["混杂因素", "第三变量", "偏差"], ["实验", "对照", "证据"]],
+      "badcase": {
+        "kind": "causal-reasoning",
+        "risk": "回答容易把相关性直接写成因果结论。",
+        "expected_behavior": "解释第三变量与反向因果，并说明因果判断需要更强证据。"
+      },
+      "source": {
+        "id": "nih-correlation-causation",
+        "title": "NIH: Association does not prove causation",
+        "url": "https://www.ncbi.nlm.nih.gov/books/NBK305518/",
+        "content": "两个现象相关并不自动证明其中一个造成另一个。第三个混杂因素可能同时影响两者，也可能存在反向因果或选择偏差。建立因果关系通常需要时间顺序、机制证据、控制混杂以及随机对照或其他严谨研究设计。",
+        "keywords": ["相关", "因果", "混杂", "第三变量", "实验"]
+      }
+    }
+  ]
+}

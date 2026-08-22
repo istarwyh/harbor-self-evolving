@@ -85,6 +85,12 @@ def evaluate_promotion(
         doctor = summary.get("_architecture_doctor") or {}
         if not doctor.get("promotion_ready", False):
             reject("ARCHITECTURE_DOCTOR_FAILED", f"{label} did not pass Architecture Doctor")
+        if int(summary.get("n_invalid_scores", 0)) > 0:
+            reject("INVALID_QUALITY_SCORE_PRESENT", f"{label} contains invalid Candidate quality scores")
+        if int(summary.get("n_valid_scores", summary.get("n_trials", 0))) <= 0:
+            reject("NO_VALID_QUALITY_SCORE", f"{label} has no valid Candidate quality score")
+        if int(summary.get("n_discovered_trials", summary.get("n_trials", 0))) != int(summary.get("n_trials", 0)):
+            reject("TRIAL_COVERAGE_INCOMPLETE", f"{label} does not cover the complete Dataset population")
 
     baseline_metrics = baseline.get("metrics") or {}
     candidate_metrics = candidate.get("metrics") or {}
@@ -121,6 +127,35 @@ def evaluate_promotion(
             if regressed:
                 reject("NON_REGRESSION_FAILED", f"{metric} regressed from {old:.6g} to {new:.6g}")
 
+    baseline_trials = {
+        str(item.get("datasetTrial") or item.get("name") or item.get("id")): item
+        for item in baseline.get("trials") or []
+    }
+    candidate_trials = {
+        str(item.get("datasetTrial") or item.get("name") or item.get("id")): item
+        for item in candidate.get("trials") or []
+    }
+    improved_trials: list[dict[str, Any]] = []
+    regressed_trials: list[dict[str, Any]] = []
+    direction = policy.get("primary_direction", "maximize")
+    for trial_id in sorted(set(baseline_trials) & set(candidate_trials)):
+        old = (baseline_trials[trial_id].get("score") or {}).get("value")
+        new = (candidate_trials[trial_id].get("score") or {}).get("value")
+        if not _is_number(old) or not _is_number(new) or old == new:
+            continue
+        delta = new - old
+        item = {"trial": trial_id, "baseline": old, "candidate": new, "delta": delta}
+        improved = delta > 0 if direction == "maximize" else delta < 0
+        (improved_trials if improved else regressed_trials).append(item)
+    baseline_exception_trials = {str(item.get("trial")) for item in baseline.get("exceptions") or []}
+    new_exceptions = [
+        item for item in candidate.get("exceptions") or []
+        if str(item.get("trial")) not in baseline_exception_trials
+    ]
+    artifact_regressions = []
+    if (baseline.get("artifact_validation") or {}).get("valid") and not (candidate.get("artifact_validation") or {}).get("valid"):
+        artifact_regressions.append("candidate-artifact-validation")
+
     return {
         "schema_version": 2,
         "decision": "PROMOTE" if not reasons else "REJECT",
@@ -134,6 +169,27 @@ def evaluate_promotion(
         "policy_digest": canonical_digest(policy, namespace="harbor-dsh-promotion-policy-v2"),
         "baseline_metrics": baseline_metrics,
         "candidate_metrics": candidate_metrics,
+        "metric_deltas": {
+            key: candidate_metrics[key] - baseline_metrics[key]
+            for key in sorted(set(baseline_metrics) & set(candidate_metrics))
+            if _is_number(baseline_metrics[key]) and _is_number(candidate_metrics[key])
+        },
+        "population": {
+            "baseline": baseline.get("n_trials", 0),
+            "candidate": candidate.get("n_trials", 0),
+            "baseline_valid": baseline.get("n_valid_scores"),
+            "candidate_valid": candidate.get("n_valid_scores"),
+        },
+        "improved_trials": improved_trials,
+        "regressed_trials": regressed_trials,
+        "new_exceptions": new_exceptions,
+        "artifact_regressions": artifact_regressions,
+        "comparable": not any(
+            reason["code"].endswith("MISMATCH")
+            or reason["code"] in {"EVALUATION_CONTEXT_SCHEMA_INVALID", "EVALUATION_STACK_MISMATCH"}
+            for reason in reasons
+        ),
+        "gate_eligible": not reasons,
         "reasons": reasons,
     }
 

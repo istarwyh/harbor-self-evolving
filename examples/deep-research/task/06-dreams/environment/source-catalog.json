@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "ninds-sleep",
+      "title": "NINDS: Brain Basics — Understanding Sleep",
+      "url": "https://www.ninds.nih.gov/health-information/public-education/brain-basics/brain-basics-understanding-sleep",
+      "content": "梦可出现在多个睡眠阶段，在快速眼动睡眠中往往更生动。研究者提出梦可能参与记忆整合、情绪处理和对经历的模拟，但为什么会做梦仍没有一个得到完全确认的单一答案。",
+      "keywords": [
+        "梦",
+        "做梦",
+        "睡眠",
+        "REM",
+        "记忆"
+      ]
+    }
+  ]
+}

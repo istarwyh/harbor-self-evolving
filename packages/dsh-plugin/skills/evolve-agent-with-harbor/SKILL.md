@@ -1,6 +1,6 @@
 ---
 name: evolve-agent-with-harbor
-description: Architect, initialize, diagnose, evaluate, compare, and safely improve a DeepSeek Harness business Agent with Harbor Evaluation Stack, Dataset Manifest, Context v2, Architecture Doctor, and Promotion Gate. Use for Harbor setup, Agent self-evolution, vertical-search evaluation loops, evaluation architecture review, failed Job diagnosis, Candidate optimization, evaluator meta-evaluation, or promotion decisions.
+description: Architect, initialize, run, diagnose, compare, and safely improve a DeepSeek Harness business Agent with Harbor Trial Lifecycle, Score Validity, Evidence Provenance, Evaluation Stack, Context v2, Architecture Doctor, and explicit Promotion Gate. Use for Harbor setup, Agent self-evolution, vertical-search evaluation loops, running Job inspection, failed Trial diagnosis, Candidate optimization, evaluator governance or meta-evaluation, and promotion decisions.
 ---
 
 # Evolve Agent With Harbor
@@ -21,7 +21,8 @@ Treat Harbor as the experiment boundary. Deployment, CI/CD, and Champion replace
 - **Diagnostic**: investigate failures without making a promotion claim.
 - **Promotion**: run a `promotion-eligible` Job and apply the deterministic Gate.
 - **Evolve**: baseline → diagnose → one controlled change → regression Job → Gate.
-- **Meta-evaluate**: improve an Evaluator/Judge against independently maintained human GT.
+- **Meta-evaluate**: improve an Evaluator/Judge against independently maintained, provenance-bearing GT.
+- **Govern**: inspect Evaluator/Rubric/Judge source and identities; preview whether a change requires a fresh baseline.
 
 Do not turn an inspection or diagnostic request into Agent mutation or deployment.
 
@@ -48,6 +49,8 @@ Require these before every Job:
 - `dataset-manifest.json` with unique task ids, non-empty instructions, safe paths, and a matching source digest.
 - `.harbor/evaluation-stack.yml` with all eight roles, Judge identity, and Evaluation Contract.
 - Evaluation Context v2 preview.
+
+Require `input_integrity`, `agent_completed`, `integration_valid`, `renderer_valid`, `judge_completed`, and `artifact_schema_valid` in the Trial validity contract. Specify which failures are hard requirements. Never infer that a numeric raw verifier reward is a valid Candidate quality score.
 
 Before a formal Job, call in order:
 
@@ -98,7 +101,15 @@ Never cherry-pick stochastic runs. Apply the accepted repeat/seed policy symmetr
 
 ### Diagnose before changing
 
-Use `harbor_eval_result` only to reopen a stable Job summary. Inspect Trial assessments and classify each failure as:
+Use `harbor_eval_result` to reopen evidence without guessing local artifact paths: default `view=summary`, `view=job` for capabilities and stage artifacts, `view=dataset` for Agent-visible instructions, `view=progress` while running, `view=trial` with a returned `trialId` for the generated output and sanitized evidence, and `view=governance` for Evaluator/Rubric/Judge source and upgrade impact. Inspect in this order:
+
+1. Confirm every Dataset item reached a terminal Trial state. Running, queued, cancelled, or missing Trials are not quality evidence.
+2. Check `score.valid` and every validity requirement. Display an invalid score as `—`, never `0`.
+3. Inspect evidence provenance. Keep `Real Renderer`, `ACP Agent Output Fallback`, raw transport evidence, Judge explanation, and deterministic diagnosis distinct.
+4. Inspect findings, recommendations, user-visible output, criteria, and timing.
+5. Classify the owning layer before proposing a mutation.
+
+Treat `raw_rewards` as audit-only when `score.valid=false`. Aggregate and compare only valid quality scores. Inspect Trial assessments and classify each failure as:
 
 - Candidate capability or policy.
 - Tool-call, invalid search, citation, or output-contract failure.
@@ -107,6 +118,15 @@ Use `harbor_eval_result` only to reopen a stable Job summary. Inspect Trial asse
 - Stochastic uncertainty.
 
 Do not optimize the Candidate around broken evaluation infrastructure. Never leak holdout answers or GT into Candidate prompts, skills, tools, or memory.
+
+Use the formal terminal states precisely:
+
+- `candidate-quality-failed`: valid execution reached evaluation, but a Candidate-owned hard requirement failed.
+- `infrastructure-error`: dependency, sandbox, permission, transport, timeout, or runtime failure; no Candidate quality score.
+- `evaluation-error`: Renderer/Judge/Verifier did not complete; no Candidate quality score.
+- `cancelled`: preserve the attempt and do not score it.
+
+For retry or resume, retain the old attempt and create a new attempt. Never replace an assessment or event history in place.
 
 ### Propose one controlled change
 
@@ -129,14 +149,36 @@ Call `harbor_context_preview`; establish a fresh baseline if needed. Run the Can
 
 Never bypass `INFRASTRUCTURE_EXCEPTION_PRESENT`, `ARTIFACT_SCHEMA_INVALID`, Dataset/Stack/Rubric/Judge mismatch, or non-regression failures.
 
+A `diagnostic` Job must never invoke Gate. Reading the Workbench, generating a Reporter summary, or producing a non-reward Optimization Report also must not promote, deploy, publish, or replace the Champion. Gate remains a separate, explicit comparison action.
+
+## Govern evaluator changes
+
+Read `references/evaluator-upgrade.md` whenever the user asks to improve, replace, align, calibrate, debug, or explain an Evaluator, Rubric, Judge, reward, or meta-evaluation loop.
+
+Use the Workbench Governance view to read component identity, source, Rubric, Judge parameters, Contract, and Context impact. Before any Evaluator/Rubric/Judge edit:
+
+1. Show the current source and proposed diff.
+2. State which reward semantics change.
+3. Create a new component and Stack version; never overwrite historical identity.
+4. Establish a fresh baseline when a reward-affecting digest or Judge identity changes.
+5. Run meta-evaluation against independently maintained GT when aligning the Evaluator itself.
+
+Saving a new identity does not automatically launch an evaluation or Gate.
+
+An Evaluator implementation must use `harbor-dsh-evaluator/v1`. It may declare `kind=script` or `kind=llm-as-judge`, but both kinds accept `evaluation-input/v1` and return `evaluation-result/v1`. Every Descriptor-declared Criterion must return its declared score plus a non-empty `reason` string and a non-empty `recommendation` string. Missing explanations or recommendations invalidate the evaluator result; Reporter must not invent them. Use `harbor_evaluator_inspect` before proposing a change. After the user approves, use `harbor_evaluator_update` only for an exact `editable_files` path and provide the current digest plus new Evaluator and Stack versions. The tool creates a new versioned bundle; it does not overwrite the old implementation, run meta-evaluation, establish a baseline, or invoke Gate.
+
 ## Handle evaluator meta-evaluation
 
 Rotate roles when improving the Evaluator:
 
 - Candidate is the Evaluator/Rubric/Judge version.
-- Dataset contains independently maintained human GT.
+- Dataset contains fixed artifacts plus independently maintained GT with explicit source kind and provenance.
 - Metrics include RCR, bias, variance, calibration, latency, and cost as appropriate.
 - The Candidate evaluator must not author its own GT or final promotion decision.
+
+GT may be human, programmatic, consensus-based, produced by an independently pinned model, or imported from an external standard. Independence and provenance matter more than the author type. The Candidate evaluator must never see labels before producing its observation.
+
+When GT is missing, clarify its id/version, source kind, owner, provenance, Criteria, case selection, and adjudication process. Then call `harbor_ground_truth_init`; it creates a non-overwriting draft and never invents cases or labels. After cases are populated, collect repeated `evaluator-observations/v1` and call `harbor_evaluator_meta_evaluate`. Report ESF, SCE, RCR, coverage, disagreement slices, latency, and cost as applicable.
 
 Manage evaluator Candidates and meta-evaluation Jobs with the same Manifest, Context v2, Doctor, evidence, and Gate rules.
 
@@ -148,7 +190,9 @@ Return:
 - Candidate, Dataset, Stack, Context, Judge, and Policy identities.
 - Comparable baseline or fresh-baseline decision.
 - Metric deltas, exception counts, Population groups, and artifact validation.
+- Dataset coverage, terminal-state counts, valid/invalid score counts, and selected attempt policy.
 - Representative Trial evidence and root-cause classes.
+- Evidence provenance and any capability unavailable on a legacy Job.
 - Controlled change hypothesis and mutation surface.
 - Gate decision with exact reason codes.
 - External CI/CD action still required.

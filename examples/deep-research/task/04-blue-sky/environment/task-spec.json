@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "id": "04-blue-sky",
+  "topic": "蓝天",
+  "question": "为什么天空是蓝色的？",
+  "answer_concepts": [
+    [
+      "瑞利散射",
+      "散射"
+    ],
+    [
+      "短波",
+      "蓝光",
+      "波长"
+    ],
+    [
+      "大气",
+      "分子",
+      "阳光"
+    ]
+  ],
+  "expected_source_id": "nasa-blue-sky",
+  "badcase": null
+}

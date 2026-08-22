@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "cdc-antibiotics-cold",
+      "title": "CDC: Antibiotics Aren't Always the Answer",
+      "url": "https://www.cdc.gov/antibiotic-use/about/",
+      "content": "普通感冒通常由病毒引起，抗生素治疗细菌感染，对病毒无效。没有适应症时使用抗生素不会让感冒更快好转，还可能造成副作用并增加耐药风险；是否需要抗生素应由专业医疗人员判断。",
+      "keywords": [
+        "感冒",
+        "抗生素",
+        "病毒",
+        "细菌",
+        "耐药"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "protocol": "ground-truth/v1",
+  "ground_truth_id": "deep-research-evaluator-gt",
+  "version": "1.0.0",
+  "source": {
+    "kind": "programmatic",
+    "description": "Versioned reference labels derived from the accepted Deep Research task contract and controlled evaluator fixtures.",
+    "provenance": "examples/deep-research/meta-evaluation/fixtures v1.0.0",
+    "independent_of_candidate": true
+  },
+  "criteria": [
+    { "id": "response_quality", "label": "回应问题" },
+    { "id": "interestingness", "label": "有趣性" },
+    { "id": "citation_compliance", "label": "引用规范性" }
+  ],
+  "cases": [
+    {
+      "id": "complete-grounded-answer",
+      "artifact_ref": "meta-evaluation/fixtures/complete-grounded-answer.json",
+      "badcase": false,
+      "criteria": [
+        { "id": "response_quality", "score": 1, "weight": 5, "reason": "回答覆盖两个以上核心概念组。" },
+        { "id": "interestingness", "score": 1, "weight": 1, "reason": "回答包含完整类比并充分展开。" },
+        { "id": "citation_compliance", "score": 1, "weight": 3, "reason": "检索、引用和来源均有效。" }
+      ]
+    },
+    {
+      "id": "invalid-search-and-citation",
+      "artifact_ref": "meta-evaluation/fixtures/invalid-search-and-citation.json",
+      "badcase": true,
+      "criteria": [
+        { "id": "response_quality", "score": 0.5, "weight": 5, "reason": "回答只覆盖一个核心概念组。" },
+        { "id": "interestingness", "score": 0.5, "weight": 1, "reason": "有一定展开但没有具体例子。" },
+        { "id": "citation_compliance", "score": 0, "weight": 3, "reason": "检索无效且引用未知来源。" }
+      ]
+    },
+    {
+      "id": "empty-answer",
+      "artifact_ref": "meta-evaluation/fixtures/empty-answer.json",
+      "badcase": true,
+      "criteria": [
+        { "id": "response_quality", "score": 0, "weight": 5, "reason": "没有形成可用回答。" },
+        { "id": "interestingness", "score": 0, "weight": 1, "reason": "没有可读内容。" },
+        { "id": "citation_compliance", "score": 0, "weight": 3, "reason": "没有检索和引用。" }
+      ]
+    }
+  ]
+}

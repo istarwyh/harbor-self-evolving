@@ -13,8 +13,8 @@ from harbor_dsh_evolution.identity import resolve_inside
 ROLE_PATHS = {
     "integration": "integrations/default.py",
     "renderer": "renderers/default.py",
-    "evaluator": "evaluators/default.py",
-    "rubric": "rubrics/default.md",
+    "evaluator": "evaluators/default/evaluator.json",
+    "rubric": "evaluators/default/rubric.md",
     "diagnoser": "diagnosers/default.py",
     "optimizer": "optimizers/default.py",
     "runner": "runners/harbor.py",
@@ -78,9 +78,48 @@ def initialize_project(
     for directory in ("candidates", "datasets", "integrations", "renderers", "evaluators", "rubrics", "diagnosers", "optimizers", "reporters", "runners", "policies", "jobs", ".harbor"):
         (project_root / directory).mkdir(exist_ok=True)
 
+    evaluator_id = f"{stack_id}-evaluator"
+    evaluator_implementation = '''"""Implement harbor-dsh-evaluator/v1 for this business domain."""
+
+def evaluate(payload):
+    return {
+        "schema_version": 1,
+        "protocol": "evaluation-result/v1",
+        "criteria": [
+            {
+                "id": "quality",
+                "score": 0,
+                "reason": "Replace the placeholder evaluator.",
+                "recommendation": "Implement the accepted business Rubric before running a formal Job.",
+            },
+        ],
+    }
+'''
+    _write_new(project_root / "evaluators/default/evaluator.py", evaluator_implementation, created, existing, project_root)
+
     for role, relative in ROLE_PATHS.items():
         if role == "rubric":
             content = f"# {contract_id}\n\nDefine the evidence-backed rubric for `{primary_metric}` here.\n"
+        elif role == "evaluator":
+            content = json.dumps(
+                {
+                    "schema_version": 1,
+                    "interface": "harbor-dsh-evaluator/v1",
+                    "evaluator_id": evaluator_id,
+                    "version": stack_version,
+                    "kind": "script",
+                    "protocol": {"input": "evaluation-input/v1", "output": "evaluation-result/v1"},
+                    "implementation": {"entry": "evaluator.py", "language": "python", "callable": "evaluate"},
+                    "editable_files": [
+                        {"path": "evaluator.py", "role": "implementation", "language": "python", "affects": ["evaluator"]},
+                        {"path": "rubric.md", "role": "rubric", "language": "markdown", "affects": ["evaluator", "rubric"]},
+                    ],
+                    "criteria": [{"id": "quality", "label": "Quality", "values": [0, 0.5, 1]}],
+                    "aggregate": {"metric_id": primary_metric, "method": "mean"},
+                },
+                ensure_ascii=False,
+                indent=2,
+            ) + "\n"
         elif role == "runner":
             content = '"""Harbor orchestration only. Keep HTTP, rubric, judge, and promotion outside this Runner."""\n\nROLE = "runner"\n'
         else:
@@ -108,9 +147,19 @@ def initialize_project(
             "contract_id": contract_id,
             "version": contract_version,
             "primary_metric": primary_metric,
-            "metrics": [{"id": primary_metric, "label": primary_metric, "direction": primary_direction}],
+            "metrics": [
+                {"id": primary_metric, "label": primary_metric, "direction": primary_direction},
+                {"id": "quality", "label": "Quality", "direction": primary_direction},
+            ],
             "groups": [],
-            "hard_requirements": [{"id": "infrastructure_exception_free"}, {"id": "artifact_schema_valid"}],
+            "hard_requirements": [
+                {"id": "input_integrity"},
+                {"id": "agent_completed"},
+                {"id": "integration_valid"},
+                {"id": "renderer_valid"},
+                {"id": "judge_completed"},
+                {"id": "artifact_schema_valid"},
+            ],
         },
         "labels": {},
     }

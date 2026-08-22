@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "07-artificial-intelligence",
+  "topic": "人工智能",
+  "question": "什么是人工智能？",
+  "answer_concepts": [
+    [
+      "机器",
+      "系统",
+      "计算机"
+    ],
+    [
+      "学习",
+      "推理",
+      "预测"
+    ],
+    [
+      "数据",
+      "算法",
+      "模型"
+    ]
+  ],
+  "expected_source_id": "oecd-ai",
+  "badcase": null
+}

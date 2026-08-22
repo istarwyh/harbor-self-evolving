@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "nasa-gravity",
+      "title": "NASA Space Place: What Is Gravity?",
+      "url": "https://spaceplace.nasa.gov/what-is-gravity/en/",
+      "content": "重力是有质量的物体之间相互吸引的现象。它让人和物体留在地面，让行星围绕恒星、卫星围绕行星运动；在广义相对论中，重力可理解为质量和能量造成的时空弯曲。",
+      "keywords": [
+        "重力",
+        "引力",
+        "质量",
+        "下落",
+        "轨道"
+      ]
+    }
+  ]
+}
