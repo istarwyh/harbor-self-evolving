@@ -1,6 +1,6 @@
 # 本地 DSH Web 快速开始
 
-版本组合：DSH `0.1.0-rc.6`、Plugin + Skill `0.6.0`、Harbor Adapter `0.6.0`。
+版本组合：DSH `0.1.0-rc.6`、Plugin + Skill `0.6.1`、Harbor Adapter `0.6.1`。
 
 ## 安装与重启
 
@@ -8,7 +8,7 @@
 
 ```bash
 cd /absolute/path/to/agent-workspace
-npx --yes dsh-harbor-evolution@0.6.0 setup --project-root "$PWD"
+npx --yes dsh-harbor-evolution@0.6.1 setup --project-root "$PWD"
 ```
 
 GitHub URL 是文档/源码入口，正式用户仍使用 npm 安装；不要直接 link 新 checkout。安装器会建立独立 Harbor venv、安装同版本 Python Adapter、把 Plugin + Skill 写入 `web` profile、保存 CLI 路径并验证 entry point。
@@ -97,7 +97,7 @@ Workbench 会跟随 DSH 语言设置展示九个阶段。「候选版本」先�
 | 现象 | 处理 |
 | --- | --- |
 | 插件没有 Harbor Tab | 确认装入 `web` profile，停止旧进程并重启 |
-| 工具存在但 Skill 不出现 | 确认 `harbor-evolution` 版本为 `0.6.0` 并重启 |
+| 工具存在但 Skill 不出现 | 确认 `harbor-evolution` 版本为 `0.6.1` 并重启 |
 | `spawn harbor ENOENT` | 重新运行 setup 保存绝对 CLI 路径 |
 | Harbor 找不到 `dsh-evolution` | Adapter 与 Harbor 不在同一 venv；重新 setup |
 | Dataset digest mismatch | intentional change 时升级 Dataset version 并重新 snapshot |

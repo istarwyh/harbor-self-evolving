@@ -119,6 +119,7 @@ test('setup installs both runtimes, writes an idempotent profile patch, and veri
   const pluginCall = calls.find(call => call.command === 'pnpm' && call.args.includes('plugin'))
   assert.equal(pluginCall.options.env.DSH_HOME, dshHome)
   assert.ok(pluginCall.args.includes('--save-exact'))
+  assert.ok(pluginCall.args.includes('--ignore-scripts'))
   assert.ok(calls.some(call => call.command === 'uv' && call.args.includes('/source/harbor-plugin')))
   const sourceInstallCalls = calls.filter(call => call.command === 'npm' && call.args[0] === 'ci')
   assert.equal(sourceInstallCalls.length, 2)

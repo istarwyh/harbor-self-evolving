@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.6.1 - 2026-08-23
+
+- Install the prebuilt registry Plugin with lifecycle scripts disabled so pnpm 11 does not reject unrelated DSH native dependencies as newly unapproved builds.
+- Add a setup regression assertion for the script-free registry install path.
+
 ## 0.6.0 - 2026-08-23
 
 - Add `harbor-dsh-evaluator/v1` for script and LLM-as-Judge implementations, with bundle identity, ternary Criteria validation, Agent tools, and descriptor-authorized Workbench source editing using optimistic concurrency and atomic version updates.

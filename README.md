@@ -23,7 +23,7 @@ cd /absolute/path/to/your-agent-workspace
 npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 ```
 
-安装器会让 npm Plugin 与 Python Adapter 使用同一个正式版本；需要完全固定版本时，把 `latest` 改为 `0.6.0`。
+安装器会让 npm Plugin 与 Python Adapter 使用同一个正式版本；需要完全固定版本时，把 `latest` 改为 `0.6.1`。
 
 默认安装到 DSH 的 `web` profile。`setup` 会一次完成：
 
