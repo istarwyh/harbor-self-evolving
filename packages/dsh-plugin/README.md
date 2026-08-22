@@ -14,8 +14,8 @@ npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 
 The setup command installs both required runtimes:
 
-- `harbor-dsh-evolution==0.6.0` in a managed Python environment.
-- `dsh-harbor-evolution@0.6.0` in the selected DSH profile.
+- `harbor-dsh-evolution==0.6.1` in a managed Python environment.
+- `dsh-harbor-evolution@0.6.1` in the selected DSH profile.
 
 It then stores the absolute Harbor executable paths and `projectRoot` in the profile's `harbor-evolution` block and verifies the integration. Existing unrelated profile entries are preserved, and rerunning setup updates the same block.
 
