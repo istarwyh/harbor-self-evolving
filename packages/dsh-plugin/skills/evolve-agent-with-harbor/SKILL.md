@@ -5,19 +5,22 @@ description: Architect, initialize, run, diagnose, compare, and safely improve a
 
 # Evolve Agent With Harbor
 
-Build a reproducible improvement loop around three boundaries:
+Build a reproducible improvement loop around four concepts that users can describe in business language:
 
-- **Generator/Candidate**: the immutable DSH Agent composition being improved.
-- **Evaluator/Evaluation Stack**: Integration, Renderer, Evaluator, Rubric, Diagnoser, Optimizer, Runner, Reporter, and Judge identities.
-- **Optimizer**: proposes one evidence-linked Candidate change; it never controls the final Gate.
+- **评测集 (Dataset)** — what should be tested: one Query, a file, a directory of instructions, or an existing Harbor Dataset.
+- **生成器 (Generator)** — who produces the answer or artifact: a curl request, a local Agent entry, or an Agent already found in the workspace.
+- **评测器（含评测标准） (Evaluator)** — what “good” means and who scores it: an evaluator endpoint, a local evaluator, or a versioned evaluator drafted from natural-language criteria.
+- **优化器 (Optimizer)** — who uses badcases and evidence to propose the next controlled change: this Agent by default, Codex/Claude Code, or a local command/Agent.
+
+Keep these four names visible during onboarding and confirmation; they establish the product's concept space. Treat Integration, Renderer, Rubric, Diagnoser, Runner, Reporter, Judge identity, Contract, Policy, Context, and Gate as the compiled evaluation architecture. Explain them only when they affect a decision or the user opens advanced configuration.
 
 Treat Harbor as the experiment boundary. Deployment, CI/CD, and Champion replacement remain external actions requiring separate authority.
 
 ## Select the narrowest mode
 
-- **Clarify**: define progress, identities, constraints, and promotion ownership.
+- **Clarify**: identify the Dataset, Generator, Evaluator/criteria, and Optimizer with the least user effort.
 - **Architecture**: inspect role boundaries and run `harbor_evolution_doctor`.
-- **Initialize**: read `references/initialization.md`, obtain explicit values, then call `harbor_evolution_init`.
+- **Initialize**: read `references/initialization.md`, compile the accepted four-concept card, then call `harbor_evolution_init`.
 - **Diagnostic**: investigate failures without making a promotion claim.
 - **Promotion**: run a `promotion-eligible` Job and apply the deterministic Gate.
 - **Evolve**: baseline → diagnose → one controlled change → regression Job → Gate.
@@ -26,20 +29,52 @@ Treat Harbor as the experiment boundary. Deployment, CI/CD, and Champion replace
 
 Do not turn an inspection or diagnostic request into Agent mutation or deployment.
 
-## Clarify before initializing
+## Start with four clear concepts
 
-Inspect the workspace first. Resolve only material gaps, preferably in no more than three grouped questions. Obtain:
+Inspect the current workspace before asking questions. Look for Agent entry files, package metadata, curl examples, Dataset instructions, existing Harbor configuration/Jobs, tests, and available Codex or Claude Code commands. Reuse reliable findings and say what was inferred; do not ask the user to transcribe information already present in files.
 
-1. Business behavior, failure pattern, and Candidate path/product identity.
-2. Dataset path/id/version, task population, holdout boundary, and side-effect sandbox.
-3. Evaluation Stack id/version and one entry for every required role.
-4. Judge provider/model/version/parameters without credentials.
-5. Evaluation Contract id/version, primary metric and direction, diagnostic metrics, groups, and hard requirements.
-6. Promotion Policy id/version, delta, minimums, maximums, non-regression metrics, and metric directions.
-7. Baseline Job/Candidate, repeat policy, run budget, stopping rule, allowed mutation surface, and forbidden files.
-8. Promotion owner and external CI/CD handoff.
+When no Harbor workspace exists, propose `./harbor-evolution/` under the current working directory as the managed evaluation workspace. Keep imported snapshots and generated evaluation files there. If the installed Plugin is configured to a different `projectRoot`, explain the mismatch and propose the exact configuration change before writing anything.
 
-Never invent GT, a Judge model, reward definitions, thresholds, credentials, or deployment authority. Offer draft values only when clearly labeled and accepted.
+Ask only for missing parts of the four-concept intake, using the user's language and short examples:
+
+1. **评测集：测什么？** Accept one Query, a file path, a directory containing multiple instructions, or an existing Dataset path.
+2. **生成器：谁来回答？** Accept a curl request or a local Agent file/directory. Offer an Agent entry discovered in the workspace instead of asking again.
+3. **评测器（评测标准）：怎样算好？** Accept an evaluator curl request, a local evaluator path, or “请你生成”. If no evaluator exists, ask only for natural-language criteria and draft a versioned evaluator plus Rubric for confirmation.
+4. **优化器：谁根据结果改进？** Default to the current Agent. If Codex CLI or Claude Code is available, present it as an optional alternative; also accept a local command or Agent path.
+
+One compact message may contain all unresolved concepts, but do not turn it into a form full of architecture terms. Never ask a first-time user to enumerate Evaluation Stack roles, identities, versions, Judge parameters, Contract fields, Policy fields, holdout rules, or CI/CD details.
+
+Interpret common inputs helpfully:
+
+- A single Query becomes a one-task **diagnostic** Dataset. It is useful for checking wiring, but never counts as promotion evidence by itself.
+- A file or directory may become a multi-task Dataset after instructions and safe paths are validated.
+- For curl input, infer method, endpoint, headers, body shape, and response protocol. Never persist Authorization values or other credentials.
+- “请你生成评测器” means the current Agent may author a pinned evaluator implementation; it does not permit ad-hoc, unversioned scoring by the current chat model.
+- “你来优化” selects the current Agent as Optimizer; it does not authorize mutation before baseline evidence and an accepted hypothesis exist.
+
+Before creating files, show one confirmation card:
+
+```text
+开始前确认
+- 工作空间：<path>
+- 评测集：<source and task count; diagnostic or regression>
+- 生成器：<curl/local Agent/detected Agent>
+- 评测器（评测标准）：<implementation or draft criteria>
+- 优化器：<current Agent/Codex/Claude Code/local>
+- 我将自动补全：版本标识、适配器、产物呈现、诊断、报告和运行配置
+- 暂不启用：<holdout / formal promotion Gate / deployment, when unresolved>
+```
+
+Offer three next actions in natural language: **开始初始化**, **修改以上内容**, or **查看高级配置**. Call `harbor_evolution_init` only after the user accepts the card. Generate internal ids and initial versions from the workspace/project identity, use `reward`/`maximize` as a visible draft when the criteria imply quality scoring, and do not use the generated Policy for a `promotion-eligible` Job until real business thresholds are accepted.
+
+Ask advanced questions just in time:
+
+- Ask for holdout boundaries and side-effect constraints before they can affect a real run.
+- Ask for metric thresholds, non-regression limits, repeat policy, and promotion owner before the first `promotion-eligible` Job.
+- Ask for GT identity, provenance, and independence only when calibrating or replacing the Evaluator.
+- Ask for deployment/CI authority only after Gate recommends promotion.
+
+Never invent GT labels, business thresholds, credentials, production side-effect permission, or deployment authority. A Generator and Evaluator may share a provider only after disclosing the coupling; do not treat that as independent GT.
 
 ## Enforce the strict architecture
 
@@ -68,7 +103,7 @@ Keep Runner orchestration-only. Treat these as architecture errors:
 
 ## Initialize without overwriting
 
-Read `references/initialization.md` when required files are missing. After the user accepts all required identities and metric semantics, call `harbor_evolution_init`. It preserves existing files and creates explicit placeholders that still require business implementation.
+Read `references/initialization.md` when required files are missing. Translate the accepted four-concept card into strict internal identities and call `harbor_evolution_init`; do not send the user back a second architecture questionnaire. It preserves existing files and creates explicit placeholders that still require business implementation.
 
 After initialization:
 

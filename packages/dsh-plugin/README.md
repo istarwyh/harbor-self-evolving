@@ -2,7 +2,7 @@
 
 Installable DeepSeek Harness Plugin + Skill for running stable Harbor evaluation and controlled Agent evolution loops, with a native DSH Web dashboard.
 
-The package gives DSH twelve strict Harbor tools, dedicated Tool cards, a nine-stage Evaluation Workbench, an installation Doctor, and the model- and user-invocable `evolve-agent-with-harbor` Skill. The Skill clarifies and initializes the Evaluation Stack, validates Dataset identity, checks Trial Lifecycle and Score Validity, governs independent Ground Truth meta-evaluation, diagnoses evidence provenance, limits each iteration to one controlled Candidate change, and invokes the Promotion Gate only as an explicit action.
+The package gives DSH twelve strict Harbor tools, dedicated Tool cards, a nine-stage Evaluation Workbench, an installation Doctor, and the model- and user-invocable `evolve-agent-with-harbor` Skill. The Skill starts with four user-facing concepts—Dataset (what to test), Generator (who answers), Evaluator plus criteria (what good means), and Optimizer (who improves it)—then compiles accepted choices into the strict Evaluation Stack. It validates Dataset identity, checks Trial Lifecycle and Score Validity, governs independent Ground Truth meta-evaluation, diagnoses evidence provenance, limits each iteration to one controlled Candidate change, and invokes the Promotion Gate only as an explicit action.
 
 ## Install
 
@@ -14,8 +14,8 @@ npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 
 The setup command installs both required runtimes:
 
-- `harbor-dsh-evolution==0.6.1` in a managed Python environment.
-- `dsh-harbor-evolution@0.6.1` in the selected DSH profile.
+- `harbor-dsh-evolution==0.7.0` in a managed Python environment.
+- `dsh-harbor-evolution@0.7.0` in the selected DSH profile.
 
 It then stores the absolute Harbor executable paths and `projectRoot` in the profile's `harbor-evolution` block and verifies the integration. Existing unrelated profile entries are preserved, and rerunning setup updates the same block.
 
@@ -31,6 +31,8 @@ Stop any old DSH process and run the exact restart command printed by setup. The
 /evolve-agent-with-harbor
 Inspect this workspace and help me clarify and initialize a stable Harbor self-evolution loop.
 ```
+
+Users may provide a single Query or Dataset path, a Generator curl or local Agent path, an Evaluator curl/path or natural-language criteria, and an optional Optimizer such as Codex or Claude Code. The Skill inspects the workspace first, defaults the Optimizer to the current Agent, and shows one confirmation card before writing files. Evaluation Stack roles, ids, versions, Judge configuration, Contract, and Policy stay behind advanced configuration unless they materially affect a decision.
 
 The Plugin registers:
 

@@ -74,7 +74,7 @@ export function apply(ctx, config) {
 
   ctx.tools.register(jsonTool({
     name: 'harbor_evolution_init',
-    description: 'Initialize a strict, non-overwriting Evaluation Stack project after the Skill has clarified identities, primary metric, judge, and promotion threshold.',
+    description: 'Compile an accepted Dataset, Generator, Evaluator/criteria, and Optimizer onboarding card into a strict, non-overwriting Evaluation Stack project. Detailed identity fields are internal tool inputs, not a user questionnaire.',
     parameters: {
       datasetPath: { type: 'string', required: true },
       stackId: { type: 'string', required: true },
