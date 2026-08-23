@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.7.1 - 2026-08-23
+
+- Add a per-Job Host Model Broker: a Candidate now reuses the DSH Agent's frozen current provider, model, and reasoning effort through a random, short-lived capability rather than receiving any provider credential. Explicit Candidate provider/model overrides remain available only as a complete pair.
+- Add the generic `dsh-host` Candidate adapter, `dsh-host-broker` transport, and `dsh-host-model-gateway/v1` protocol. `openai-codex` runs fail fast when GPT Auth is not signed in.
+- Generate an isolated Candidate `.harbor-runtime` Cordis Overlay inside the task container, including Include/Patch safety, an ACP uniqueness check, a `0600` Job token file, and broker reachability preflight. Runtime state cannot be pre-created or enter the Candidate digest.
+- Bind provider, model, reasoning effort, transport, and protocol into Context v2 comparison identity, so a model change requires a fresh baseline.
+
 ## 0.7.0 - 2026-08-23
 
 - Replace the first-run architecture questionnaire with a progressive four-concept intake: Dataset, Generator, Evaluator plus criteria, and Optimizer. Inspect the workspace first, infer internal identities, require one confirmation card before writes, classify single-Query runs as diagnostic-only, and defer promotion, Ground Truth, and deployment governance until they are relevant.

@@ -10,7 +10,7 @@ from typing import Any
 
 MANIFEST_NAME = "candidate-manifest.json"
 _DIGEST_PREFIX = b"harbor-dsh-candidate-v1\0"
-_EXCLUDED_DIRS = {".git", "node_modules", "__pycache__"}
+_EXCLUDED_DIRS = {".git", "node_modules", "__pycache__", ".harbor-runtime"}
 _EXCLUDED_FILES = {MANIFEST_NAME, ".DS_Store"}
 _DIGEST_PATTERN = re.compile(r"^sha256:[0-9a-f]{64}$")
 _LOCKFILES = ("package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lock", "bun.lockb")
@@ -110,6 +110,8 @@ def compute_candidate(candidate_dir: Path) -> tuple[str, list[CandidateFile]]:
 
 
 def _validate_candidate_contract(candidate_dir: Path) -> None:
+    if (candidate_dir / ".harbor-runtime").exists():
+        raise ValueError("Candidate must not contain the reserved .harbor-runtime path")
     missing = [
         name
         for name in ("cordis.yml", "package.json")

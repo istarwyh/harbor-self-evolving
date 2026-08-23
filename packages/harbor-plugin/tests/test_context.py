@@ -4,7 +4,7 @@ from pathlib import Path
 from harbor_dsh_evolution.context import context_preview
 from harbor_dsh_evolution.candidate import load_manifest
 
-from helpers import make_candidate, make_context, make_dataset, make_stack
+from helpers import MODEL_BINDING, make_candidate, make_context, make_dataset, make_stack
 
 
 def test_context_v2_is_stable_portable_and_excludes_candidate_from_comparability(tmp_path: Path):
@@ -51,6 +51,25 @@ def test_context_preview_finds_comparable_baseline(tmp_path: Path):
     job = jobs / "baseline"
     job.mkdir(parents=True)
     (job / "evaluation-context.json").write_text(json.dumps(make_context(tmp_path, baseline, dataset, stack)))
-    preview = context_preview(project_root=tmp_path, candidate=load_manifest(candidate), dataset_dir=dataset, stack_path=stack, jobs_dir=jobs, mode="promotion-eligible")
+    preview = context_preview(project_root=tmp_path, candidate=load_manifest(candidate), dataset_dir=dataset, stack_path=stack, jobs_dir=jobs, mode="promotion-eligible", candidate_model_binding=MODEL_BINDING)
     assert preview["fresh_baseline_required"] is False
     assert preview["comparable_baselines"][0]["job"] == "baseline"
+
+
+def test_model_binding_change_requires_a_fresh_baseline(tmp_path: Path):
+    candidate = make_candidate(tmp_path)
+    dataset = make_dataset(tmp_path)
+    stack = make_stack(tmp_path)
+    first = make_context(tmp_path, candidate, dataset, stack)
+    from harbor_dsh_evolution.context import build_evaluation_context
+
+    changed = build_evaluation_context(
+        dataset,
+        candidate=load_manifest(candidate),
+        stack_path=stack,
+        project_root=tmp_path,
+        mode="promotion-eligible",
+        candidate_model_binding={**MODEL_BINDING, "model": "gpt-other"},
+    )
+    assert first["candidate_model_binding"]["model"] == "gpt-test"
+    assert first["digest"] != changed["digest"]
