@@ -23,7 +23,7 @@ cd /absolute/path/to/your-agent-workspace
 npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 ```
 
-安装器会让 npm Plugin 与 Python Adapter 使用同一个正式版本；需要完全固定版本时，把 `latest` 改为 `0.7.0`。
+安装器会让 npm Plugin 与 Python Adapter 使用同一个正式版本；需要完全固定版本时，把 `latest` 改为 `0.7.1`。
 
 默认安装到 DSH 的 `web` profile。`setup` 会一次完成：
 
@@ -136,6 +136,20 @@ promotion-report.json       # 晋级或拒绝及原因
 ```
 
 Promotion Gate 会先检查 Context v2、Dataset、Integration、Renderer、Evaluator、Rubric、Judge、语义 Runner、产物 Schema、Trial 覆盖、Score Validity 和基础设施异常，再按指标方向判断提升、最小/最大阈值与非回归。Harbor Job 跑完不等于 Candidate 已通过 Gate；Diagnostic Job、Reporter 和 Optimizer 都不能自动 Gate。
+
+### Candidate 复用当前 DSH 模型
+
+通过 Plugin 启动的 Job 会在启动前冻结当前 DSH Agent 的 `provider`、`model` 与 `reasoning_effort`，并为该 Job 创建一个只绑定本机、随机路径与随机 Bearer capability 的 Model Broker：
+
+```text
+DSH 当前模型 → Job Host Model Broker → Harbor Python Agent
+       ↑                                      ↓
+       └── Candidate 的 dsh-host LLM Adapter ← 临时 .harbor-runtime
+```
+
+Candidate 只得到 Job Token 文件（容器内 `0600`）；不会得到 GPT Auth / Codex OAuth、DeepSeek Key 或其他 Host 凭证。Candidate 传来的 provider、model、reasoning 参数也不会影响已冻结的 Host 选择。`openai-codex` 会在 Job 启动前确认 GPT Auth 已登录。
+
+默认继承当前模型；工具调用可以同时传入 `candidateProvider` 和 `candidateModel` 覆盖，禁止只传其一。模型身份会写入 `evaluation-context.json` 的 `candidate_model_binding`，因此改变 provider、model 或推理强度时，旧 baseline 会显示为不可比，必须重新建立。
 
 ## 示例与源码开发
 

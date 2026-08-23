@@ -9,7 +9,6 @@ from harbor_dsh_evolution.candidate import (
     snapshot_candidate,
     verify_candidate,
 )
-from harbor_dsh_evolution.agent import _responses_environment
 
 
 def make_candidate(tmp_path: Path) -> Path:
@@ -97,12 +96,8 @@ def test_rejects_unknown_manifest_schema():
         )
 
 
-def test_responses_environment_only_injects_runtime_credential(monkeypatch):
-    monkeypatch.delenv("HSE_DEMO_LLM_API_KEY", raising=False)
-    assert _responses_environment() == {}
-
-    monkeypatch.setenv("HSE_DEMO_LLM_API_KEY", "test-key")
-    assert _responses_environment() == {
-        "HSE_RESPONSES_API_KEY_FILE": "/run/secrets/hse-responses-api-key",
-    }
-    assert "test-key" not in json.dumps(_responses_environment())
+def test_candidate_rejects_reserved_runtime_state(tmp_path: Path):
+    candidate = make_candidate(tmp_path)
+    (candidate / ".harbor-runtime").mkdir()
+    with pytest.raises(ValueError, match=r"reserved \.harbor-runtime path"):
+        snapshot_candidate(candidate, candidate_id="demo", version="1.0.0")

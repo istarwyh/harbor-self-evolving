@@ -37,17 +37,23 @@ Evaluator 通过 [`harbor-dsh-evaluator/v1`](evaluator-interface.md) 描述 `scr
 Candidate manifest ──────────────┐
 Dataset manifest ────────────────┼─ full_digest（完整审计）
 Evaluation Stack full identity ──┤
+Candidate model binding ─────────┤
 runtime + Job mode ──────────────┘
 
 Dataset identity ────────────────┐
 Integration/Renderer/Evaluator ──┤
 Rubric/Judge ────────────────────┼─ digest（可比较性）
+Candidate model binding ─────────┤
 semantic Runner + runtime ───────┘
 ```
 
 Candidate 不进入可比较 digest：v1/v2 必须是不同 Candidate digest，但必须共享同一把评测尺子。Diagnoser、Optimizer、Reporter 和 `semantic: false` Runner 会进入完整审计，却不改变 reward 可比较性。
 
-以下变化必须建立 fresh baseline：Dataset id/version/source、Integration、Renderer、Evaluator、Rubric、Judge、语义 Runner、Harbor 或 Adapter runtime。Policy 是独立版本化的决策合同，可以在已有指标足够时重新应用，不会改写 Context。
+以下变化必须建立 fresh baseline：Dataset id/version/source、Integration、Renderer、Evaluator、Rubric、Judge、语义 Runner、Candidate provider/model/reasoning effort、Harbor 或 Adapter runtime。Policy 是独立版本化的决策合同，可以在已有指标足够时重新应用，不会改写 Context。
+
+### Host Model Broker
+
+每个 Plugin Job 都在 Host 侧冻结当前 DSH Agent 模型，然后创建仅绑定本机的短期 Broker。Candidate 通过容器内临时 `.harbor-runtime` 的 `dsh-host` Adapter 发起请求；Broker 以固定模型身份转发给 Host `llm.stream()`，并忽略 Candidate 伪造的 provider、model 与 signal。容器只拥有随机 Job Token 文件（`0600`），不拥有 GPT Auth/Codex OAuth 或任何上游 API Key。Job 结束、失败或超时时 Broker 会 abort 尚未完成的推理并释放 Server。
 
 ## 严格数据流
 

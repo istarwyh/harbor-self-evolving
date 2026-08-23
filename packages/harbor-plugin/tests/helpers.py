@@ -11,6 +11,15 @@ from harbor_dsh_evolution.context import build_evaluation_context
 from harbor_dsh_evolution.dataset import snapshot_dataset
 
 
+MODEL_BINDING = {
+    "provider": "openai-codex",
+    "model": "gpt-test",
+    "reasoning_effort": "high",
+    "transport": "dsh-host-broker",
+    "protocol": "dsh-host-model-gateway/v1",
+}
+
+
 def make_candidate(root: Path, *, version: str = "1.0.0", content: str = "v1") -> Path:
     candidate = root / f"candidate-{version}"
     candidate.mkdir()
@@ -115,4 +124,5 @@ def make_context(root: Path, candidate: Path, dataset: Path, stack: Path, *, mod
         stack_path=stack,
         project_root=root,
         mode=mode,
+        candidate_model_binding=MODEL_BINDING,
     )

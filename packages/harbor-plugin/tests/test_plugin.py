@@ -6,7 +6,7 @@ import pytest
 
 from harbor_dsh_evolution.plugin import EvolutionPlugin
 
-from helpers import make_candidate, make_dataset, make_stack
+from helpers import MODEL_BINDING, make_candidate, make_dataset, make_stack
 
 
 def fake_job(tmp_path: Path, dataset: Path):
@@ -36,12 +36,18 @@ async def test_plugin_persists_strict_identity_artifacts(tmp_path: Path):
         stack_path=str(stack),
         project_root=str(tmp_path),
         mode="diagnostic",
+        candidate_model_provider=MODEL_BINDING["provider"],
+        candidate_model=MODEL_BINDING["model"],
+        candidate_model_transport=MODEL_BINDING["transport"],
+        candidate_model_protocol=MODEL_BINDING["protocol"],
+        candidate_reasoning_effort=MODEL_BINDING["reasoning_effort"],
     )
     await plugin.on_job_start(fake_job(tmp_path, dataset))
     job = tmp_path / "jobs" / "job"
     context = json.loads((job / "evaluation-context.json").read_text())
     assert context["schema_version"] == 2
     assert context["dataset"]["dataset_id"] == "vertical-search"
+    assert context["candidate_model_binding"] == MODEL_BINDING
     assert (job / "dataset-manifest.json").is_file()
     preview = json.loads((job / "dataset-preview.json").read_text())
     assert preview["tasks"][0]["instruction"] == "Find the requested source and cite it.\n"
@@ -66,6 +72,10 @@ async def test_plugin_rejects_dataset_path_not_bound_to_job(tmp_path: Path):
         stack_path=str(stack),
         project_root=str(tmp_path),
         mode="diagnostic",
+        candidate_model_provider=MODEL_BINDING["provider"],
+        candidate_model=MODEL_BINDING["model"],
+        candidate_model_transport=MODEL_BINDING["transport"],
+        candidate_model_protocol=MODEL_BINDING["protocol"],
     )
     with pytest.raises(ValueError, match="must exactly match"):
         await plugin.on_job_start(fake_job(tmp_path, actual))
@@ -80,4 +90,8 @@ def test_promotion_eligible_plugin_requires_policy(tmp_path: Path):
             stack_path=str(stack),
             project_root=str(tmp_path),
             mode="promotion-eligible",
+            candidate_model_provider=MODEL_BINDING["provider"],
+            candidate_model=MODEL_BINDING["model"],
+            candidate_model_transport=MODEL_BINDING["transport"],
+            candidate_model_protocol=MODEL_BINDING["protocol"],
         )

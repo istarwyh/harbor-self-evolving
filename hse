@@ -20,7 +20,8 @@ Commands:
   doctor                Check local prerequisites and integration health
   test                  Run all local package tests and build checks
   preview <candidate> <dataset> <stack> [mode]
-                        Preview strict Context v2 and comparable baselines
+                        Preview Context v2 and comparable baselines. Requires
+                        HSE_CANDIDATE_MODEL_PROVIDER and HSE_CANDIDATE_MODEL.
   dsh-install [profile] Install the released Plugin + Skill (default: web)
   dsh-install-source [profile]
                         Prepare and link this source checkout (default: web)
@@ -152,16 +153,31 @@ case "$command_name" in
       echo "preview requires candidate, dataset, and stack paths" >&2
       exit 2
     fi
+    candidate_provider="${HSE_CANDIDATE_MODEL_PROVIDER:-}"
+    candidate_model="${HSE_CANDIDATE_MODEL:-}"
+    if [[ -z "$candidate_provider" || -z "$candidate_model" ]]; then
+      echo "preview requires HSE_CANDIDATE_MODEL_PROVIDER and HSE_CANDIDATE_MODEL" >&2
+      exit 2
+    fi
     if [[ ! -x "$harbor_dsh_bin" ]]; then
       setup_python
     fi
-    "$harbor_dsh_bin" context preview \
-      --project-root "$repo_dir" \
-      --candidate "$candidate_path" \
-      --dataset "$dataset_path" \
-      --stack "$stack_path" \
-      --jobs-dir "$repo_dir/jobs" \
+    context_args=(
+      --project-root "$repo_dir"
+      --candidate "$candidate_path"
+      --dataset "$dataset_path"
+      --stack "$stack_path"
+      --jobs-dir "$repo_dir/jobs"
       --mode "$mode"
+      --candidate-model-provider "$candidate_provider"
+      --candidate-model "$candidate_model"
+      --candidate-model-transport dsh-host-broker
+      --candidate-model-protocol dsh-host-model-gateway/v1
+    )
+    if [[ -n "${HSE_CANDIDATE_REASONING_EFFORT:-}" ]]; then
+      context_args+=(--candidate-reasoning-effort "$HSE_CANDIDATE_REASONING_EFFORT")
+    fi
+    "$harbor_dsh_bin" context preview "${context_args[@]}"
     ;;
   dsh-install)
     profile="${2:-web}"
