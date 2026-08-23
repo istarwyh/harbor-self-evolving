@@ -22,6 +22,12 @@ test('bundled Skill loads through the official DSH Skill Registry', async () => 
   assert.match(skill.content, /Run the evolution loop/)
   assert.match(skill.content, /harbor_evolution_doctor/)
   assert.match(skill.content, /fresh_baseline_required/)
+  assert.match(skill.content, /评测集：测什么？/)
+  assert.match(skill.content, /生成器：谁来回答？/)
+  assert.match(skill.content, /评测器（评测标准）：怎样算好？/)
+  assert.match(skill.content, /优化器：谁根据结果改进？/)
+  assert.match(skill.content, /开始初始化/)
+  assert.match(skill.content, /single Query becomes a one-task \*\*diagnostic\*\* Dataset/)
 
   dispose()
   assert.deepEqual(await root.skills.list(), [])

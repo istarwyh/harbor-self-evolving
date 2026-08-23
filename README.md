@@ -6,7 +6,7 @@
 
 | 交付物 | 用户得到什么 |
 | --- | --- |
-| DSH Plugin：`dsh-harbor-evolution` | 在自己的 DSH 中获得 Evaluation Workbench、8 个严格评测工具和结构化结果卡片 |
+| DSH Plugin：`dsh-harbor-evolution` | 在自己的 DSH 中获得 Evaluation Workbench、12 个严格评测工具和结构化结果卡片 |
 | 本项目官方 Skill：`evolve-agent-with-harbor` | Agent 知道如何澄清、初始化 Evaluation Stack、运行 Doctor、建立 baseline、诊断、回归和 Gate |
 | Harbor Adapter：`harbor-dsh-evolution` | 固化 Candidate、Dataset、Evaluation Stack、Context v2、Trial 证据与 Promotion Gate |
 
@@ -23,7 +23,7 @@ cd /absolute/path/to/your-agent-workspace
 npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 ```
 
-安装器会让 npm Plugin 与 Python Adapter 使用同一个正式版本；需要完全固定版本时，把 `latest` 改为 `0.6.1`。
+安装器会让 npm Plugin 与 Python Adapter 使用同一个正式版本；需要完全固定版本时，把 `latest` 改为 `0.7.0`。
 
 默认安装到 DSH 的 `web` profile。`setup` 会一次完成：
 
@@ -45,8 +45,10 @@ DSH_HOME="$HOME/.dsh" pnpm dlx @deepseek-ai/dsh@0.1.0-rc.6 web
 
 ```text
 /evolve-agent-with-harbor
-请检查当前工作区，先帮我澄清成功指标、baseline、允许改动范围和晋级规则，再初始化 Harbor 自进化流程。
+请检查当前工作区，帮我初始化 Harbor 自进化流程。
 ```
+
+Skill 会先检查文件，再围绕四个用户可理解的概念补齐必要信息：**评测集（测什么）**、**生成器（谁来回答）**、**评测器/评测标准（怎样算好）**、**优化器（谁根据结果改进）**。单条 Query、文件路径、curl 和本地 Agent 路径都可以直接提供；其余版本标识、适配器、产物呈现、诊断与报告配置由 Skill 推断并汇总成一张确认卡。只有用户选择“查看高级配置”时，才展开 Evaluation Stack、Judge、Contract 和 Policy 等专业字段。
 
 在 Web profile 中还会出现三个可见入口：
 
@@ -88,10 +90,12 @@ Plugin 注册 12 个确定性工具：
 - `harbor_evaluator_meta_evaluate`：用固定产物、Ground Truth 和重复观测计算 ESF、SCE、RCR、覆盖率与分歧。
 - `harbor_candidate_compare`：执行严格、可解释、带原因码的 Promotion Gate。
 
-Skill 负责稳定使用这些工具，而不是让 Agent 无约束地“改自己”：
+Skill 负责稳定使用这些工具，而不是让 Agent 无约束地“改自己”。用户入口保持为四个概念，内部再编译为严格架构：
 
 ```text
-澄清评测契约 → 初始化 Candidate / Dataset / Evaluation Stack / Policy
+评测集 + 生成器 + 评测器（评测标准） + 优化器 → 用户确认
+        ↓
+自动生成 Candidate / Dataset / Evaluation Stack / Policy 草案
         ↓
 Dataset Validate → Architecture Doctor → Context Preview
         ↓

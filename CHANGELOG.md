@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.7.0 - 2026-08-23
+
+- Replace the first-run architecture questionnaire with a progressive four-concept intake: Dataset, Generator, Evaluator plus criteria, and Optimizer. Inspect the workspace first, infer internal identities, require one confirmation card before writes, classify single-Query runs as diagnostic-only, and defer promotion, Ground Truth, and deployment governance until they are relevant.
+- Add bundled Skill onboarding evals covering a blank workspace, a single-Query diagnostic, and curl/local-Agent inputs with credential redaction.
+
 ## 0.6.1 - 2026-08-23
 
 - Install the prebuilt registry Plugin with lifecycle scripts disabled so pnpm 11 does not reject unrelated DSH native dependencies as newly unapproved builds.

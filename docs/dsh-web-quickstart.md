@@ -1,6 +1,6 @@
 # 本地 DSH Web 快速开始
 
-版本组合：DSH `0.1.0-rc.6`、Plugin + Skill `0.6.1`、Harbor Adapter `0.6.1`。
+版本组合：DSH `0.1.0-rc.6`、Plugin + Skill `0.7.0`、Harbor Adapter `0.7.0`。
 
 ## 安装与重启
 
@@ -8,7 +8,7 @@
 
 ```bash
 cd /absolute/path/to/agent-workspace
-npx --yes dsh-harbor-evolution@0.6.1 setup --project-root "$PWD"
+npx --yes dsh-harbor-evolution@0.7.0 setup --project-root "$PWD"
 ```
 
 GitHub URL 是文档/源码入口，正式用户仍使用 npm 安装；不要直接 link 新 checkout。安装器会建立独立 Harbor venv、安装同版本 Python Adapter、把 Plugin + Skill 写入 `web` profile、保存 CLI 路径并验证 entry point。
@@ -38,6 +38,10 @@ harbor_dataset_validate
 harbor_context_preview
 harbor_eval_run
 harbor_eval_result
+harbor_evaluator_inspect
+harbor_evaluator_update
+harbor_ground_truth_init
+harbor_evaluator_meta_evaluate
 harbor_candidate_compare
 ```
 
@@ -47,10 +51,19 @@ harbor_candidate_compare
 
 ```text
 /evolve-agent-with-harbor
-请检查当前工作区。先澄清 Candidate、Dataset、Evaluation Stack 八个角色、Judge、指标方向、baseline、允许改动面和 Policy；我确认后再初始化，不要直接运行 Job。
+请检查当前工作区，帮我初始化 Harbor 自进化流程。
 ```
 
-Skill 会在信息齐全后调用非覆盖式 initializer，再要求实现业务组件并运行 Dataset Validate、Architecture Doctor 和 Context Preview。初始化成功不等于正式评测就绪。
+Skill 会先扫描当前目录，只追问缺失的四个业务概念：
+
+1. **评测集：测什么？** 可以是一条 Query、文件、包含多个 instruction 的目录或已有 Dataset。
+2. **生成器：谁来回答？** 可以给 curl、本地 Agent 文件/目录，或采用 Skill 在工作区发现的入口。
+3. **评测器（评测标准）：怎样算好？** 可以给评测器 curl/路径；没有时直接用自然语言描述标准，由当前 Agent 起草版本化实现。
+4. **优化器：谁根据结果改进？** 默认由当前 Agent 负责，也可选择 Codex CLI、Claude Code 或本地命令。
+
+如果还没有 Harbor 目录，Skill 会提议在当前目录下使用 `./harbor-evolution/` 作为托管工作空间。它会把底层版本、身份、适配器、产物呈现、诊断和报告配置汇总成确认卡；你选择“开始初始化”后才调用非覆盖式 initializer。单条 Query 默认只是诊断，不会被包装成可晋级证据。初始化成功也不等于正式评测就绪。
+
+只有在真正需要时才会继续询问专业治理信息：正式回归前确认阈值、非回归指标、重复策略和副作用边界；优化评测器时单独建立独立 Ground Truth；Gate 建议晋级后才讨论 CI/CD 与部署权限。
 
 ## DeepResearch 严格示例
 
@@ -97,7 +110,7 @@ Workbench 会跟随 DSH 语言设置展示九个阶段。「候选版本」先�
 | 现象 | 处理 |
 | --- | --- |
 | 插件没有 Harbor Tab | 确认装入 `web` profile，停止旧进程并重启 |
-| 工具存在但 Skill 不出现 | 确认 `harbor-evolution` 版本为 `0.6.1` 并重启 |
+| 工具存在但 Skill 不出现 | 确认 `harbor-evolution` 版本为 `0.7.0` 并重启 |
 | `spawn harbor ENOENT` | 重新运行 setup 保存绝对 CLI 路径 |
 | Harbor 找不到 `dsh-evolution` | Adapter 与 Harbor 不在同一 venv；重新 setup |
 | Dataset digest mismatch | intentional change 时升级 Dataset version 并重新 snapshot |
