@@ -6,7 +6,7 @@
 
 | 交付物 | 用户得到什么 |
 | --- | --- |
-| DSH Plugin：`dsh-harbor-evolution` | 在自己的 DSH 中获得 Evaluation Workbench、12 个严格评测工具和结构化结果卡片 |
+| DSH Plugin：`dsh-harbor-evolution` | 在自己的 DSH 中获得 Evaluation Workbench、14 个严格评测工具和结构化结果卡片 |
 | 本项目官方 Skill：`evolve-agent-with-harbor` | Agent 知道如何澄清、初始化 Evaluation Stack、运行 Doctor、建立 baseline、诊断、回归和 Gate |
 | Harbor Adapter：`harbor-dsh-evolution` | 固化 Candidate、Dataset、Evaluation Stack、Context v2、Trial 证据与 Promotion Gate |
 
@@ -57,7 +57,7 @@ Skill 会先检查文件，再围绕四个用户可理解的概念补齐必要�
 - 评测器页：直接查看 `script` 或 `llm-as-judge` 的统一接口、三元 Criterion、Rubric 与实现源码；只能受控修改 Descriptor 授权的文件，并强制创建新的 Evaluator / Stack 身份。
 - `harbor-dsh-evaluator/v1`：统一 `script` 与 `llm-as-judge` 的输入、三元 Criteria 输出、实现身份和可编辑文件；详情见 [`docs/evaluator-interface.md`](docs/evaluator-interface.md)。
 - 工具调用中的 Harbor 专属卡片：直接理解初始化、Doctor、Context 预览、评测与 Gate。
-- “设置 → Harbor 自进化”：检查项目目录、Evaluation Stack、Jobs 和两个 Harbor CLI 是否就绪。
+- “设置 → Harbor 自进化”：检查项目目录、Evaluation Stack、Jobs 和两个 Harbor CLI 是否就绪；显示当前/最新插件版本及精确更新命令，但不会静默安装。
 
 GUI 当前是观察与诊断面，评测、比较等高成本动作仍由官方 Skill 在澄清需求后调用工具执行；它不会在浏览器后台静默启动 Job。
 
@@ -75,12 +75,14 @@ GUI 当前是观察与诊断面，评测、比较等高成本动作仍由官方 
 
 ## 用户实际获得的能力
 
-Plugin 注册 12 个确定性工具：
+Plugin 注册 14 个确定性工具：
 
 - `harbor_candidate_snapshot`：固化不可变 Candidate。
+- `harbor_model_binding`：把当前 DSH 默认模型生成为不含凭证的 `model-binding.json` 草案；写入 Candidate 后会进入 digest，并在后续 Job 中通过 Host Model Broker 固定复用。
 - `harbor_evolution_init`：在需求确认后创建不覆盖已有文件的标准 Evaluation Stack 结构。
 - `harbor_evolution_doctor`：检查角色边界、God Runner、Dataset、Candidate 和 Policy。
-- `harbor_dataset_validate`：验证任务、路径、敏感字段和 Dataset source digest。
+- `harbor_quick_diagnostic_init`：用一个 Query 和 Rubric 草稿生成 Harbor 1.4 wiring 诊断工程；明确不可用于 Baseline 或晋级。
+- `harbor_dataset_validate`：验证任务、路径、敏感字段、Dataset source digest，并复现 Harbor 的运行时 Task 解析；Dataset 根目录下必须是一级 Task 子目录，`task.toml` 使用 `schema_version = "1.4"` 和 `org/name`。
 - `harbor_context_preview`：预览 Context v2、可比 baseline 和 fresh-baseline 要求。
 - `harbor_eval_run`：运行显式的 `diagnostic` 或 `promotion-eligible` Job。
 - `harbor_eval_result`：读取规范化 Summary，或按 `view=job|progress|dataset|trial|governance` 读取脱敏后的阶段、指令、生成产物与评测器治理证据。
@@ -151,6 +153,10 @@ Candidate 只得到 Job Token 文件（容器内 `0600`）；不会得到 GPT Au
 
 默认继承当前模型；工具调用可以同时传入 `candidateProvider` 和 `candidateModel` 覆盖，禁止只传其一。模型身份会写入 `evaluation-context.json` 的 `candidate_model_binding`，因此改变 provider、model 或推理强度时，旧 baseline 会显示为不可比，必须重新建立。
 
+如果希望 Candidate 永久固定创建时的模型，可先调用 `harbor_model_binding`，把返回的 `candidate_model_binding` 写成 Candidate 根目录的 `model-binding.json`，再执行 snapshot。文件只包含 provider/model/reasoning 身份，不包含登录信息；Job 会校验显式参数、Plugin 默认值和该文件一致，并继续通过短期 `dsh-host-broker` Capability 调用 Host，绝不会上传 Codex `auth.json` 或 API key。
+
+DSH 的“设置 → Harbor 自进化”会在打开时由 Host 检查 npm 正式版本。发现新版本后显示当前/最新版本、发布说明和可复制的精确升级命令；浏览器不会自动安装或重启 DSH。断网只会使版本检查暂时不可用，不影响 Harbor 功能或安装健康度。
+
 ## 示例与源码开发
 
 如果你想先理解完整机制，再接入自己的业务 Agent，可以运行仓库中的 DeepResearch 示例：
@@ -204,7 +210,7 @@ docs/                      # 架构、接入、Web 快速开始与安全边界
 → Promotion Gate → 将同一 image digest 交给 CD 晋级
 ```
 
-Harbor 不替代镜像仓库、发布审批或线上流量切换。详见 [架构与角色](docs/architecture.md)、[接入指南](docs/integration.md) 和 [安全边界](docs/security.md)。
+Harbor 不替代镜像仓库、发布审批或线上流量切换。详见 [架构与角色](docs/architecture.md)、[接入指南](docs/integration.md)、[首次接入与失败诊断](docs/troubleshooting.md) 和 [安全边界](docs/security.md)。
 
 ## License
 

@@ -816,6 +816,14 @@ def write_job_artifacts(
     return validate_job_artifacts(job_dir, expected_trials=len(assessments))
 
 
+def load_trial_assessments(job_dir: Path) -> list[dict[str, Any]]:
+    """Load the canonical per-Trial validity decisions written for a Job."""
+    directory = job_dir / "trial-assessments"
+    if not directory.is_dir():
+        return []
+    return [json.loads(path.read_text()) for path in sorted(directory.glob("*.json"))]
+
+
 def _validate_versioned(name: str, value: dict[str, Any]) -> list[str]:
     if name == "trial-assessment.json" and value.get("schema_version") == 1:
         required = {"trial_id", "trial_name", "status", "rewards", "findings", "evidence", "process"}

@@ -35,6 +35,7 @@ test('dashboard is a lightweight Context v2 overview', async () => {
   const snapshot = await readDashboardSnapshot(config(projectRoot), { pluginVersion: '0.5.0-test' })
   assert.equal(snapshot.schemaVersion, 3)
   assert.equal(snapshot.pluginVersion, '0.5.0-test')
+  assert.equal(snapshot.config.projectRoot, projectRoot)
   assert.equal(snapshot.overview.totalJobs, 4)
   assert.deepEqual(snapshot.overview.latestMetric, { name: 'reward', value: 0.82 })
   assert.equal(snapshot.jobs.find(job => job.name === 'candidate-v2').status, 'partial')

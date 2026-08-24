@@ -6,6 +6,7 @@ import pytest
 from harbor_dsh_evolution.candidate import (
     CandidateManifest,
     compute_candidate,
+    load_model_binding,
     snapshot_candidate,
     verify_candidate,
 )
@@ -61,6 +62,42 @@ def test_snapshot_requires_lockfile_and_rejects_credential_files(tmp_path: Path)
     candidate = make_candidate(tmp_path)
     (candidate / "package-lock.json").unlink()
     with pytest.raises(ValueError, match="lockfile"):
+        snapshot_candidate(candidate, candidate_id="demo", version="1.0.0")
+
+
+def test_model_binding_is_non_secret_candidate_identity(tmp_path: Path):
+    candidate = make_candidate(tmp_path)
+    binding = {
+        "schema_version": 1,
+        "source": "skill-agent-default",
+        "provider": "openai-codex",
+        "model": "gpt-test",
+        "reasoning_effort": "high",
+    }
+    (candidate / "model-binding.json").write_text(json.dumps(binding))
+
+    manifest = snapshot_candidate(candidate, candidate_id="demo", version="1.0.0")
+
+    assert load_model_binding(candidate) == binding
+    assert manifest.metadata["model_binding"] == binding
+    assert "model-binding.json" in {item.path for item in manifest.files}
+    assert "auth.json" not in json.dumps(manifest.to_dict())
+
+
+def test_model_binding_rejects_secret_or_unknown_fields(tmp_path: Path):
+    candidate = make_candidate(tmp_path)
+    (candidate / "model-binding.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "source": "skill-agent-default",
+                "provider": "openai-codex",
+                "model": "gpt-test",
+                "token": "forbidden",
+            }
+        )
+    )
+    with pytest.raises(ValueError, match="unsupported or secret-bearing"):
         snapshot_candidate(candidate, candidate_id="demo", version="1.0.0")
     (candidate / "package-lock.json").write_text(
         '{"name":"candidate","lockfileVersion":3}\n'

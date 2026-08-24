@@ -44,6 +44,17 @@
         "The response does not block initialization or require a projectRoot configuration change because the fallback differs.",
         "The proposed managed workspace stays under /Users/mac/Documents/Harness."
       ]
+    },
+    {
+      "id": 5,
+      "prompt": "生成器用本机 DSH Agent，我希望它固定使用当前 Harbor Agent 的 GPT Auth 模型，不要把登录信息放进 Candidate。",
+      "expected_output": "把同模型解释为固定的 Candidate model binding；确认后调用 harbor_model_binding 取得非敏感 provider/model/reasoning，写入 model-binding.json，并说明运行仍通过短期 dsh-host-broker Capability，Host OAuth 文件不会进入容器或 Harbor 产物。",
+      "files": [],
+      "assertions": [
+        "The response offers the current Harbor Agent model as an explicit Generator choice and snapshots it instead of live-following later model changes.",
+        "The response keeps Host authentication outside the Candidate and uses the short-lived Host Model Broker capability.",
+        "The response requires a new Candidate identity instead of overriding a pinned model binding in place."
+      ]
     }
   ]
 }

@@ -9,7 +9,7 @@ from harbor.models.job.plugin import BaseJobPlugin
 from harbor.models.job.result import JobResult
 from harbor.trial.hooks import TrialHookEvent
 
-from harbor_dsh_evolution.artifacts import write_job_artifacts
+from harbor_dsh_evolution.artifacts import load_trial_assessments, write_job_artifacts
 from harbor_dsh_evolution.candidate import CandidateManifest, verify_candidate
 from harbor_dsh_evolution.context import CONTEXT_NAME, build_evaluation_context
 from harbor_dsh_evolution.dataset import (
@@ -212,6 +212,7 @@ class EvolutionPlugin(BaseJobPlugin):
             artifact_validation=validation,
             evaluation_contract=self._stack_manifest["evaluation_contract"],
             dataset_manifest=self._dataset_manifest,
+            assessments=load_trial_assessments(self._job_dir),
         )
         write_summary(self._job_dir, summary)
         if self._lifecycle:

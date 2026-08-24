@@ -17,6 +17,7 @@ from harbor_dsh_evolution.meta_evaluation import (
     run_meta_evaluation,
 )
 from harbor_dsh_evolution.promotion import compare_jobs, write_report
+from harbor_dsh_evolution.quick import initialize_quick_diagnostic
 from harbor_dsh_evolution.stack import snapshot_stack, validate_stack, write_stack_manifest
 from harbor_dsh_evolution.summary import load_or_create_summary
 
@@ -55,6 +56,15 @@ def _parser() -> argparse.ArgumentParser:
     initialize.add_argument("--policy-id", required=True)
     initialize.add_argument("--policy-version", required=True)
     initialize.add_argument("--min-improvement", required=True, type=float)
+    initialize.add_argument("--workspace-subdir", default=".")
+
+    quick = commands.add_parser("quick", help="Create an explicitly non-promotable wiring diagnostic")
+    quick_commands = quick.add_subparsers(dest="quick_command", required=True)
+    quick_diagnostic = quick_commands.add_parser("diagnostic")
+    quick_diagnostic.add_argument("--project-root", required=True, type=Path)
+    quick_diagnostic.add_argument("--query", required=True)
+    quick_diagnostic.add_argument("--rubric", required=True)
+    quick_diagnostic.add_argument("--workspace-subdir", default="harbor-diagnostic")
 
     dataset = commands.add_parser("dataset", help="Manage Dataset manifests")
     dataset_commands = dataset.add_subparsers(dest="dataset_command", required=True)
@@ -137,6 +147,7 @@ def _parser() -> argparse.ArgumentParser:
     doctor.add_argument("--dataset", required=True, type=Path)
     doctor.add_argument("--candidate", type=Path)
     doctor.add_argument("--policy", type=Path)
+    doctor.add_argument("--runtime", action="store_true")
 
     promote = commands.add_parser("promote", help="Apply a Promotion Gate")
     promote.add_argument("baseline_job", type=Path)
@@ -173,6 +184,7 @@ def main() -> int:
             policy_id=args.policy_id,
             policy_version=args.policy_version,
             min_improvement=args.min_improvement,
+            workspace_subdir=args.workspace_subdir,
         )
     elif args.command == "dataset":
         if args.dataset_command == "snapshot":
@@ -180,6 +192,13 @@ def main() -> int:
         else:
             result = validate_dataset(args.dataset_dir, project_root=args.project_root).to_dict()
             exit_code = 0 if result["valid"] else 2
+    elif args.command == "quick":
+        result = initialize_quick_diagnostic(
+            project_root=args.project_root,
+            query=args.query,
+            rubric=args.rubric,
+            workspace_subdir=args.workspace_subdir,
+        )
     elif args.command == "stack":
         if args.stack_command == "validate":
             result = validate_stack(args.stack_path, project_root=args.project_root)
@@ -257,6 +276,7 @@ def main() -> int:
             dataset_path=args.dataset,
             candidate_path=args.candidate,
             policy_path=args.policy,
+            runtime_checks=args.runtime,
         )
         exit_code = 0 if result["promotion_ready"] else 2
     else:

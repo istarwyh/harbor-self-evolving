@@ -95,10 +95,17 @@ export function apply(ctx, config) {
   }, (args, exec) => serviceForTool(exec).snapshot(args)))
 
   ctx.tools.register(jsonTool({
+    name: 'harbor_model_binding',
+    description: 'Freeze the current DSH default provider, model, and reasoning identity into a non-secret model-binding.json draft. Runtime access still uses the short-lived Host Model Broker capability.',
+    parameters: {},
+  }, (_args, exec) => serviceForTool(exec).modelBinding()))
+
+  ctx.tools.register(jsonTool({
     name: 'harbor_evolution_init',
     description: 'Compile an accepted Dataset, Generator, Evaluator/criteria, and Optimizer onboarding card into a strict, non-overwriting Evaluation Stack project. Detailed identity fields are internal tool inputs, not a user questionnaire.',
     parameters: {
       datasetPath: { type: 'string', required: true },
+      workspaceSubdir: { type: 'string', description: 'Optional namespace under the current project root. Defaults to the project root; use it to host multiple independent Harbor projects.' },
       stackId: { type: 'string', required: true },
       stackVersion: { type: 'string', required: true },
       datasetId: { type: 'string', required: true },
@@ -130,6 +137,16 @@ export function apply(ctx, config) {
       candidateReasoningEffort: { type: 'string' },
     },
   }, (args, exec) => serviceForTool(exec).doctor(args)))
+
+  ctx.tools.register(jsonTool({
+    name: 'harbor_quick_diagnostic_init',
+    description: 'Create a non-overwriting Harbor 1.4 wiring diagnostic with one Query, a minimal Host-model Candidate, a runnable Task, and an explicit non-promotion Evaluator. The supplied Rubric is recorded as a draft but is not treated as executed.',
+    parameters: {
+      query: { type: 'string', required: true },
+      rubric: { type: 'string', required: true },
+      workspaceSubdir: { type: 'string', description: 'Defaults to harbor-diagnostic under the current Agent session directory.' },
+    },
+  }, (args, exec) => serviceForTool(exec).quickDiagnostic(args)))
 
   ctx.tools.register(jsonTool({
     name: 'harbor_dataset_validate',

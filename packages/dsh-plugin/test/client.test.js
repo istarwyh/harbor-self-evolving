@@ -4,7 +4,7 @@ import test from 'node:test'
 
 import React from 'react'
 
-test('built Web client registers the Evaluation Workbench, Doctor, and twelve Tool views', async () => {
+test('built Web client registers the Evaluation Workbench, Doctor, and fourteen Tool views', async () => {
   const bundle = await readFile(new URL('../lib/client.js', import.meta.url), 'utf8')
   const source = await readFile(new URL('../src/client/index.jsx', import.meta.url), 'utf8')
   let descriptor
@@ -54,13 +54,17 @@ test('built Web client registers the Evaluation Workbench, Doctor, and twelve To
     'tool.call.toolview',
     'tool.call.toolview',
     'tool.call.toolview',
+    'tool.call.toolview',
+    'tool.call.toolview',
   ])
   assert.equal(registrations[0].options.id, 'harbor-evolution')
   assert.equal(registrations[1].options.id, 'harbor-evolution')
   assert.deepEqual(registrations.slice(2).map(entry => entry.options.key), [
     'harbor_candidate_snapshot',
+    'harbor_model_binding',
     'harbor_evolution_init',
     'harbor_evolution_doctor',
+    'harbor_quick_diagnostic_init',
     'harbor_dataset_validate',
     'harbor_context_preview',
     'harbor_eval_run',
@@ -85,6 +89,10 @@ test('built Web client registers the Evaluation Workbench, Doctor, and twelve To
   assert.match(source, /REPORT_PAGE_SIZE = 10/, 'Reporter stage must paginate per-Trial assessments')
   assert.match(source, /hse-report-compare/, 'Reporter stage must compare the artifact with its assessment side by side')
   assert.match(source, /function MetaEvaluationPanel/, 'Ground Truth and evaluator meta-evaluation must have a separate stage')
+  assert.match(source, /switchProjectRoot/, 'Doctor settings must expose a hot-reloadable Web Workbench projectRoot')
+  assert.match(source, /credentialStoreHint/, 'Doctor settings must state the real credential persistence boundary')
+  assert.match(source, /function VersionPanel/, 'Settings must present installed and latest Plugin versions')
+  assert.match(source, /navigator\.clipboard\.writeText\(value\.command\)/, 'Settings must copy an exact update command without executing it')
   assert.match(source, /ESF.*SCE.*RCR/s, 'Meta-evaluation must expose the accepted reliability metrics')
   assert.match(source, /function gateReasonText/, 'Gate must render structured and legacy string reasons safely')
   assert.doesNotMatch(source, /StageSummary|hse-stage-summary|what_happened/, 'stage tabs must open directly on user-facing evidence')

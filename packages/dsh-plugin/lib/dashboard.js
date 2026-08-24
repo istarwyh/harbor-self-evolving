@@ -233,7 +233,7 @@ export async function readDashboardSnapshot(config, metadata = {}) {
     schemaVersion: 3,
     generatedAt: new Date().toISOString(),
     pluginVersion: metadata.pluginVersion ?? 'development',
-    config: { jobsDir: config.jobsDir, dshVersion: config.dshVersion, agentImportPath: config.agentImportPath, pluginImportPath: config.pluginImportPath },
+    config: { projectRoot, jobsDir: config.jobsDir, dshVersion: config.dshVersion, agentImportPath: config.agentImportPath, pluginImportPath: config.pluginImportPath },
     checks: { projectRoot: projectRootCheck, jobsDir: jobsDirCheck, harbor: harborCheck, harborDsh: harborDshCheck, evaluationStack: stackCheck },
     overview: {
       totalJobs: jobs.length,

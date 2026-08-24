@@ -56,3 +56,41 @@ def test_summarize_job_aggregates_only_valid_quality_scores(tmp_path: Path):
     assert summary["n_infrastructure_exceptions"] == 1
     assert summary["metrics"] == {"reward": 0.4}
     assert summary["artifact_validation"]["valid"] is True
+
+
+def test_summary_reuses_trial_validity_when_evaluator_result_is_missing(tmp_path: Path):
+    payload = {
+        "id": "missing-result",
+        "task_name": "missing-result",
+        "trial_name": "missing-result",
+        "agent_info": {"name": "demo"},
+        "agent_result": {"metadata": {}},
+        "verifier_result": {"rewards": {"reward": 1.0}},
+        "exception_info": None,
+    }
+    trial = tmp_path / "trial-missing"
+    trial.mkdir()
+    (trial / "result.json").write_text(json.dumps(payload))
+    stack_manifest = {
+        "components": {
+            "evaluator": {
+                "interface": {
+                    "criteria": [
+                        {"id": "quality", "label": "Quality", "values": [0, 0.5, 1]}
+                    ]
+                }
+            }
+        }
+    }
+    write_job_artifacts(
+        tmp_path,
+        [payload],
+        evaluation_contract=CONTRACT,
+        stack_manifest=stack_manifest,
+    )
+
+    summary = summarize_job(tmp_path)
+
+    assert summary["n_valid_scores"] == 0
+    assert summary["metrics"] == {}
+    assert "evaluator-result-invalid:evaluation-result.json is missing" in summary["trials"][0]["score"]["invalid_reasons"]

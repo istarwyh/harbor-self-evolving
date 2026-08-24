@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file.
 
+## Unreleased
+
+- Make `projectRoot` visible and hot-reloadable in Settings, return path-containment errors with the active root and concrete repair guidance, and reject a different existing Stack identity with `STACK_ALREADY_EXISTS_DIFFERENT_ID` while supporting namespaced `workspaceSubdir` projects.
+- Validate Dataset task resolution through Harbor's runtime parser, generate Harbor 1.4 Task templates, align Summary validity with `evaluation-result.json`, and add Docker/ACP preflight plus redacted failure tails with actionable error codes.
+- Add a permanently non-promotable Quick Diagnostic scaffold for first-run wiring checks, including Doctor and Gate enforcement of its diagnostic-only identity.
+- Check the npm registry from the Host only when Harbor Settings opens, cache successful checks, and show installed/latest versions plus an exact copyable update command without silently changing the user's DSH profile. Registry failures stay non-blocking and separate from installation health.
+- Add an explicit, non-secret `model-binding.json` Candidate identity and `harbor_model_binding` tool. Pinned models still run exclusively through the per-Job Host Model Broker; Host OAuth/API credentials never enter the Candidate container or Harbor artifacts.
+
 ## 0.7.2 - 2026-08-24
 
 - Resolve every Agent-facing Harbor Tool against the calling session's absolute working directory instead of the Plugin's process-wide fallback `projectRoot`. Each call receives an immutable request-local Service, so concurrent workspaces remain isolated while all existing path-containment checks stay active.

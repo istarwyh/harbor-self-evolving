@@ -1,5 +1,7 @@
-import { access } from 'node:fs/promises'
+import { access, stat } from 'node:fs/promises'
 import path from 'node:path'
+
+import { loadModelBinding } from './candidate.js'
 
 import {
   readComparison,
@@ -16,6 +18,7 @@ import {
   compareCandidates,
   initializeGroundTruth,
   initializeProject,
+  initializeQuickDiagnostic,
   inspectEvaluator,
   previewContext,
   readEvaluation,
@@ -25,7 +28,9 @@ import {
   snapshot,
   updateEvaluator,
   validateDataset,
+  resolveWithin,
 } from './evolution.js'
+import { createVersionChecker } from './version.js'
 
 export async function resolveEvaluatorStackPath(config, governance, explicitPath) {
   if (explicitPath) return explicitPath
@@ -52,6 +57,7 @@ export class EvolutionService {
     this.config = config
     this.metadata = metadata
     this.modelRuntime = modelRuntime
+    this.versionChecker = metadata.versionChecker ?? createVersionChecker()
   }
 
   snapshot(args) {
@@ -62,8 +68,22 @@ export class EvolutionService {
     return initializeProject(this.config, args)
   }
 
+  quickDiagnostic(args) {
+    return initializeQuickDiagnostic(this.config, args)
+  }
+
+  async _resolveCandidateModel(args) {
+    const candidatePath = resolveWithin(
+      this.config.projectRoot,
+      args.candidatePath,
+      'candidatePath',
+    )
+    const pinnedBinding = await loadModelBinding(candidatePath)
+    return this.modelRuntime.resolve(args, pinnedBinding)
+  }
+
   async run(args) {
-    const candidateModelBinding = await this.modelRuntime.resolve(args)
+    const candidateModelBinding = await this._resolveCandidateModel(args)
     return runEvaluation(this.config, { ...args, candidateModelBinding }, this.modelRuntime)
   }
 
@@ -85,7 +105,7 @@ export class EvolutionService {
   }
 
   async doctor(args) {
-    const candidateModelBinding = await this.modelRuntime.resolve(args)
+    const candidateModelBinding = await this._resolveCandidateModel(args)
     const result = await runDoctor(this.config, args)
     return { ...result, candidate_model_binding: candidateModelBinding }
   }
@@ -95,12 +115,50 @@ export class EvolutionService {
   }
 
   async previewContext(args) {
-    const candidateModelBinding = await this.modelRuntime.resolve(args)
+    const candidateModelBinding = await this._resolveCandidateModel(args)
     return previewContext(this.config, { ...args, candidateModelBinding })
   }
 
   dashboard() {
     return readDashboardSnapshot(this.config, this.metadata)
+  }
+
+  version(args = {}) {
+    return this.versionChecker({
+      currentVersion: this.metadata.pluginVersion ?? 'development',
+      projectRoot: this.config.projectRoot,
+      refresh: args.refresh === true || args.refresh === 'true',
+    })
+  }
+
+  async modelBinding() {
+    const binding = await this.modelRuntime.currentBinding()
+    return {
+      schema_version: 1,
+      scope: 'new-candidate',
+      candidate_model_binding: binding,
+      transport: 'dsh-host-broker',
+      protocol: 'dsh-host-model-gateway/v1',
+      credentials: {
+        mode: 'host-broker-only',
+        note: 'The Candidate receives only a short-lived Job capability. Host OAuth and API credentials never enter the Candidate or Harbor artifacts.',
+      },
+      note: 'Write candidate_model_binding to model-binding.json before snapshotting. Later chat-model changes do not rewrite this Candidate.',
+    }
+  }
+
+  async setProjectRoot(args) {
+    const requested = String(args?.projectRoot ?? '').trim()
+    if (!path.isAbsolute(requested)) throw new Error('projectRoot must be an absolute directory path')
+    const resolved = path.resolve(requested)
+    const details = await stat(resolved)
+    if (!details.isDirectory()) throw new Error('projectRoot must point to an existing directory')
+    this.config.projectRoot = resolved
+    return {
+      projectRoot: resolved,
+      reloaded: true,
+      scope: 'Web Workbench only; Agent tools continue to use each calling session working directory.',
+    }
   }
 
   job(args) {

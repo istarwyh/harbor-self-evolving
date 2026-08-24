@@ -35,12 +35,19 @@ def make_candidate(root: Path, *, version: str = "1.0.0", content: str = "v1") -
 
 def make_dataset(root: Path, *, version: str = "1.0.0") -> Path:
     dataset = root / "dataset"
-    (dataset / "environment").mkdir(parents=True)
-    (dataset / "tests").mkdir()
-    (dataset / "task.toml").write_text('[task]\nname = "vertical-search"\nversion = "1.0.0"\n')
-    (dataset / "instruction.md").write_text("Find the requested source and cite it.\n")
-    (dataset / "environment" / "Dockerfile").write_text("FROM alpine:3.22\n")
-    (dataset / "tests" / "verify.py").write_text("print('ok')\n")
+    task = dataset / "search-task"
+    (task / "environment").mkdir(parents=True)
+    (task / "tests").mkdir()
+    (task / "task.toml").write_text(
+        'schema_version = "1.4"\n\n[task]\nname = "examples/vertical-search"\nversion = "1.0.0"\n'
+    )
+    (task / "instruction.md").write_text("Find the requested source and cite it.\n")
+    (task / "environment" / "Dockerfile").write_text("FROM alpine:3.22\n")
+    (task / "tests" / "test.sh").write_text(
+        "#!/bin/sh\nset -eu\nmkdir -p /logs/verifier\n"
+        "printf '{\"reward\":1}' > /logs/verifier/reward.json\n"
+        "printf '{\"schema_version\":1,\"protocol\":\"evaluation-result/v1\",\"criteria\":[{\"id\":\"citation_accuracy\",\"score\":1,\"reason\":\"Citation is valid.\",\"recommendation\":\"Preserve this behavior.\"}]}' > /logs/verifier/evaluation-result.json\n"
+    )
     snapshot_dataset(dataset, dataset_id="vertical-search", version=version)
     return dataset
 

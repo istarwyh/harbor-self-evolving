@@ -66,6 +66,31 @@ class DshCandidateAgent(AcpAgent):
         }
         if not self._model_binding["provider"] or not self._model_binding["model"]:
             raise ValueError("Candidate model provider and model are required")
+        pinned_binding = self.manifest.metadata.get("model_binding")
+        if isinstance(pinned_binding, dict):
+            pinned_identity = {
+                "provider": str(pinned_binding.get("provider") or "").strip(),
+                "model": str(pinned_binding.get("model") or "").strip(),
+                **(
+                    {
+                        "reasoning_effort": str(
+                            pinned_binding["reasoning_effort"]
+                        ).strip()
+                    }
+                    if pinned_binding.get("reasoning_effort")
+                    else {}
+                ),
+            }
+            runtime_identity = {
+                key: self._model_binding[key]
+                for key in ("provider", "model", "reasoning_effort")
+                if key in self._model_binding
+            }
+            if pinned_identity != runtime_identity:
+                raise ValueError(
+                    "Candidate model-binding.json does not match the Host Broker "
+                    "binding; create a new Candidate for a different model identity"
+                )
         self._gateway_url = _required_environment("HSE_MODEL_GATEWAY_URL")
         self._gateway_token = _required_environment("HSE_MODEL_GATEWAY_TOKEN")
         self._gateway_provider = _required_environment("HSE_MODEL_GATEWAY_PROVIDER")
