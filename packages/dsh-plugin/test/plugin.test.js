@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
 import { existsSync } from 'node:fs'
-import { readFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises'
+import os from 'node:os'
+import path from 'node:path'
 import test from 'node:test'
 
 import { apply } from '../index.js'
@@ -51,6 +53,8 @@ test('Cordis plugin registers the bundled evolution Skill and strict architectur
   assert.match(skills[0].content, /评测器（含评测标准） \(Evaluator\)/)
   assert.match(skills[0].content, /优化器 \(Optimizer\)/)
   assert.match(skills[0].content, /Never ask a first-time user to enumerate Evaluation Stack roles/)
+  assert.match(skills[0].content, /derive `projectRoot` from the calling session/)
+  assert.doesNotMatch(skills[0].content, /configured to a different `projectRoot`/)
   assert.doesNotMatch(skills[0].content, /Obtain:\s*\n\s*1\. Business behavior/)
   assert.doesNotMatch(skills[0].content, /^---/)
 })
@@ -66,15 +70,75 @@ test('published package exposes the DSH bundle patch', async () => {
   assert.equal(packageJson.exports['./schemas/ground-truth.schema.json'], './schemas/ground-truth.schema.json')
 })
 
+function toolExecution(cwd) {
+  return {
+    agent: { session: { header: { cwd } } },
+  }
+}
+
+async function writeCandidate(projectRoot, name) {
+  const candidate = path.join(projectRoot, 'candidate')
+  await mkdir(candidate, { recursive: true })
+  await writeFile(path.join(candidate, 'cordis.yml'), '- name: demo\n')
+  await writeFile(path.join(candidate, 'package.json'), `${JSON.stringify({ name, version: '1.0.0' })}\n`)
+  await writeFile(path.join(candidate, 'package-lock.json'), `${JSON.stringify({ name, version: '1.0.0', lockfileVersion: 3 })}\n`)
+}
+
+test('Agent tools isolate concurrent calls by the calling session working directory', async () => {
+  const configuredRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-configured-root-'))
+  const firstRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-session-first-'))
+  const secondRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-session-second-'))
+  await Promise.all([
+    writeCandidate(firstRoot, 'first-candidate'),
+    writeCandidate(secondRoot, 'second-candidate'),
+  ])
+  const tools = []
+  apply({
+    skills: { register() {} },
+    tools: { register(tool) { tools.push(tool) } },
+  }, {
+    projectRoot: configuredRoot,
+    jobsDir: 'jobs',
+    harborBin: 'harbor',
+    harborDshBin: 'harbor-dsh',
+    dshVersion: '0.1.0-rc.6',
+    agentImportPath: 'harbor_dsh_evolution.agent:DshCandidateAgent',
+    pluginImportPath: 'dsh-evolution',
+    pythonPath: '',
+    timeoutMs: 1000,
+  })
+
+  const snapshot = tools.find(tool => tool.name === 'harbor_candidate_snapshot')
+  const [first, second] = await Promise.all([
+    snapshot.execute({ candidatePath: 'candidate' }, toolExecution(firstRoot)),
+    snapshot.execute({ candidatePath: 'candidate' }, toolExecution(secondRoot)),
+  ])
+
+  assert.equal(JSON.parse(first).candidate_id, 'first-candidate')
+  assert.equal(JSON.parse(second).candidate_id, 'second-candidate')
+  assert.equal(existsSync(path.join(firstRoot, 'candidate', 'candidate-manifest.json')), true)
+  assert.equal(existsSync(path.join(secondRoot, 'candidate', 'candidate-manifest.json')), true)
+  assert.equal(existsSync(path.join(configuredRoot, 'candidate', 'candidate-manifest.json')), false)
+  await assert.rejects(
+    snapshot.execute({ candidatePath: '../outside' }, toolExecution(firstRoot)),
+    /must stay under projectRoot/,
+  )
+  await assert.rejects(
+    snapshot.execute({ candidatePath: 'candidate' }, {}),
+    /Agent session with an absolute working directory/,
+  )
+})
+
 test('bundled Skill ships realistic low-friction onboarding evals', async () => {
   const evals = JSON.parse(
     await readFile(new URL('../skills/evolve-agent-with-harbor/evals/evals.json', import.meta.url), 'utf8'),
   )
 
   assert.equal(evals.skill_name, 'evolve-agent-with-harbor')
-  assert.equal(evals.evals.length, 3)
+  assert.equal(evals.evals.length, 4)
   assert.ok(evals.evals.every(item => item.assertions.length >= 3))
   assert.match(evals.evals[0].expected_output, /评测集、生成器、评测器（评测标准）和优化器/)
   assert.match(evals.evals[1].expected_output, /单任务诊断评测/)
   assert.match(evals.evals[2].expected_output, /不回显或持久化 secret/)
+  assert.match(evals.evals[3].expected_output, /不因路径不同而拒绝初始化/)
 })
