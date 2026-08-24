@@ -2,6 +2,10 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.7.2 - 2026-08-24
+
+- Resolve every Agent-facing Harbor Tool against the calling session's absolute working directory instead of the Plugin's process-wide fallback `projectRoot`. Each call receives an immutable request-local Service, so concurrent workspaces remain isolated while all existing path-containment checks stay active.
+
 ## 0.7.1 - 2026-08-23
 
 - Add a per-Job Host Model Broker: a Candidate now reuses the DSH Agent's frozen current provider, model, and reasoning effort through a random, short-lived capability rather than receiving any provider credential. Explicit Candidate provider/model overrides remain available only as a complete pair.
