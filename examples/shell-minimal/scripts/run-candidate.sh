@@ -55,7 +55,7 @@ BUILDX_CONFIG="${TMPDIR:-/tmp}/harbor-minimal-demo-buildx" \
 PYTHONDONTWRITEBYTECODE=1 \
 PYTHONPATH="$script_dir${PYTHONPATH:+:$PYTHONPATH}" \
   "${harbor_command[@]}" run \
-    -p "$demo_dir/task" \
+    -p "$demo_dir" \
     -a candidate_agent:CandidateAgent \
     --ak "candidate_path=$candidate_path" \
     --ak "candidate_version=$candidate_version" \

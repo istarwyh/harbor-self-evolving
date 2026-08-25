@@ -5,12 +5,17 @@ import path from 'node:path'
 import test from 'node:test'
 
 import {
+  DSH_VERSION,
   parseSetupArgs,
   resolveLocalPluginDirectory,
   resolveSetupOptions,
   setupIntegration,
   upsertHarborProfileEntry,
 } from '../lib/setup.js'
+
+test('setup follows the latest DSH runtime release', () => {
+  assert.equal(DSH_VERSION, 'latest')
+})
 
 test('setup arguments default to the Web profile and reject unknown options', () => {
   assert.deepEqual(parseSetupArgs(['--project-root', '/tmp/agent', '--profile', 'web']), {

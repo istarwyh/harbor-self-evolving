@@ -5,10 +5,10 @@ import path from 'node:path'
 import { performance } from 'node:perf_hooks'
 import test from 'node:test'
 
-import { readComparison, readDashboardSnapshot, readDatasetPreview, readEvaluatorGovernance, readJobDetail, readJobProgress, readMetaEvaluation, readTrialDetail, readTrialsPage } from '../lib/dashboard.js'
+import { discoverWorkspaceConfigs, readComparison, readDashboardSnapshot, readDatasetPreview, readEvaluatorGovernance, readJobDetail, readJobProgress, readMetaEvaluation, readTrialDetail, readTrialsPage } from '../lib/dashboard.js'
 
 function config(projectRoot) {
-  return { projectRoot, jobsDir: 'jobs', harborBin: '/bin/sh', harborDshBin: '/bin/sh', dshVersion: '0.1.0-rc.6', agentImportPath: 'example:Agent', pluginImportPath: 'dsh-evolution' }
+  return { projectRoot, jobsDir: 'jobs', harborBin: '/bin/sh', harborDshBin: '/bin/sh', runtimePolicy: 'follow-latest', agentImportPath: 'example:Agent', pluginImportPath: 'dsh-evolution' }
 }
 
 async function makeJob(projectRoot, name = 'candidate-v2', nTrials = 4) {
@@ -32,9 +32,11 @@ test('dashboard is a lightweight Context v2 overview', async () => {
   await writeFile(path.join(projectRoot, 'jobs', 'broken', 'evaluation-summary.json'), '{not-json')
   await mkdir(path.join(projectRoot, 'jobs', 'legacy'))
   await writeFile(path.join(projectRoot, 'jobs', 'legacy', 'evaluation-summary.json'), JSON.stringify({ schema_version: 1, evaluation_context: { schema_version: 1 } }))
-  const snapshot = await readDashboardSnapshot(config(projectRoot), { pluginVersion: '0.5.0-test' })
+  const snapshot = await readDashboardSnapshot(config(projectRoot), { pluginVersion: '0.5.0-test', projectRootSource: 'agent-session' })
   assert.equal(snapshot.schemaVersion, 3)
   assert.equal(snapshot.pluginVersion, '0.5.0-test')
+  assert.equal(snapshot.config.projectRoot, projectRoot)
+  assert.equal(snapshot.config.projectRootSource, 'agent-session')
   assert.equal(snapshot.overview.totalJobs, 4)
   assert.deepEqual(snapshot.overview.latestMetric, { name: 'reward', value: 0.82 })
   assert.equal(snapshot.jobs.find(job => job.name === 'candidate-v2').status, 'partial')
@@ -94,7 +96,9 @@ test('dashboard, 100-trial page, and Trial detail meet local response budgets', 
   started = performance.now()
   const detail = await readTrialDetail(config(projectRoot), { job: 'job-0', trial: 'trial-0' })
   const detailElapsed = performance.now() - started
-  assert.equal(snapshot.jobs.length, 50)
+  assert.equal(snapshot.jobs.length, 20)
+  assert.equal(snapshot.overview.totalJobs, 50)
+  assert.equal(snapshot.jobPagination.hasMore, true)
   assert.equal(page.items.length, 100)
   assert.equal(detail.trial, 'trial-0')
   assert.ok(dashboardElapsed < 300, `dashboard took ${dashboardElapsed.toFixed(1)}ms`)
@@ -284,4 +288,97 @@ test('Evaluator meta-evaluation is a separate Ground Truth flow with provenance 
   assert.equal(meta.groundTruth.badcaseCount, 1)
   assert.equal(meta.report.metrics.esf, 0.9)
   assert.match(meta.workflow.nextAction, /fresh Agent baseline/)
+})
+
+test('dashboard discovers namespaced workspaces and pages every Job without a silent cap', async () => {
+  const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-workspaces-'))
+  const nestedRoot = path.join(projectRoot, 'projects', 'research')
+  await mkdir(path.join(nestedRoot, '.harbor'), { recursive: true })
+  await writeFile(path.join(nestedRoot, '.harbor', 'workspace.json'), JSON.stringify({
+    schema_version: 1,
+    workspace_id: 'research',
+    path_base: 'workspace',
+    stack: '.harbor/evaluation-stack.yml',
+    jobs: 'jobs',
+  }))
+  await writeFile(path.join(nestedRoot, '.harbor', 'evaluation-stack.yml'), 'schema_version: 1\n')
+  for (let index = 0; index < 55; index += 1) await makeJob(nestedRoot, `nested-${index}`, 1)
+
+  const workspaces = await discoverWorkspaceConfigs(config(projectRoot))
+  const nested = workspaces.find(item => item.workspaceLabel === 'research')
+  assert.ok(nested)
+  assert.equal(nested.jobsDir, 'projects/research/jobs')
+  assert.equal(nested.stackPath, 'projects/research/.harbor/evaluation-stack.yml')
+  const reopenedDirectly = (await discoverWorkspaceConfigs(config(nestedRoot))).find(item => item.workspaceLabel === 'research')
+  assert.equal(reopenedDirectly.jobsDir, 'jobs')
+  assert.equal(reopenedDirectly.stackPath, '.harbor/evaluation-stack.yml')
+
+  const firstPage = await readDashboardSnapshot(nested, {}, { offset: 0, limit: 20 })
+  const lastPage = await readDashboardSnapshot(nested, {}, { offset: 40, limit: 20 })
+  assert.equal(firstPage.overview.totalJobs, 55)
+  assert.equal(firstPage.jobs.length, 20)
+  assert.equal(firstPage.jobPagination.hasMore, true)
+  assert.equal(lastPage.jobs.length, 15)
+  assert.equal(lastPage.jobPagination.hasMore, false)
+})
+
+test('historical Evaluator governance reads the Job source snapshot after live files change', async () => {
+  const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-history-'))
+  const job = path.join(projectRoot, 'jobs', 'historical')
+  await mkdir(path.join(projectRoot, 'stack'), { recursive: true })
+  await mkdir(job, { recursive: true })
+  await writeFile(path.join(projectRoot, 'stack', 'rubric.md'), 'new rubric semantics\n')
+  await writeFile(path.join(job, 'evaluation-stack-manifest.json'), JSON.stringify({
+    schema_version: 1,
+    stack_id: 'search',
+    version: '1',
+    digest: 'sha256:stack',
+    comparison_digest: 'sha256:comparison',
+    components: { rubric: { id: 'rubric', version: '1', entry: 'stack/rubric.md', digest: 'sha256:old', reward_affecting: true } },
+    judge: { provider: 'local', model: 'judge', version: '1' },
+  }))
+  await writeFile(path.join(job, 'evaluation-stack-sources.json'), JSON.stringify({
+    schema_version: 1,
+    stack_digest: 'sha256:stack',
+    components: { rubric: { entry: 'stack/rubric.md', files: [{ path: 'stack/rubric.md', digest: 'sha256:old', text: 'old rubric semantics\n', redacted: false }] } },
+  }))
+  await writeFile(path.join(job, 'evaluation-context.json'), JSON.stringify({ schema_version: 2, digest: 'sha256:context' }))
+
+  const governance = await readEvaluatorGovernance(config(projectRoot), { job: 'historical' })
+  assert.equal(governance.components.rubric.source.text, 'old rubric semantics\n')
+  assert.equal(governance.components.rubric.source.source, 'job-snapshot')
+  assert.equal(governance.components.rubric.source.readOnly, true)
+  assert.equal(governance.stackIdentity.comparisonDigest, 'sha256:comparison')
+})
+
+test('meta-evaluation follows registered artifact paths and paginates disagreements', async () => {
+  const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-meta-index-'))
+  const evaluationRoot = path.join(projectRoot, 'evaluation')
+  await mkdir(path.join(evaluationRoot, '.harbor'), { recursive: true })
+  await mkdir(path.join(evaluationRoot, 'evidence'), { recursive: true })
+  await writeFile(path.join(evaluationRoot, '.harbor', 'meta-artifacts.json'), JSON.stringify({
+    schema_version: 1,
+    artifacts: { ground_truth: 'evidence/gt.json', meta_evaluation_report: 'evidence/report.json' },
+  }))
+  await writeFile(path.join(evaluationRoot, 'evidence', 'gt.json'), JSON.stringify({
+    schema_version: 1,
+    ground_truth_id: 'custom-gt',
+    version: '1',
+    source: { kind: 'human' },
+    criteria: [],
+    cases: [{ id: 'case-1' }],
+  }))
+  await writeFile(path.join(evaluationRoot, 'evidence', 'report.json'), JSON.stringify({
+    schema_version: 1,
+    evaluator: { id: 'judge', version: '1' },
+    metrics: { rcr: 0.8 },
+    disagreements: Array.from({ length: 25 }, (_, index) => ({ case_id: `case-${index}`, criterion_id: 'quality', ground_truth: 1, observed: 0.5 })),
+  }))
+
+  const page = await readMetaEvaluation(config(projectRoot), { evaluationRoot: 'evaluation', offset: 20, limit: 20 })
+  assert.equal(page.groundTruth.path, 'evaluation/evidence/gt.json')
+  assert.equal(page.report.disagreements.length, 5)
+  assert.equal(page.disagreementPagination.total, 25)
+  assert.equal(page.disagreementPagination.hasMore, false)
+  assert.equal(page.artifactIndex, 'evaluation/.harbor/meta-artifacts.json')
 })

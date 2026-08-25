@@ -12,7 +12,7 @@ const dictionaries = {
     tab: 'Harbor', settings: 'Harbor 自进化', eyebrow: 'EVALUATION WORKBENCH',
     heroTitle: '看见 Agent 的每一次进步，也看见分数是否值得相信',
     heroBody: 'Harbor 固定实验边界；Trial Lifecycle 展示真实运行过程；Score Validity 阻止基础设施故障伪装成业务 0 分。',
-    refresh: '刷新', jobs: '评测批次', jobsHint: '点击 Job 后，最多再点一次即可进入对应 Trial 的证据。', empty: '还没有可读取的 Harbor Job。请用官方 Skill 完成需求澄清和初始化。',
+    refresh: '刷新', jobs: '评测批次', jobsHint: '点击 Job 后，最多再点一次即可进入对应 Trial 的证据。', workspace: '工作空间', workspaceSelect: '选择 Harbor 工作空间', empty: '还没有可读取的 Harbor Job。请用官方 Skill 完成需求澄清和初始化。',
     completed: '已完成', partial: '完成但有异常', failed: '读取失败', pending: '等待运行', running: '运行中', attention: '需核查',
     candidate: '候选版本', dataset: '评测集', integration: '集成', renderer: '产物呈现', judge: '评测器', meta: '评测器元评测', reporter: '评测报告', optimizer: '优化器', gate: '晋级门禁',
     context: 'Context v2', trials: 'Trials', exceptions: '异常', mode: '模式', close: '关闭', retry: '重试', loading: '正在读取…', noData: '暂无数据', currentStatus: '当前状态',
@@ -22,14 +22,17 @@ const dictionaries = {
     findings: '主要发现', recommendations: '建议', output: '用户可见输出', criteria: '评分维度', provenance: '证据来源', timing: '执行时间', audit: '审计原文',
     compare: '回归比较', baseline: 'Baseline Job', comparable: '可比较', notComparable: '不可比较', improved: '改善样本', regressed: '回归样本', explicitGate: '只读比较不会自动 Gate；需要显式授权后运行确定性 Gate。',
     governance: '评测器治理', governanceHint: '读取 Rubric / Evaluator / Judge 身份与源码。语义改动必须创建新身份，并建立新 Baseline。',
-    artifacts: 'Artifact Registry', setupDoctor: '安装与架构检查', setupHint: '浏览器仅能改写 Evaluator 声明中明确授权的文件；不会改写 Candidate 或自动发起评测。',
+    artifacts: 'Artifact Registry', setupDoctor: '安装与架构检查', setupHint: '这里显示 Web 工作台实际使用的项目根目录。每次 Harbor Agent Tool 调用都会自动切到该 Session；工具执行仍保持 Session 隔离。',
+    projectRoot: '当前 projectRoot', switchProjectRoot: '切换并重载', projectRootHint: '请输入已存在的绝对目录。本次 DSH 运行立即生效；下一次 Harbor Agent Tool 调用会自动跟随它的 Session。', switchingProjectRoot: '正在切换…', projectRootUpdated: '已切换并重新读取 Harbor Jobs。', projectRootConfigured: '来源：Plugin 启动配置', projectRootAgent: '来源：最近一次 Harbor Agent 调用（自动同步）', projectRootManual: '来源：本次运行手动切换',
+    pluginVersion: '插件版本', checkingUpdate: '正在检查更新…', updateAvailable: '发现新版本', upToDate: '已是最新版', updateUnavailable: '暂时无法检查更新', currentVersion: '当前版本', latestVersion: '最新版本', updateHint: '在终端运行下面的命令即可升级 Plugin、Skill 和 Harbor Adapter。升级不会在浏览器中静默执行。', offlineUpdateHint: '这不会影响 Harbor 的任何功能。请检查网络后重试，或在终端运行带 @latest 的安装命令。', copyUpdateCommand: '复制更新命令', updateCommandCopied: '已复制更新命令', checkAgain: '重新检查', viewRelease: '查看发布说明', checkedAt: '检查时间', staleVersion: '当前展示的是最近一次成功检查的结果。',
+    credentialPolicy: 'Secret 持久化策略', sessionCredential: '仅本次运行', credentialStore: 'DSH 凭据库', plaintextCredential: '明文 settings', supported: '已支持', hostServiceRequired: '等待 Host credential service', forbidden: '禁止', sessionCredentialHint: '默认。通过环境变量或 Job 临时 capability 注入，不进入评测身份与报告。', credentialStoreHint: '只有 DSH 暴露正式凭据服务后才可启用，当前不会用 settings.yaml 冒充。', plaintextCredentialHint: 'Harbor 不把 Authorization、API key 或 OAuth token 写入项目配置。',
     stageNav: '评测阶段', datasetTasks: '评测任务', datasetSource: '任务来源', taskInstruction: '具体任务要求', instructionFile: '指令文件', snapshot: 'Job 固化快照', historicalFallback: '历史 Job 源文件回读',
     generatedOutput: '生成产物', selectTrial: '选择 Trial', noRenderableOutput: '这个 Trial 没有可呈现的页面、文档或结构化产物。请让 Agent 将业务结果写入 Harbor artifacts。', previewSource: '产物来源', pagePreview: '页面预览', documentPreview: '文档预览', structuredOutput: '结构化产物', rawOutput: '原始产物',
     currentEvaluator: '当前评测器', evaluator: 'Evaluator', rubric: 'Rubric', judgeParameters: 'Judge 参数', scoringContract: '评分合同', primaryMetric: '主指标', metricSemantics: '指标语义', sourceCode: '查看源码', upgradeEvaluator: '如何升级评测器', upgradeHint: '评测器升级会改变分数语义。创建新身份，先做元评测，再建立新的 Agent Baseline。', copyPrompt: '复制给 Agent', copied: '已复制', freshBaseline: '需要新 Baseline', metaEvaluation: '元评测要求',
     evaluatorImplementation: '评测器实现', evaluatorKind: '实现类型', evaluatorProtocol: '接口协议', editableFiles: '允许修改的文件', openFile: '打开', editingFile: '正在修改', editSource: '直接修改当前文件', evaluatorVersion: '新 Evaluator 版本', stackVersion: '新 Stack 版本', saveEvaluator: '保存为新身份', saving: '正在保存…', saved: '已保存；下一步请做元评测并建立新 Baseline。', reloadBeforeSave: '源码已变化，请刷新后再保存。', noEvaluatorInterface: '当前 Stack 还没有 harbor-dsh-evaluator/v1 接口，不能从 UI 安全编辑。', editWarning: '保存只更新源码与身份，不会自动运行评测或 Gate。',
     upgradeStep1: '查看当前 Evaluator、Rubric、Judge、评分合同和代表性误判样本。', upgradeStep2: '创建新的评测器身份、版本和源文件；不覆盖历史评测器。', upgradeStep3: '使用独立、可追溯的 GT 运行元评测，检查 ESF、SCE、RCR、延迟和成本。', upgradeStep4: '更新 Evaluation Stack 身份，并预览 Context v2 变化。', upgradeStep5: '在新分数语义下建立全新 Agent Baseline，再比较后续 Candidate。', evaluatorPrompt: '请使用 evolve-agent-with-harbor 升级当前评测器。先读取 governance 证据，澄清 GT 的来源类型、provenance、维护者和目标元指标，再提出新的不可变评测器身份与 fresh-baseline 方案。在我批准受控改动前，不要修改文件或发起评测。',
     queryTrial: '任务 / Trial', statusLabel: '状态', attempt: '尝试', population: '任务数量',
-    experimentIdentity: '本次实验固定了什么', experimentIdentityHint: 'Candidate、Dataset、Evaluation Stack 与 Runtime 共同定义可复现、可比较的实验身份。', immutableCandidateFiles: '候选版本内容', file: '文件', size: '大小', digest: '内容指纹', runtime: '运行时', evaluationStack: 'Evaluation Stack',
+    experimentIdentity: '本次实验使用了什么', experimentIdentityHint: 'Candidate、Dataset、Evaluation Stack 与模型身份共同定义可比较实验；DSH 运行时默认追随最新版，并在证据中明确记录该策略。', immutableCandidateFiles: '候选版本内容', file: '文件', size: '大小', digest: '内容指纹', runtime: '运行时', evaluationStack: 'Evaluation Stack',
     integrationBoundary: '执行与评分边界', hardRequirements: '分数生效前必须满足', populationEvidence: '总体评测证据', metric: '指标', aggregate: '总体值', coverage: '有效覆盖', trialGroups: 'Trial 状态分组',
     controlledHypotheses: '受控优化假设', rootCause: '证据指向', affectedTrials: '影响样本', expectedEffect: '预期指标变化', mutationSurface: '允许改动', forbiddenSurface: '禁止改动', guardrails: '保护条件', rollback: '回滚条件', nextExperiment: '下一次受控实验', noHypotheses: '本批次没有生成受控优化假设。',
     gateEvidence: '已执行的晋级门禁', decision: '门禁结果', policy: '门禁策略', eligible: '满足门禁前提', notEligible: '不满足门禁前提', metricDeltas: '指标变化', newExceptions: '新增异常', artifactRegressions: '产物回归', reasons: '门禁依据',
@@ -40,7 +43,7 @@ const dictionaries = {
     tab: 'Harbor', settings: 'Harbor Evolution', eyebrow: 'EVALUATION WORKBENCH',
     heroTitle: 'See every Agent improvement—and whether the score is trustworthy',
     heroBody: 'Harbor fixes the experiment boundary. Trial Lifecycle shows real execution, while Score Validity keeps infrastructure failures out of quality metrics.',
-    refresh: 'Refresh', jobs: 'Evaluation jobs', jobsHint: 'Open a Job, then reach Trial evidence in at most one more interaction.', empty: 'No readable Harbor Jobs yet. Use the official Skill to clarify and initialize the project.',
+    refresh: 'Refresh', jobs: 'Evaluation jobs', jobsHint: 'Open a Job, then reach Trial evidence in at most one more interaction.', workspace: 'Workspace', workspaceSelect: 'Select Harbor workspace', empty: 'No readable Harbor Jobs yet. Use the official Skill to clarify and initialize the project.',
     completed: 'Completed', partial: 'Completed with errors', failed: 'Read failed', pending: 'Queued', running: 'Running', attention: 'Needs review',
     candidate: 'Candidate', dataset: 'Dataset', integration: 'Integration', renderer: 'Renderer', judge: 'Judge', meta: 'Evaluator meta-evaluation', reporter: 'Reporter', optimizer: 'Optimizer', gate: 'Gate',
     context: 'Context v2', trials: 'Trials', exceptions: 'Exceptions', mode: 'Mode', close: 'Close', retry: 'Retry', loading: 'Loading…', noData: 'No data', currentStatus: 'Current status',
@@ -50,14 +53,17 @@ const dictionaries = {
     findings: 'Findings', recommendations: 'Recommendations', output: 'User-visible output', criteria: 'Criteria', provenance: 'Evidence provenance', timing: 'Timing', audit: 'Raw audit',
     compare: 'Regression comparison', baseline: 'Baseline Job', comparable: 'Comparable', notComparable: 'Not comparable', improved: 'Improved trials', regressed: 'Regressed trials', explicitGate: 'A read-only comparison never runs Gate. Run the deterministic Gate only with explicit authority.',
     governance: 'Evaluator governance', governanceHint: 'Read Rubric, Evaluator, Judge identity, and source. Semantic edits create a new identity and require a fresh baseline.',
-    artifacts: 'Artifact Registry', setupDoctor: 'Installation and architecture checks', setupHint: 'The browser may only update files explicitly authorized by the Evaluator descriptor; it never rewrites a Candidate or launches evaluation automatically.',
+    artifacts: 'Artifact Registry', setupDoctor: 'Installation and architecture checks', setupHint: 'This is the project root currently used by the Web Workbench. Every Harbor Agent Tool call follows its Session automatically while tool execution remains Session-isolated.',
+    projectRoot: 'Current projectRoot', switchProjectRoot: 'Switch and reload', projectRootHint: 'Enter an existing absolute directory. It applies now; the next Harbor Agent Tool call will follow its Session automatically.', switchingProjectRoot: 'Switching…', projectRootUpdated: 'Switched and reloaded Harbor Jobs.', projectRootConfigured: 'Source: Plugin startup configuration', projectRootAgent: 'Source: most recent Harbor Agent call (automatic)', projectRootManual: 'Source: manually switched for this run',
+    pluginVersion: 'Plugin version', checkingUpdate: 'Checking for updates…', updateAvailable: 'Update available', upToDate: 'Up to date', updateUnavailable: 'Update check unavailable', currentVersion: 'Current version', latestVersion: 'Latest version', updateHint: 'Run this command in a terminal to update the Plugin, Skill, and Harbor Adapter. The browser never installs updates silently.', offlineUpdateHint: 'Harbor remains fully functional. Check the network and retry, or run the installer with @latest in a terminal.', copyUpdateCommand: 'Copy update command', updateCommandCopied: 'Update command copied', checkAgain: 'Check again', viewRelease: 'View release notes', checkedAt: 'Checked', staleVersion: 'Showing the most recent successful check.',
+    credentialPolicy: 'Secret persistence policy', sessionCredential: 'This run only', credentialStore: 'DSH credential store', plaintextCredential: 'Plaintext settings', supported: 'Supported', hostServiceRequired: 'Host credential service required', forbidden: 'Blocked', sessionCredentialHint: 'Default. Inject through environment variables or a short-lived Job capability; never include it in evaluation identity or reports.', credentialStoreHint: 'Enabled only after DSH exposes a formal credential service; settings.yaml is not treated as a credential store.', plaintextCredentialHint: 'Harbor never writes Authorization, API keys, or OAuth tokens into project settings.',
     stageNav: 'Evaluation stages', datasetTasks: 'Evaluation tasks', datasetSource: 'Task source', taskInstruction: 'Task instruction', instructionFile: 'Instruction file', snapshot: 'Job snapshot', historicalFallback: 'Historical source fallback',
     generatedOutput: 'Generated output', selectTrial: 'Select Trial', noRenderableOutput: 'This Trial has no renderable page, document, or structured artifact. Publish the business result through Harbor artifacts.', previewSource: 'Output provenance', pagePreview: 'Page preview', documentPreview: 'Document preview', structuredOutput: 'Structured output', rawOutput: 'Raw output',
     currentEvaluator: 'Current evaluator', evaluator: 'Evaluator', rubric: 'Rubric', judgeParameters: 'Judge parameters', scoringContract: 'Scoring contract', primaryMetric: 'Primary metric', metricSemantics: 'Metric semantics', sourceCode: 'View source', upgradeEvaluator: 'How to upgrade the evaluator', upgradeHint: 'Evaluator upgrades change score semantics. Create a new identity, meta-evaluate it, then establish a fresh Agent baseline.', copyPrompt: 'Copy for Agent', copied: 'Copied', freshBaseline: 'Fresh baseline required', metaEvaluation: 'Meta-evaluation requirements',
     evaluatorImplementation: 'Evaluator implementation', evaluatorKind: 'Implementation kind', evaluatorProtocol: 'Interface protocol', editableFiles: 'Files you can modify', openFile: 'Open', editingFile: 'Editing', editSource: 'Edit the current file directly', evaluatorVersion: 'New Evaluator version', stackVersion: 'New Stack version', saveEvaluator: 'Save as new identity', saving: 'Saving…', saved: 'Saved. Meta-evaluate it and establish a fresh Baseline next.', reloadBeforeSave: 'The source changed; reload before saving.', noEvaluatorInterface: 'This Stack has no harbor-dsh-evaluator/v1 interface, so safe UI editing is unavailable.', editWarning: 'Saving updates source and identities only. It never runs an evaluation or Gate.',
     upgradeStep1: 'Inspect the current Evaluator, Rubric, Judge, Contract, and representative false-positive or false-negative Trials.', upgradeStep2: 'Create a new evaluator identity, version, and source file; never overwrite the historical evaluator.', upgradeStep3: 'Meta-evaluate against independently maintained, provenance-bearing GT using ESF, SCE, RCR, latency, and cost as appropriate.', upgradeStep4: 'Update the Evaluation Stack identity and preview the Context v2 impact.', upgradeStep5: 'Establish a fresh Agent baseline under the new score semantics before comparing later Candidates.', evaluatorPrompt: 'Use evolve-agent-with-harbor to upgrade this evaluator. First inspect governance evidence, clarify GT source type, provenance, ownership, and target meta-metrics, then propose a new immutable evaluator identity and fresh-baseline plan. Do not edit files or run an evaluation until I approve the controlled change.',
     queryTrial: 'Task / Trial', statusLabel: 'Status', attempt: 'Attempt', population: 'Population',
-    experimentIdentity: 'Fixed experiment identity', experimentIdentityHint: 'Candidate, Dataset, Evaluation Stack, and Runtime jointly define a reproducible and comparable experiment.', immutableCandidateFiles: 'Candidate contents', file: 'File', size: 'Size', digest: 'Digest', runtime: 'Runtime', evaluationStack: 'Evaluation Stack',
+    experimentIdentity: 'Experiment identity', experimentIdentityHint: 'Candidate, Dataset, Evaluation Stack, and model identity define comparability. The DSH runtime follows the latest release by default and records that policy explicitly.', immutableCandidateFiles: 'Candidate contents', file: 'File', size: 'Size', digest: 'Digest', runtime: 'Runtime', evaluationStack: 'Evaluation Stack',
     integrationBoundary: 'Execution and scoring boundary', hardRequirements: 'Required before a score is valid', populationEvidence: 'Population evidence', metric: 'Metric', aggregate: 'Aggregate', coverage: 'Valid coverage', trialGroups: 'Trial status groups',
     controlledHypotheses: 'Controlled optimization hypotheses', rootCause: 'Evidence points to', affectedTrials: 'Affected trials', expectedEffect: 'Expected metric effect', mutationSurface: 'Allowed mutation', forbiddenSurface: 'Forbidden mutation', guardrails: 'Guardrails', rollback: 'Rollback condition', nextExperiment: 'Next controlled experiment', noHypotheses: 'No controlled optimization hypothesis was generated for this Job.',
     gateEvidence: 'Executed promotion gate', decision: 'Gate result', policy: 'Gate policy', eligible: 'Gate prerequisites satisfied', notEligible: 'Gate prerequisites not satisfied', metricDeltas: 'Metric deltas', newExceptions: 'New exceptions', artifactRegressions: 'Artifact regressions', reasons: 'Gate evidence',
@@ -68,16 +74,18 @@ const dictionaries = {
 
 const CSS = `
 .hse-root{--ocean-950:#03152f;--ocean-800:#07366f;--ocean-600:#1464c8;--ocean-300:#75b7ff;--foam-50:#f4fbff;--whale-500:#2875ff;--coral-500:#ee6478;--amber-500:#e4a23b;--kelp-500:#1f9b72;height:100%;min-height:0;overflow:auto;color:var(--dsw-alias-label-primary,#142038);background:var(--dsw-alias-bg-layer-1,#f2f7fc);font-family:inherit}.hse-page{width:min(1320px,calc(100% - 36px));margin:auto;padding:24px 0 56px}
+.hse-root-switch{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin:16px 0 8px;padding:14px;border:1px solid #2875ff42;border-radius:12px;background:#2875ff0b}.hse-root-switch label{grid-column:1/-1;font-size:11px;font-weight:700}.hse-root-switch input{min-width:0;padding:10px 12px;border:1px solid #c8d6e7;border-radius:8px;color:inherit;background:var(--dsw-alias-bg-layer-2,#fff);font:11px ui-monospace,SFMono-Regular,Menlo,monospace}.hse-root-switch button{padding:9px 13px;border:0;border-radius:8px;color:#fff;background:var(--ocean-600);cursor:pointer}.hse-root-switch small{grid-column:1/-1;color:var(--dsw-alias-label-secondary,#748096)}
 .hse-hero{position:relative;isolation:isolate;overflow:hidden;min-height:225px;padding:32px;border-radius:24px;color:#fff;background:var(--ocean-950) var(--ocean-image) center/cover no-repeat;box-shadow:0 22px 65px #03152f38}.hse-hero:before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,#02132fea,#062b62d6 55%,#0e6dc42e)}.hse-hero:after{content:"";position:absolute;width:220px;height:220px;right:8%;bottom:-170px;border:1px solid #8be9ff66;border-radius:50%;box-shadow:0 0 0 28px #68dfff0b,0 0 0 60px #68dfff08;animation:hse-ripple 5s ease-out infinite}.hse-hero h1{max-width:780px;margin:15px 0 10px;font-size:clamp(28px,4vw,46px);line-height:1.08;letter-spacing:-.04em}.hse-hero p{max-width:760px;margin:0;color:#d9eeff;font-size:14px;line-height:1.75}.hse-eyebrow{color:#86e8ff;font-size:11px;font-weight:800;letter-spacing:.17em}.hse-whale{margin-right:8px;font-size:17px}.hse-refresh{position:absolute;right:22px;top:22px;padding:8px 13px;border:1px solid #ffffff52;border-radius:999px;color:#fff;background:#06245eb8;cursor:pointer}.hse-stats{display:flex;gap:9px;margin-top:24px;flex-wrap:wrap}.hse-stat{min-width:130px;padding:11px 13px;border:1px solid #ffffff29;border-radius:13px;background:#031a41a8;backdrop-filter:blur(8px)}.hse-stat span{display:block;color:#cde7fb;font-size:10px}.hse-stat b{display:block;margin-top:4px;font-size:20px}.hse-head{margin:28px 0 12px}.hse-head h2{margin:0;font-size:18px}.hse-head p{margin:4px 0 0;color:#728097;font-size:12px}
 .hse-list{display:grid;gap:10px}.hse-job{display:block;width:100%;padding:0;border:1px solid var(--dsw-alias-border-l1,#d7e2ef);border-radius:16px;color:inherit;background:var(--dsw-alias-bg-layer-2,#fff);text-align:left;cursor:pointer;overflow:hidden;box-shadow:0 5px 18px #1736600d;transition:.18s ease}.hse-job:hover,.hse-job:focus-visible{border-color:var(--ocean-300);transform:translateY(-1px);outline:3px solid #2875ff20}.hse-job-body{padding:16px 18px}.hse-job-top{display:flex;justify-content:space-between;gap:14px}.hse-job-title{min-width:0}.hse-job-title strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}.hse-job-title small{display:block;margin-top:4px;color:#7b879c;font-size:10px}.hse-status{flex:none;padding:5px 9px;border-radius:999px;color:#126d50;background:#23ba8318;font-size:10px;font-weight:700}.hse-status:before{content:"✓ ";}.hse-status[data-status=running],.hse-status[data-status=pending]{color:#245dcc;background:#2875ff18}.hse-status[data-status=running]:before{content:"● ";animation:hse-pulse 1.6s ease-in-out infinite}.hse-status[data-status=partial],.hse-status[data-status=attention]{color:#8e5b0c;background:#e4a23b1b}.hse-status[data-status=partial]:before,.hse-status[data-status=attention]:before{content:"△ "}.hse-status[data-status=failed]{color:#b52f45;background:#ee647818}.hse-status[data-status=failed]:before{content:"× "}.hse-meta-grid{display:grid;grid-template-columns:1.35fr 1fr .9fr .65fr .75fr .75fr;gap:7px;margin-top:13px}.hse-meta{min-width:0;padding:8px 9px;border-radius:9px;background:var(--dsw-alias-bg-layer-1,#f3f7fb)}.hse-meta span{display:block;color:#7b879c;font-size:9px}.hse-meta b,.hse-meta code{display:block;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.hse-progress{height:5px;margin-top:11px;border-radius:99px;background:#dbe8f5;overflow:hidden}.hse-progress i{display:block;height:100%;background:linear-gradient(90deg,var(--ocean-600),#54d7f5);transition:width .3s}.hse-metrics{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.hse-pill{padding:5px 7px;border:1px solid var(--dsw-alias-border-l1,#dce4f0);border-radius:7px;font-size:10px}.hse-pill b{margin-left:5px;color:var(--ocean-600)}
 .hse-empty,.hse-error{padding:34px;border:1px dashed #c4d3e5;border-radius:16px;text-align:center;background:var(--dsw-alias-bg-layer-2,#fff);color:var(--dsw-alias-label-secondary,#728097);font-size:12px}.hse-spin{width:25px;height:25px;margin:0 auto 10px;border:3px solid #2875ff22;border-top-color:var(--whale-500);border-radius:50%;animation:hse-spin .8s linear infinite}.hse-button,.hse-close{border:0;border-radius:9px;padding:8px 11px;color:#fff;background:var(--whale-500);cursor:pointer}.hse-overlay{position:fixed;inset:0;z-index:1000;display:flex;justify-content:flex-end;background:#03152f8c;backdrop-filter:blur(3px)}.hse-drawer{width:min(1180px,96vw);height:100%;overflow:auto;background:var(--dsw-alias-bg-layer-1,#f2f7fc);box-shadow:-24px 0 70px #03152f52}.hse-drawer-head{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;gap:15px;padding:16px 20px;border-bottom:1px solid var(--dsw-alias-border-l1,#dce4f0);background:color-mix(in srgb,var(--dsw-alias-bg-layer-2,#fff) 94%,transparent);backdrop-filter:blur(12px)}.hse-drawer-head h2{margin:0;font-size:18px}.hse-drawer-head p{margin:5px 0 0;color:var(--dsw-alias-label-secondary,#748096);font-size:10px}.hse-close{align-self:flex-start;background:var(--ocean-950)}.hse-workbench{padding:14px 20px 48px}.hse-stage-nav{position:sticky;top:67px;z-index:4;display:grid;grid-template-columns:repeat(8,minmax(88px,1fr));gap:5px;margin:-1px -1px 14px;padding:8px;border:1px solid var(--dsw-alias-border-l1,#d7e2ef);border-radius:13px;background:color-mix(in srgb,var(--dsw-alias-bg-layer-2,#fff) 94%,transparent);backdrop-filter:blur(10px);overflow:auto}.hse-stage-nav button{padding:9px 7px;border:0;border-radius:8px;color:var(--dsw-alias-label-secondary,#52627b);background:transparent;font:inherit;font-size:10px;cursor:pointer;white-space:nowrap}.hse-stage-nav button[data-active=true]{color:#fff;background:var(--ocean-600)}.hse-stage-nav button:focus-visible{outline:3px solid #2875ff2f}.hse-capability{margin-bottom:12px;padding:10px 12px;border-left:3px solid var(--amber-500);border-radius:8px;background:#e4a23b14;color:var(--dsw-alias-label-primary,#75500f);font-size:11px}.hse-section{margin-bottom:13px;padding:16px;border:1px solid var(--dsw-alias-border-l1,#d7e2ef);border-radius:14px;background:var(--dsw-alias-bg-layer-2,#fff)}.hse-section h3{margin:0 0 11px;font-size:14px}.hse-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.hse-kpi{padding:11px;border-radius:10px;background:color-mix(in srgb,var(--dsw-alias-bg-layer-1,#edf7ff) 88%,var(--ocean-600) 12%)}.hse-kpi span{display:block;color:var(--dsw-alias-label-secondary,#748096);font-size:9px}.hse-kpi b{display:block;margin-top:4px;font-size:17px}.hse-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.hse-card{min-width:0;padding:11px;border-radius:10px;background:var(--dsw-alias-bg-layer-1,#f3f7fb)}.hse-card span,.hse-card b,.hse-card code{display:block}.hse-card span{color:var(--dsw-alias-label-secondary,#748096);font-size:9px}.hse-card b,.hse-card code{margin-top:4px;overflow-wrap:anywhere;font-size:10px}.hse-valid{color:var(--kelp-500)}.hse-invalid{color:#bd3148}.hse-muted{color:var(--dsw-alias-label-secondary,#75839a)}.hse-findings{display:grid;gap:6px}.hse-finding{padding:9px 10px;border-left:3px solid var(--ocean-300);border-radius:7px;background:#2875ff0c;font-size:10px}.hse-finding[data-level=error]{border-color:var(--coral-500);background:#ee64780d}.hse-finding[data-level=warning]{border-color:var(--amber-500);background:#e4a23b0d}.hse-components{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.hse-component{padding:10px;border-radius:9px;background:#0b4c9c12}.hse-component span{display:block;color:var(--dsw-alias-label-secondary,#748096);font-size:9px}.hse-component b,.hse-component code{display:block;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px}
 .hse-trial-layout{display:grid;grid-template-columns:minmax(380px,1fr) minmax(360px,.9fr);gap:10px;align-items:start}.hse-trial-list,.hse-trial-detail{min-width:0}.hse-trial-tools{display:grid;grid-template-columns:minmax(150px,1fr) auto auto auto;gap:6px;margin-bottom:9px}.hse-input,.hse-select{min-width:0;padding:8px 9px;border:1px solid #c8d6e7;border-radius:8px;color:inherit;background:transparent;font:inherit;font-size:10px}.hse-table-wrap{overflow:auto}.hse-table{width:100%;border-collapse:collapse;font-size:10px}.hse-table th,.hse-table td{padding:8px;border-bottom:1px solid #e2eaf3;text-align:left;white-space:nowrap}.hse-table button{border:0;color:var(--ocean-600);background:none;cursor:pointer;font:inherit}.hse-table tr[data-selected=true]{background:#2875ff0c}.hse-pager{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:9px;font-size:10px}.hse-pager button{padding:5px 8px;border:1px solid #c8d6e7;border-radius:7px;background:transparent;color:inherit;cursor:pointer}.hse-trial-detail{position:sticky;top:132px;max-height:calc(100vh - 160px);overflow:auto;padding:14px;border-radius:12px;color:#dcecff;background:var(--ocean-950)}.hse-trial-score{display:flex;justify-content:space-between;gap:12px;padding-bottom:12px;border-bottom:1px solid #ffffff1f}.hse-trial-score b{font-size:25px}.hse-trial-score span{font-size:10px}.hse-detail-group{padding:11px 0;border-bottom:1px solid #ffffff16}.hse-detail-group h4{margin:0 0 7px;color:#8fe8ff;font-size:10px;text-transform:uppercase;letter-spacing:.08em}.hse-detail-group pre{max-height:280px;overflow:auto;margin:0;white-space:pre-wrap;word-break:break-word;font-size:9px;line-height:1.55}.hse-detail-group ul{margin:0;padding-left:17px;font-size:10px;line-height:1.6}.hse-criteria{display:grid;gap:5px}.hse-criterion{display:flex;justify-content:space-between;gap:8px;padding:7px;border-radius:6px;background:#ffffff0b;font-size:10px}.hse-provenance{display:flex;gap:5px;flex-wrap:wrap}.hse-provenance span{padding:5px 7px;border:1px solid #70cfff4a;border-radius:999px;font-size:9px}.hse-audit summary{cursor:pointer;font-size:11px;font-weight:700}.hse-audit pre,.hse-source{max-height:360px;overflow:auto;white-space:pre-wrap;word-break:break-word;font-size:9px;line-height:1.55}.hse-compare-select{display:flex;gap:7px;margin-bottom:10px}.hse-compare-select select{flex:1}.hse-delta{font-variant-numeric:tabular-nums}.hse-delta[data-positive=true]{color:var(--kelp-500)}.hse-delta[data-positive=false]{color:var(--coral-500)}.hse-source{padding:10px;border-radius:8px;color:#d9edff;background:var(--ocean-950)}.hse-settings{width:min(850px,calc(100% - 32px));margin:auto;padding:28px 0}.hse-checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:16px}.hse-check{padding:12px;border:1px solid #dce4f0;border-radius:10px;background:var(--dsw-alias-bg-layer-2,#fff)}.hse-check b,.hse-check small{display:block}.hse-check small{margin-top:4px;color:#748096}.hse-tool{border:1px solid #dce4f0;border-radius:11px;background:var(--dsw-alias-bg-layer-2,#fff);overflow:hidden}.hse-tool button{display:flex;gap:8px;width:100%;padding:10px;border:0;color:inherit;background:transparent;text-align:left;cursor:pointer}.hse-tool strong{font-size:11px}.hse-tool small{margin-left:auto}.hse-tool pre{max-height:260px;overflow:auto;margin:0;padding:11px;border-top:1px solid #e3e9f1;white-space:pre-wrap;font-size:9px}
+.hse-version{margin:18px 0;padding:16px;border:1px solid var(--dsw-alias-border-l1,#d7e2ef);border-radius:14px;background:var(--dsw-alias-bg-layer-2,#fff)}.hse-version[data-status=update-available]{border-color:#2875ff75;background:linear-gradient(145deg,#2875ff12,#44d9ff08)}.hse-version-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.hse-version-head h3{margin:0;font-size:16px}.hse-version-badge{padding:6px 10px;border-radius:999px;color:#126d50;background:#23ba8318;font-size:10px;font-weight:800}.hse-version[data-status=update-available] .hse-version-badge{color:#fff;background:var(--whale-500)}.hse-version[data-status=unavailable] .hse-version-badge{color:#8e5b0c;background:#e4a23b1b}.hse-version[data-status=loading] .hse-version-badge{color:#245dcc;background:#2875ff18}.hse-version-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:13px}.hse-version-card{padding:11px;border-radius:10px;background:var(--dsw-alias-bg-layer-1,#f3f7fb)}.hse-version-card span,.hse-version-card b{display:block}.hse-version-card span{color:var(--dsw-alias-label-secondary,#748096);font-size:9px}.hse-version-card b{margin-top:4px;font-size:15px}.hse-version-copy{margin:12px 0 0;color:var(--dsw-alias-label-secondary,#748096);font-size:11px;line-height:1.6}.hse-update-command{display:block;box-sizing:border-box;width:100%;margin:10px 0 0;padding:12px;border:1px solid #70cfff3d;border-radius:9px;color:#dcecff;background:var(--ocean-950);white-space:pre-wrap;word-break:break-word;font:10px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace}.hse-version-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px}.hse-version-actions a,.hse-version-actions button{padding:7px 10px;border:1px solid var(--dsw-alias-border-l1,#c8d6e7);border-radius:8px;color:inherit;background:transparent;cursor:pointer;font:inherit;font-size:10px;text-decoration:none}.hse-version-actions .hse-primary{border-color:var(--whale-500);color:#fff;background:var(--whale-500)}.hse-version-actions small{margin-left:auto;color:var(--dsw-alias-label-secondary,#748096);font-size:9px}
 .hse-task-list{display:grid;gap:10px}.hse-task{border:1px solid var(--dsw-alias-border-l1,#d7e2ef);border-radius:12px;background:var(--dsw-alias-bg-layer-1,#f3f7fb);overflow:hidden}.hse-task summary{display:flex;align-items:center;gap:9px;padding:12px 14px;cursor:pointer;font-size:11px;font-weight:700}.hse-task summary span{margin-left:auto;color:var(--dsw-alias-label-secondary,#748096);font-size:9px;font-weight:400}.hse-task-body{padding:0 14px 14px}.hse-instruction{min-height:80px;margin:0;padding:15px;border-radius:10px;color:#e3f3ff;background:linear-gradient(145deg,#03152f,#07366f);white-space:pre-wrap;word-break:break-word;font:inherit;font-size:12px;line-height:1.75}.hse-inline-meta{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0 0;color:var(--dsw-alias-label-secondary,#748096);font-size:9px}.hse-output-layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:10px;align-items:start}.hse-output-list{display:grid;gap:6px}.hse-output-item{width:100%;padding:10px;border:1px solid var(--dsw-alias-border-l1,#d7e2ef);border-radius:9px;color:inherit;background:var(--dsw-alias-bg-layer-1,#f3f7fb);text-align:left;cursor:pointer}.hse-output-item[data-active=true]{border-color:var(--ocean-300);background:#2875ff16}.hse-output-item b,.hse-output-item span{display:block}.hse-output-item span{margin-top:3px;color:var(--dsw-alias-label-secondary,#748096);font-size:9px}.hse-preview{min-width:0;border:1px solid var(--dsw-alias-border-l1,#d7e2ef);border-radius:12px;overflow:hidden}.hse-preview-head{display:flex;justify-content:space-between;gap:12px;padding:12px 14px;background:var(--dsw-alias-bg-layer-1,#f3f7fb)}.hse-preview-head b,.hse-preview-head span{display:block}.hse-preview-head span{margin-top:3px;color:var(--dsw-alias-label-secondary,#748096);font-size:9px}.hse-document{min-height:210px;padding:22px;background:var(--dsw-alias-bg-layer-2,#fff);font-size:13px;line-height:1.8}.hse-document pre{margin:0;white-space:pre-wrap;word-break:break-word;font:inherit}.hse-document h4{margin:0 0 12px;font-size:17px}.hse-page-frame{display:block;width:100%;height:520px;border:0;background:#fff}.hse-output-structured{max-height:520px;overflow:auto;margin:0;padding:16px;color:#dcecff;background:var(--ocean-950);white-space:pre-wrap;word-break:break-word;font-size:10px}.hse-preview-empty{padding:60px 20px;text-align:center;color:var(--dsw-alias-label-secondary,#748096)}.hse-governance-id{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.hse-source-details{margin-top:9px;border-top:1px solid var(--dsw-alias-border-l1,#d7e2ef);padding-top:9px}.hse-source-details summary{cursor:pointer;font-size:10px;font-weight:700}.hse-upgrade{border-color:#2875ff55;background:linear-gradient(145deg,#2875ff0f,#44d9ff08)}.hse-upgrade ol{margin:10px 0;padding-left:20px;font-size:11px;line-height:1.75}.hse-prompt{margin-top:10px;padding:12px;border-radius:9px;color:#dcecff;background:var(--ocean-950);white-space:pre-wrap;font-size:10px;line-height:1.6}.hse-prompt-actions{display:flex;justify-content:flex-end;margin-top:8px}.hse-editor-head{display:flex;justify-content:space-between;gap:10px;align-items:start}.hse-editor-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 8px}.hse-editor-tab{display:grid;gap:2px;padding:8px 10px;border:1px solid var(--dsw-alias-border-l1,#d7e2ef);border-radius:8px;color:inherit;background:transparent;text-align:left;cursor:pointer}.hse-editor-tab b{font-size:10px}.hse-editor-tab span{color:var(--dsw-alias-label-secondary,#748096);font-size:8px}.hse-editor-tab[data-active=true]{border-color:var(--ocean-600);color:#fff;background:var(--ocean-600)}.hse-editor-tab[data-active=true] span{color:#dcecff}.hse-editor-current{display:grid;gap:3px;margin:8px 0;padding:9px 11px;border-left:3px solid var(--ocean-600);border-radius:8px;background:var(--dsw-alias-bg-layer-1,#f3f7fb)}.hse-editor-current span{color:var(--dsw-alias-label-secondary,#748096);font-size:9px}.hse-editor-current b{font-size:11px}.hse-editor-current code{overflow-wrap:anywhere;font-size:9px}.hse-editor{display:block;width:100%;min-height:360px;box-sizing:border-box;padding:14px;border:1px solid #1f73ca;border-radius:10px;color:#dcecff;background:var(--ocean-950);resize:vertical;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace}.hse-editor-versions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}.hse-editor-actions{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-top:9px}.hse-editor-actions p{margin:0;font-size:10px}.hse-editor-actions button:disabled{opacity:.45;cursor:not-allowed}.hse-editor-error{color:#bd3148}.hse-editor-success{color:var(--kelp-500)}
 .hse-identity-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.hse-evidence-table{width:100%;border-collapse:collapse;font-size:10px}.hse-evidence-table th,.hse-evidence-table td{padding:9px;border-bottom:1px solid var(--dsw-alias-border-l1,#dce4f0);text-align:left;vertical-align:top}.hse-evidence-table th{color:var(--dsw-alias-label-secondary,#748096);font-weight:500}.hse-evidence-table code{overflow-wrap:anywhere}.hse-chip-list{display:flex;gap:6px;flex-wrap:wrap}.hse-chip-list span{padding:6px 8px;border-radius:999px;background:#2875ff12;font-size:9px}.hse-hypotheses{display:grid;gap:10px}.hse-hypothesis{padding:14px;border:1px solid #2875ff3d;border-radius:12px;background:linear-gradient(145deg,#2875ff0c,#44d9ff05)}.hse-hypothesis h4{margin:0 0 10px;font-size:13px}.hse-hypothesis dl{display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px 12px;margin:0;font-size:10px}.hse-hypothesis dt{color:var(--dsw-alias-label-secondary,#748096)}.hse-hypothesis dd{margin:0;overflow-wrap:anywhere}.hse-gate-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.hse-decision{padding:8px 12px;border-radius:999px;color:#126d50;background:#23ba8318;font-weight:800}.hse-decision[data-pass=false]{color:#b52f45;background:#ee647818}
 .hse-report-table button{border:0;color:var(--ocean-600);background:none;text-align:left;cursor:pointer;font:inherit}.hse-report-table tr[data-selected=true]{background:#2875ff10}.hse-report-score{font-size:15px;font-weight:800}.hse-report-score[data-valid=false]{color:var(--coral-500)}.hse-report-detail{margin-top:12px;border:1px solid #2875ff40;border-radius:13px;overflow:hidden}.hse-report-detail-head{display:flex;justify-content:space-between;gap:12px;padding:14px 16px;background:linear-gradient(145deg,#2875ff14,#44d9ff08)}.hse-report-detail-head h4{margin:0;font-size:14px}.hse-report-detail-head span,.hse-report-detail-head code{display:block;margin-top:4px;color:var(--dsw-alias-label-secondary,#748096);font-size:9px}.hse-report-detail-head b{font-size:25px}.hse-report-criteria{display:grid;gap:9px;padding:14px}.hse-report-criterion{padding:12px;border-radius:10px;background:var(--dsw-alias-bg-layer-1,#f3f7fb)}.hse-report-criterion header{display:flex;justify-content:space-between;gap:10px}.hse-report-criterion header b:last-child{font-size:17px}.hse-report-criterion dl{display:grid;grid-template-columns:92px minmax(0,1fr);gap:8px 10px;margin:10px 0 0;font-size:10px;line-height:1.55}.hse-report-criterion dt{color:var(--dsw-alias-label-secondary,#748096)}.hse-report-criterion dd{margin:0;overflow-wrap:anywhere}.hse-report-recommendation{color:var(--ocean-600)}
 .hse-stage-nav{grid-template-columns:repeat(9,minmax(88px,1fr))}.hse-report-compare{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;padding:14px;align-items:start}.hse-report-compare .hse-report-criteria{padding:0}.hse-meta-flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.hse-meta-flow div{position:relative;padding:13px;border-radius:10px;background:#2875ff0f;font-size:10px}.hse-meta-flow div:not(:last-child):after{content:'→';position:absolute;right:-8px;top:50%;z-index:1;color:var(--ocean-600);font-weight:800}.hse-badcase{color:#b52f45;background:#ee647817!important}.hse-hook-state{margin-bottom:12px;padding:11px 13px;border-left:3px solid var(--ocean-600);border-radius:8px;background:#2875ff0d;font-size:10px}.hse-hook-state[data-executed=false]{border-color:var(--amber-500);background:#e4a23b12}
 @keyframes hse-spin{to{transform:rotate(360deg)}}@keyframes hse-pulse{50%{opacity:.38}}@keyframes hse-ripple{0%{transform:scale(.75);opacity:.4}70%,100%{transform:scale(1.12);opacity:0}}
-@media(max-width:900px){.hse-page{width:calc(100% - 20px)}.hse-meta-grid,.hse-kpis,.hse-identity-grid{grid-template-columns:repeat(2,1fr)}.hse-trial-layout,.hse-output-layout{grid-template-columns:1fr}.hse-trial-detail{position:static;max-height:none}.hse-components,.hse-governance-id{grid-template-columns:repeat(2,1fr)}.hse-drawer{width:100vw}.hse-workbench{padding:12px}.hse-stage-nav{top:62px}.hse-trial-tools{grid-template-columns:1fr 1fr}.hse-grid,.hse-checks{grid-template-columns:1fr}.hse-hypothesis dl{grid-template-columns:1fr}}
+@media(max-width:900px){.hse-page{width:calc(100% - 20px)}.hse-meta-grid,.hse-kpis,.hse-identity-grid{grid-template-columns:repeat(2,1fr)}.hse-trial-layout,.hse-output-layout{grid-template-columns:1fr}.hse-trial-detail{position:static;max-height:none}.hse-components,.hse-governance-id{grid-template-columns:repeat(2,1fr)}.hse-drawer{width:100vw}.hse-workbench{padding:12px}.hse-stage-nav{top:62px}.hse-trial-tools{grid-template-columns:1fr 1fr}.hse-grid,.hse-checks,.hse-version-grid{grid-template-columns:1fr}.hse-hypothesis dl{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.hse-spin,.hse-status:before,.hse-hero:after{animation:none}.hse-job{transition:none}.hse-job:hover{transform:none}}
 @media(max-width:900px){.hse-report-compare,.hse-meta-flow{grid-template-columns:1fr}.hse-meta-flow div:after{display:none}}
 `
@@ -124,19 +132,30 @@ function nextVersion(value) {
   return match ? `${match[1]}.${match[2]}.${Number(match[3]) + 1}` : ''
 }
 
-function useDashboard(poll = true) {
+function useDashboard(poll = true, workspace = '', offset = 0) {
   const [state, setState] = useState({ status: 'loading' })
   const load = useCallback(async (quiet = false) => {
     if (!quiet) setState(current => ({ ...current, status: current.value ? 'refreshing' : 'loading' }))
-    try { setState({ status: 'ready', value: await api('dashboard') }) }
+    try { setState({ status: 'ready', value: await api('dashboard', { workspace, offset, limit: 20 }) }) }
     catch (error) { setState(current => ({ ...current, status: 'error', error: error.message })) }
-  }, [])
+  }, [workspace, offset])
   useEffect(() => { void load() }, [load])
   useEffect(() => {
     if (!poll || !state.value) return undefined
     const timer = window.setTimeout(() => void load(true), state.value.overview?.activeJobs ? 2_500 : 15_000)
     return () => window.clearTimeout(timer)
   }, [load, poll, state.value])
+  return { ...state, load }
+}
+
+function useVersionCheck() {
+  const [state, setState] = useState({ status: 'loading' })
+  const load = useCallback(async (refresh = false) => {
+    setState(current => ({ ...current, status: 'loading' }))
+    try { setState({ status: 'ready', value: await api('version', refresh ? { refresh: 'true' } : {}) }) }
+    catch { setState(current => ({ ...current, status: 'error' })) }
+  }, [])
+  useEffect(() => { void load() }, [load])
   return { ...state, load }
 }
 
@@ -177,7 +196,7 @@ function TrialDetail({ detail, t }) {
   </article>
 }
 
-function TrialExplorer({ job, active, t }) {
+function TrialExplorer({ job, workspace, active, t }) {
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState('')
   const [validity, setValidity] = useState('')
@@ -188,20 +207,20 @@ function TrialExplorer({ job, active, t }) {
   const [detail, setDetail] = useState()
   useEffect(() => {
     let cancelled = false
-    const load = () => api('trials', { job, offset, limit: 100, query, status, validity, sort }).then(value => { if (!cancelled) setPage(value) })
+    const load = () => api('trials', { workspace, job, offset, limit: 100, query, status, validity, sort }).then(value => { if (!cancelled) setPage(value) })
     const debounce = window.setTimeout(() => void load(), 120)
     const poll = active ? window.setInterval(() => void load(), 2_500) : undefined
     return () => { cancelled = true; window.clearTimeout(debounce); if (poll) window.clearInterval(poll) }
-  }, [job, offset, query, status, validity, sort, active])
-  const choose = async trial => { setSelected(trial); setDetail(await api('trial', { job, trial })) }
+  }, [workspace, job, offset, query, status, validity, sort, active])
+  const choose = async trial => { setSelected(trial); setDetail(await api('trial', { workspace, job, trial })) }
   return <div className="hse-trial-layout"><div className="hse-trial-list"><div className="hse-trial-tools"><input className="hse-input" value={query} placeholder={t('search')} onChange={event => { setQuery(event.target.value); setOffset(0) }}/><select className="hse-select" value={status} onChange={event => { setStatus(event.target.value); setOffset(0) }}><option value="">{t('all')}</option><option value="completed">completed</option><option value="candidate-quality-failed">candidate-quality-failed</option><option value="infrastructure-error">infrastructure-error</option><option value="evaluation-error">evaluation-error</option><option value="running-agent">running-agent</option><option value="evaluating">evaluating</option></select><select className="hse-select" value={validity} onChange={event => { setValidity(event.target.value); setOffset(0) }}><option value="">{t('validity')}</option><option value="true">{t('valid')}</option><option value="false">{t('invalid')}</option></select><select className="hse-select" value={sort} onChange={event => setSort(event.target.value)}><option value="dataset-order">{t('datasetOrder')}</option><option value="latest-completed">{t('latest')}</option><option value="lowest-score">{t('lowest')}</option><option value="errors">{t('errorsFirst')}</option></select></div>
     <div className="hse-table-wrap"><table className="hse-table"><thead><tr><th>#</th><th>{t('queryTrial')}</th><th>{t('statusLabel')}</th><th>{t('score')}</th><th>{t('attempt')}</th></tr></thead><tbody>{page?.items?.map(trial => <tr key={`${trial.id}-${trial.attempt}`} data-selected={String(selected) === String(trial.id)}><td>{trial.datasetOrder + 1}</td><td><button onClick={() => void choose(trial.id ?? trial.datasetTrial)}>{trial.displayName ?? trial.datasetTrial ?? trial.name}</button></td><td>{trial.status}</td><td>{trial.score?.valid ? format(trial.score.value ?? trial.rewards?.reward) : '—'}</td><td>{trial.attempt}</td></tr>)}</tbody></table></div>
     <div className="hse-pager"><span>{page?.total ? `${offset + 1}–${Math.min(offset + (page.items?.length ?? 0), page.total)} / ${page.total}` : '0 / 0'}</span><button disabled={!offset} onClick={() => setOffset(Math.max(0, offset - 100))}>{t('previous')}</button><button disabled={!page?.hasMore} onClick={() => setOffset(offset + 100)}>{t('next')}</button></div></div><TrialDetail detail={detail} t={t}/></div>
 }
 
-function DatasetPanel({ job, artifacts, t }) {
+function DatasetPanel({ job, workspace, artifacts, t }) {
   const [state, setState] = useState({ status: 'loading' })
-  useEffect(() => { let alive = true; void api('dataset', { job }).then(value => alive && setState({ status: 'ready', value }), error => alive && setState({ status: 'error', error: error.message })); return () => { alive = false } }, [job])
+  useEffect(() => { let alive = true; void api('dataset', { workspace, job }).then(value => alive && setState({ status: 'ready', value }), error => alive && setState({ status: 'error', error: error.message })); return () => { alive = false } }, [workspace, job])
   const dataset = state.value ?? artifacts.datasetPreview ?? artifacts.dataset
   const badcases = (dataset?.tasks ?? []).filter(task => task.metadata?.badcase).length
   return <><section className="hse-section"><div className="hse-grid"><div className="hse-card"><span>ID / version</span><b>{artifacts.dataset?.dataset_id ?? '—'} · {artifacts.dataset?.version ?? '—'}</b><code>{short(artifacts.dataset?.source_digest)}</code></div><div className="hse-card"><span>{t('population')}</span><b>{artifacts.dataset?.task_count ?? dataset?.task_count ?? 0}</b><code>{badcases} {t('badcase')} · {dataset?.source === 'job-snapshot' ? t('snapshot') : dataset?.source === 'historical-source-fallback' ? t('historicalFallback') : '—'}</code></div></div></section>
@@ -253,23 +272,23 @@ function ArtifactPreview({ detail, t }) {
   return <article className="hse-preview"><header className="hse-preview-head"><div><b>{preview.title ?? t('generatedOutput')}</b><span>{preview.kind} · {preview.format}</span></div><div><b>{t('previewSource')}</b><span>{provenance.map(item => item.label ?? item.kind).join(' · ') || preview.source || '—'}</span></div></header>{body}</article>
 }
 
-function RendererPanel({ job, active, component, t }) {
+function RendererPanel({ job, workspace, active, component, t }) {
   const [page, setPage] = useState()
   const [selected, setSelected] = useState()
   const [detail, setDetail] = useState()
-  useEffect(() => { let alive = true; const load = () => api('trials', { job, offset: 0, limit: 100, sort: 'dataset-order' }).then(value => { if (!alive) return; setPage(value); if (value.items?.length) setSelected(current => current ?? value.items[0].id ?? value.items[0].datasetTrial) }); void load(); const poll = active ? window.setInterval(() => void load(), 2_500) : undefined; return () => { alive = false; if (poll) window.clearInterval(poll) } }, [job, active])
-  useEffect(() => { if (!selected) return; let alive = true; void api('trial', { job, trial: selected }).then(value => alive && setDetail(value)); return () => { alive = false } }, [job, selected])
+  useEffect(() => { let alive = true; const load = () => api('trials', { workspace, job, offset: 0, limit: 100, sort: 'dataset-order' }).then(value => { if (!alive) return; setPage(value); if (value.items?.length) setSelected(current => current ?? value.items[0].id ?? value.items[0].datasetTrial) }); void load(); const poll = active ? window.setInterval(() => void load(), 2_500) : undefined; return () => { alive = false; if (poll) window.clearInterval(poll) } }, [workspace, job, active])
+  useEffect(() => { if (!selected) return; let alive = true; void api('trial', { workspace, job, trial: selected }).then(value => alive && setDetail(value)); return () => { alive = false } }, [workspace, job, selected])
   return <><section className="hse-section"><div className="hse-grid"><div className="hse-card"><span>{t('renderer')}</span><b>{component?.id ?? '—'} · {component?.version ?? '—'}</b><code>{short(component?.digest)}</code></div><div className="hse-card"><span>{t('generatedOutput')}</span><b>{page?.items?.length ?? 0} Trials</b><code>{t('previewSource')}: {detail?.preview?.provenance?.map(item => item.label ?? item.kind).join(' · ') || '—'}</code></div></div></section><section className="hse-section"><h3>{t('generatedOutput')}</h3><div className="hse-output-layout"><div className="hse-output-list">{(page?.items ?? []).map((trial, index) => <button type="button" className="hse-output-item" data-active={String(selected) === String(trial.id ?? trial.datasetTrial)} key={`${trial.id}-${trial.attempt}`} onClick={() => setSelected(trial.id ?? trial.datasetTrial)}><b>{index + 1}. {trial.displayName ?? trial.datasetTrial ?? trial.name}</b><span>{trial.status} · attempt {trial.attempt}</span></button>)}</div><ArtifactPreview detail={detail} t={t}/></div></section></>
 }
 
-function TrialAssessmentReport({ job, active, artifacts, t }) {
+function TrialAssessmentReport({ job, workspace, active, artifacts, t }) {
   const [offset, setOffset] = useState(0)
   const [page, setPage] = useState()
   const [selected, setSelected] = useState()
   const [detailState, setDetailState] = useState({ status: 'idle' })
   useEffect(() => {
     let alive = true
-    const load = () => api('trials', { job, offset, limit: REPORT_PAGE_SIZE, sort: 'dataset-order' }).then(value => {
+    const load = () => api('trials', { workspace, job, offset, limit: REPORT_PAGE_SIZE, sort: 'dataset-order' }).then(value => {
       if (!alive) return
       setPage(value)
       if (value.items?.length) setSelected(current => value.items.some(item => String(item.id ?? item.datasetTrial) === String(current)) ? current : value.items[0].id ?? value.items[0].datasetTrial)
@@ -278,15 +297,15 @@ function TrialAssessmentReport({ job, active, artifacts, t }) {
     void load()
     const poll = active ? window.setInterval(() => void load(), 2_500) : undefined
     return () => { alive = false; if (poll) window.clearInterval(poll) }
-  }, [job, active, offset])
+  }, [workspace, job, active, offset])
   useEffect(() => { setOffset(0) }, [job])
   useEffect(() => {
     if (!selected) return
     let alive = true
     setDetailState({ status: 'loading' })
-    void api('trial', { job, trial: selected }).then(value => alive && setDetailState({ status: 'ready', value }), error => alive && setDetailState({ status: 'error', error: error.message }))
+    void api('trial', { workspace, job, trial: selected }).then(value => alive && setDetailState({ status: 'ready', value }), error => alive && setDetailState({ status: 'error', error: error.message }))
     return () => { alive = false }
-  }, [job, selected])
+  }, [workspace, job, selected])
   const labels = metricLabelMap(artifacts)
   const primary = artifacts.contract?.primary_metric ?? 'reward'
   const declared = (artifacts.contract?.metrics ?? []).map(item => item.id).filter(id => id !== primary)
@@ -303,7 +322,7 @@ function TrialAssessmentReport({ job, active, artifacts, t }) {
   </section>
 }
 
-function ReporterPanel({ job, active, artifacts, t }) {
+function ReporterPanel({ job, workspace, active, artifacts, t }) {
   const summary = artifacts.summary ?? {}
   const population = artifacts.population ?? {}
   const metrics = population.metrics ?? summary.metrics ?? {}
@@ -315,21 +334,21 @@ function ReporterPanel({ job, active, artifacts, t }) {
   return <><section className="hse-section"><h3>{t('populationEvidence')}</h3>{configured ? <div className="hse-hook-state" data-executed={Boolean(configured.executed)}><b>{t('hookExecution')}: {configured.id ?? '—'} · {configured.version ?? '—'}</b><br/>{configured.executed ? t('configuredHookRun') : t('configuredHookNotRun')}</div> : null}<div className="hse-kpis"><div className="hse-kpi"><span>{t('trials')}</span><b>{total}</b></div><div className="hse-kpi"><span>{t('valid')}</span><b className="hse-valid">{valid ?? '—'}</b></div><div className="hse-kpi"><span>{t('invalid')}</span><b className="hse-invalid">{summary.n_invalid_scores ?? population.invalid_population_size ?? '—'}</b></div><div className="hse-kpi"><span>{t('exceptions')}</span><b>{summary.n_exceptions ?? 0}</b></div><div className="hse-kpi"><span>{t('health')}</span><b>{summary.artifact_validation?.valid ? 'VALID' : 'CHECK'}</b></div></div></section>
     <section className="hse-section"><div className="hse-table-wrap"><table className="hse-evidence-table"><thead><tr><th>{t('metric')}</th><th>{t('aggregate')}</th><th>{t('coverage')}</th></tr></thead><tbody>{Object.entries(metrics).map(([id, value]) => <tr key={id}><td><b>{labels[id] ?? id}</b><br/><code>{id}</code></td><td>{format(value)}</td><td>{valid ?? '—'} / {total}</td></tr>)}</tbody></table></div></section>
     <section className="hse-section"><h3>{t('trialGroups')}</h3><div className="hse-chip-list">{groups.map(group => <span key={group.id}>{group.id}: {group.count}</span>)}</div></section>
-    <TrialAssessmentReport job={job} active={active} artifacts={artifacts} t={t}/></>
+    <TrialAssessmentReport job={job} workspace={workspace} active={active} artifacts={artifacts} t={t}/></>
 }
 
 function TrialDeltaTable({ title, items }) {
   return <section className="hse-section"><h3>{title} · {items?.length ?? 0}</h3>{items?.length ? <div className="hse-table-wrap"><table className="hse-evidence-table"><thead><tr><th>Trial</th><th>Baseline</th><th>Candidate</th><th>Delta</th></tr></thead><tbody>{items.map(item => <tr key={item.trial}><td>{item.trial}</td><td>{format(item.baseline)}</td><td>{format(item.candidate)}</td><td className="hse-delta" data-positive={(item.delta ?? 0) >= 0}>{item.delta >= 0 ? '+' : ''}{format(item.delta)}</td></tr>)}</tbody></table></div> : <span className="hse-muted">0</span>}</section>
 }
 
-function ComparePanel({ job, jobs, artifacts, t }) {
+function ComparePanel({ job, workspace, jobs, artifacts, t }) {
   const current = jobs.find(item => item.name === job)
   const all = jobs.filter(item => item.name !== job)
   const matched = all.filter(item => item.candidate?.candidate_id === current?.candidate?.candidate_id && item.dataset?.dataset_id === current?.dataset?.dataset_id && item.dataset?.version === current?.dataset?.version && item.mode === current?.mode)
   const candidates = matched.length ? matched : all
   const [baseline, setBaseline] = useState(candidates[0]?.name ?? '')
   const [state, setState] = useState()
-  useEffect(() => { if (!baseline) return; let alive = true; void api('compare', { baseline, candidate: job }).then(value => alive && setState({ value }), error => alive && setState({ error: error.message })); return () => { alive = false } }, [baseline, job])
+  useEffect(() => { if (!baseline) return; let alive = true; void api('compare', { workspace, baseline, candidate: job }).then(value => alive && setState({ value }), error => alive && setState({ error: error.message })); return () => { alive = false } }, [workspace, baseline, job])
   const labels = metricLabelMap(artifacts)
   return <><section className="hse-section"><h3>{t('compare')}</h3><div className="hse-compare-select"><select className="hse-select" value={baseline} onChange={event => setBaseline(event.target.value)}><option value="">{t('baseline')}</option>{candidates.map(item => <option key={item.name} value={item.name}>{item.name}</option>)}</select></div>{state?.error ? <div className="hse-error">{state.error}</div> : state?.value ? <><div className={state.value.comparable ? 'hse-valid' : 'hse-invalid'}>{state.value.comparable ? `✓ ${t('comparable')}` : `× ${t('notComparable')}`}</div><p className="hse-muted">{state.value.note}</p><div className="hse-grid">{Object.entries(state.value.metrics ?? {}).map(([metric, values]) => <div className="hse-card" key={metric}><span>{labels[metric] ?? metric} · {values.direction}</span><b>{format(values.baseline)} → {format(values.candidate)}</b><code className="hse-delta" data-positive={(values.improvement ?? values.delta ?? 0) >= 0}>{typeof values.delta === 'number' ? `${values.delta >= 0 ? '+' : ''}${format(values.delta)}` : '—'}</code></div>)}</div></> : <span className="hse-muted">{t('noData')}</span>}</section>{state?.value ? <><TrialDeltaTable title={t('improved')} items={state.value.improvedTrials}/><TrialDeltaTable title={t('regressed')} items={state.value.regressedTrials}/></> : null}<div className="hse-capability">{t('explicitGate')}</div></>
 }
@@ -369,7 +388,7 @@ function GateEvidencePanel({ artifacts, t }) {
   </>
 }
 
-function EvaluatorEditor({ value, reload, t }) {
+function EvaluatorEditor({ value, workspace, reload, t }) {
   const active = value.evaluatorInterface
   const evaluator = active?.evaluator
   const files = evaluator?.editable_files ?? []
@@ -392,6 +411,7 @@ function EvaluatorEditor({ value, reload, t }) {
     setSaveState({ status: 'saving' })
     try {
       await mutate('evaluator', {
+        workspace,
         stackPath: active.stack.path,
         filePath: selected.path,
         content: draft,
@@ -415,10 +435,10 @@ function EvaluatorEditor({ value, reload, t }) {
   </section>
 }
 
-function GovernancePanel({ job, t }) {
+function GovernancePanel({ job, workspace, t }) {
   const [state, setState] = useState({ status: 'loading' })
   const [copied, setCopied] = useState(false)
-  const load = useCallback(async () => { try { setState({ status: 'ready', value: await api('governance', { job }) }) } catch (error) { setState({ status: 'error', error: error.message }) } }, [job])
+  const load = useCallback(async () => { try { setState({ status: 'ready', value: await api('governance', { workspace, job }) }) } catch (error) { setState({ status: 'error', error: error.message }) } }, [workspace, job])
   useEffect(() => { void load() }, [load])
   if (state.status === 'loading') return <div className="hse-empty"><div className="hse-spin"/>{t('loading')}</div>
   if (state.status === 'error') return <div className="hse-capability">{state.error}</div>
@@ -429,39 +449,43 @@ function GovernancePanel({ job, t }) {
   const prompt = t('evaluatorPrompt')
   const copy = async () => { try { await navigator.clipboard.writeText(prompt); setCopied(true); window.setTimeout(() => setCopied(false), 1_500) } catch { setCopied(false) } }
   return <><section className="hse-section"><h3>{t('currentEvaluator')}</h3><p className="hse-muted">{t('governanceHint')}</p><div className="hse-governance-id"><div className="hse-card"><span>{t('evaluator')}</span><b>{evaluator?.id ?? '—'} · {evaluator?.version ?? '—'}</b><code>{evaluator?.entry ?? '—'}</code></div><div className="hse-card"><span>{t('rubric')}</span><b>{rubric?.id ?? '—'} · {rubric?.version ?? '—'}</b><code>{rubric?.entry ?? '—'}</code></div><div className="hse-card"><span>Judge</span><b>{value.judge?.provider ?? '—'} / {value.judge?.model ?? '—'}</b><code>{value.judge?.version ?? '—'}</code></div></div></section>
-    <EvaluatorEditor value={value} reload={load} t={t}/>
+    <EvaluatorEditor value={value} workspace={workspace} reload={load} t={t}/>
     {[['evaluator', evaluator], ['rubric', rubric]].map(([role, component]) => <section className="hse-section" key={role}><h3>{role === 'evaluator' ? t('evaluator') : t('rubric')} · {component?.id ?? '—'} · {component?.version ?? '—'}</h3><div className="hse-grid"><div className="hse-card"><span>{t('sourceCode')}</span><b>{component?.entry ?? '—'}</b><code>{short(component?.digest)}</code></div><div className="hse-card"><span>Reward semantics</span><b>{component?.reward_affecting ? 'reward-affecting' : 'non-reward'}</b><code>{component?.source?.error ?? 'read-only'}</code></div></div>{component?.source?.text ? <details className="hse-source-details"><summary>{t('sourceCode')}</summary><pre className="hse-source">{component.source.text}</pre></details> : <div className="hse-capability">{component?.source?.error}</div>}</section>)}
     <section className="hse-section hse-upgrade"><h3>{t('upgradeEvaluator')}</h3><p className="hse-muted">{t('upgradeHint')}</p><ol>{[1, 2, 3, 4, 5].map(index => <li key={index}>{t(`upgradeStep${index}`)}</li>)}</ol><div className="hse-grid"><div className="hse-card"><span>{t('freshBaseline')}</span><b>Evaluator / Rubric / Judge identity</b><code>{(workflow.freshBaselineRequiredWhen ?? []).join(' · ')}</code></div><div className="hse-card"><span>{t('metaEvaluation')}</span><b>Independent GT · ESF · SCE · RCR</b><code>No automatic evaluation or Gate</code></div></div><pre className="hse-prompt">{prompt}</pre><div className="hse-prompt-actions"><button className="hse-button" type="button" onClick={() => void copy()}>{copied ? t('copied') : t('copyPrompt')}</button></div></section></>
 }
 
-function MetaEvaluationPanel({ job, t }) {
+function MetaEvaluationPanel({ job, workspace, t }) {
   const [state, setState] = useState({ status: 'loading' })
+  const [offset, setOffset] = useState(0)
+  const pageSize = 20
   useEffect(() => {
     let alive = true
-    void api('meta', { job }).then(value => alive && setState({ status: 'ready', value }), error => alive && setState({ status: 'error', error: error.message }))
+    void api('meta', { workspace, job, offset, limit: pageSize }).then(value => alive && setState({ status: 'ready', value }), error => alive && setState({ status: 'error', error: error.message }))
     return () => { alive = false }
-  }, [job])
+  }, [workspace, job, offset])
+  useEffect(() => { setOffset(0) }, [workspace, job])
   if (state.status === 'loading') return <div className="hse-empty"><div className="hse-spin"/>{t('loading')}</div>
   if (state.status === 'error') return <div className="hse-error">{state.error}</div>
   const value = state.value ?? {}
   const groundTruth = value.groundTruth
   const report = value.report
   const metrics = report?.metrics ?? {}
+  const pagination = value.disagreementPagination ?? {}
   return <>
     <section className="hse-section"><h3>{t('metaWorkflow')}</h3><p className="hse-muted">{t('metaWorkflowHint')}</p><div className="hse-meta-flow"><div><b>1. Evaluator Candidate</b><br/>{value.workflow?.candidate}</div><div><b>2. Fixed artifacts + GT</b><br/>{value.workflow?.dataset}</div><div><b>3. Repeated observations</b><br/>{value.workflow?.output}</div><div><b>4. ESF / SCE / RCR</b><br/>{value.workflow?.verifier}</div></div></section>
     <section className="hse-section"><h3>{t('groundTruth')}</h3>{groundTruth ? <><div className="hse-grid"><div className="hse-card"><span>ID / version</span><b>{groundTruth.id} · {groundTruth.version}</b><code>{groundTruth.path}</code></div><div className="hse-card"><span>{t('gtSource')}</span><b>{groundTruth.source?.kind}</b><code>{groundTruth.source?.description}</code></div><div className="hse-card"><span>{t('gtCases')}</span><b>{groundTruth.caseCount}</b><code>{groundTruth.criteria?.map(item => item.label ?? item.id).join(' · ')}</code></div><div className="hse-card"><span>{t('gtBadcases')}</span><b>{groundTruth.badcaseCount}</b><code>{t('gtProvenance')}: {groundTruth.source?.provenance}</code></div></div></> : <div className="hse-capability"><b>{t('groundTruthRequired')}</b><br/>{t('gtKinds')}</div>}<div className="hse-hook-state" data-executed={Boolean(report)}><b>{t('metaNext')}</b><br/>{value.workflow?.nextAction}</div></section>
-    {report ? <><section className="hse-section"><h3>Evaluator · {report.evaluator?.id} · {report.evaluator?.version}</h3><div className="hse-kpis"><div className="hse-kpi"><span>ESF ↑</span><b>{format(metrics.esf)}</b></div><div className="hse-kpi"><span>SCE ↓</span><b>{format(metrics.sce)}</b></div><div className="hse-kpi"><span>RCR ↑</span><b>{format(metrics.rcr)}</b></div><div className="hse-kpi"><span>{t('coverage')}</span><b>{format(report.coverage?.rate)}</b></div><div className="hse-kpi"><span>{t('disagreements')}</span><b>{report.disagreements?.length ?? 0}</b></div></div></section>{report.disagreements?.length ? <section className="hse-section"><h3>{t('disagreements')}</h3><div className="hse-table-wrap"><table className="hse-evidence-table"><thead><tr><th>Case</th><th>Criterion</th><th>GT</th><th>Observed</th></tr></thead><tbody>{report.disagreements.slice(0, 20).map((item, index) => <tr key={`${item.case_id}-${item.repeat}-${item.criterion_id}-${index}`}><td>{item.case_id}</td><td>{item.criterion_id}</td><td>{format(item.ground_truth)}</td><td>{format(item.observed)}</td></tr>)}</tbody></table></div></section> : null}</> : null}
+    {report ? <><section className="hse-section"><h3>Evaluator · {report.evaluator?.id} · {report.evaluator?.version}</h3><div className="hse-kpis"><div className="hse-kpi"><span>ESF ↑</span><b>{format(metrics.esf)}</b></div><div className="hse-kpi"><span>SCE ↓</span><b>{format(metrics.sce)}</b></div><div className="hse-kpi"><span>RCR ↑</span><b>{format(metrics.rcr)}</b></div><div className="hse-kpi"><span>{t('coverage')}</span><b>{format(report.coverage?.rate)}</b></div><div className="hse-kpi"><span>{t('disagreements')}</span><b>{pagination.total ?? report.disagreements?.length ?? 0}</b></div></div></section>{pagination.total ? <section className="hse-section"><h3>{t('disagreements')}</h3><div className="hse-table-wrap"><table className="hse-evidence-table"><thead><tr><th>Case</th><th>Criterion</th><th>GT</th><th>Observed</th></tr></thead><tbody>{(report.disagreements ?? []).map((item, index) => <tr key={`${item.case_id}-${item.repeat}-${item.criterion_id}-${index}`}><td>{item.case_id}</td><td>{item.criterion_id}</td><td>{format(item.ground_truth)}</td><td>{format(item.observed)}</td></tr>)}</tbody></table></div><div className="hse-pager"><span>{pagination.total ? `${offset + 1}–${Math.min(offset + (report.disagreements?.length ?? 0), pagination.total)} / ${pagination.total}` : '0 / 0'}</span><button disabled={!offset} onClick={() => setOffset(Math.max(0, offset - pageSize))}>{t('previous')}</button><button disabled={!pagination.hasMore} onClick={() => setOffset(offset + pageSize)}>{t('next')}</button></div></section> : null}</> : null}
   </>
 }
 
-function Workbench({ job, jobs, close, t }) {
+function Workbench({ job, workspace, jobs, close, t }) {
   const [state, setState] = useState({ status: 'loading' })
   const [stage, setStage] = useState('candidate')
   const activeJob = jobs.find(item => item.name === job)
   const load = useCallback(async () => {
-    try { setState({ status: 'ready', value: await api('job', { job }) }) }
+    try { setState({ status: 'ready', value: await api('job', { workspace, job }) }) }
     catch (error) { setState({ status: 'error', error: error.message }) }
-  }, [job])
+  }, [workspace, job])
   useEffect(() => { void load() }, [load])
   useEffect(() => { if (!activeJob?.progress?.active) return undefined; const timer = window.setInterval(() => void load(), 2_500); return () => window.clearInterval(timer) }, [activeJob?.progress?.active, load])
   useEffect(() => { const escape = event => event.key === 'Escape' && close(); window.addEventListener('keydown', escape); return () => window.removeEventListener('keydown', escape) }, [close])
@@ -470,13 +494,13 @@ function Workbench({ job, jobs, close, t }) {
   const component = artifacts.stack?.components?.[stage]
   let content
   if (stage === 'candidate') content = <CandidatePanel artifacts={artifacts} t={t}/>
-  else if (stage === 'dataset') content = <DatasetPanel job={job} artifacts={artifacts} t={t}/>
-  else if (stage === 'renderer') content = <RendererPanel job={job} active={Boolean(activeJob?.progress?.active)} component={component} t={t}/>
-  else if (stage === 'judge') content = <><GovernancePanel job={job} t={t}/><section className="hse-section"><h3>{t('trials')} / {t('evidence')}</h3><TrialExplorer job={job} active={Boolean(activeJob?.progress?.active)} t={t}/></section></>
-  else if (stage === 'meta') content = <MetaEvaluationPanel job={job} t={t}/>
-  else if (stage === 'reporter') content = <ReporterPanel job={job} active={Boolean(activeJob?.progress?.active)} artifacts={artifacts} t={t}/>
+  else if (stage === 'dataset') content = <DatasetPanel job={job} workspace={workspace} artifacts={artifacts} t={t}/>
+  else if (stage === 'renderer') content = <RendererPanel job={job} workspace={workspace} active={Boolean(activeJob?.progress?.active)} component={component} t={t}/>
+  else if (stage === 'judge') content = <><GovernancePanel job={job} workspace={workspace} t={t}/><section className="hse-section"><h3>{t('trials')} / {t('evidence')}</h3><TrialExplorer job={job} workspace={workspace} active={Boolean(activeJob?.progress?.active)} t={t}/></section></>
+  else if (stage === 'meta') content = <MetaEvaluationPanel job={job} workspace={workspace} t={t}/>
+  else if (stage === 'reporter') content = <ReporterPanel job={job} workspace={workspace} active={Boolean(activeJob?.progress?.active)} artifacts={artifacts} t={t}/>
   else if (stage === 'optimizer') content = <OptimizerPanel artifacts={artifacts} t={t}/>
-  else if (stage === 'gate') content = <><ComparePanel job={job} jobs={jobs} artifacts={artifacts} t={t}/><GateEvidencePanel artifacts={artifacts} t={t}/></>
+  else if (stage === 'gate') content = <><ComparePanel job={job} workspace={workspace} jobs={jobs} artifacts={artifacts} t={t}/><GateEvidencePanel artifacts={artifacts} t={t}/></>
   else content = stage === 'integration' ? <ContractPanel artifacts={artifacts} component={component} t={t}/> : <section className="hse-section"><div className="hse-components"><div className="hse-component"><span>{stage}{component?.reward_affecting ? ' · reward-affecting' : ''}</span><b>{component?.id ?? '—'} · {component?.version ?? '—'}</b><code>{short(component?.digest)}</code></div></div></section>
   return <div className="hse-overlay" role="presentation" onMouseDown={event => event.target === event.currentTarget && close()}><aside className="hse-drawer" role="dialog" aria-modal="true" aria-label={job}>
     <header className="hse-drawer-head"><div><h2>{job}</h2><p>{activeJob?.candidate?.candidate_id ?? '—'} · {activeJob?.candidate?.version ?? '—'} · {activeJob?.mode ?? '—'} · {activeJob?.progress?.completed ?? 0}/{activeJob?.progress?.total ?? 0}</p></div><button type="button" className="hse-close" onClick={close}>{t('close')}</button></header>
@@ -485,16 +509,72 @@ function Workbench({ job, jobs, close, t }) {
 }
 
 function DashboardView({ t }) {
-  const state = useDashboard(true)
+  const [workspace, setWorkspace] = useState('')
+  const [offset, setOffset] = useState(0)
+  const state = useDashboard(true, workspace, offset)
   const [selected, setSelected] = useState()
   const snapshot = state.value
   const stats = [[t('jobs'), snapshot?.overview?.totalJobs ?? '—'], [t('completed'), snapshot?.overview?.completedJobs ?? '—'], [t('running'), snapshot?.overview?.activeJobs ?? '—'], [snapshot?.overview?.latestMetric?.name ?? t('score'), format(snapshot?.overview?.latestMetric?.value)]]
-  return <main className="hse-root"><div className="hse-page"><section className="hse-hero" style={{ '--ocean-image': `url(${oceanBackground})` }}><button className="hse-refresh" onClick={() => void state.load()}>{t('refresh')}</button><div className="hse-eyebrow"><span className="hse-whale" aria-hidden="true">🐳</span>{t('eyebrow')}</div><h1>{t('heroTitle')}</h1><p>{t('heroBody')}</p><div className="hse-stats">{stats.map(([label, value]) => <div className="hse-stat" key={label}><span>{label}</span><b>{value}</b></div>)}</div></section><div className="hse-head"><h2>{t('jobs')}</h2><p>{t('jobsHint')}</p></div>{state.status === 'loading' ? <div className="hse-empty"><div className="hse-spin"/>{t('loading')}</div> : state.status === 'error' && !snapshot ? <div className="hse-error">{state.error}<br/><button className="hse-button" onClick={() => void state.load()}>{t('retry')}</button></div> : !snapshot?.jobs?.length ? <div className="hse-empty">{t('empty')}</div> : <div className="hse-list">{snapshot.jobs.map(job => <JobCard job={job} t={t} open={setSelected} key={job.name}/>)}</div>}</div>{selected ? <Workbench job={selected} jobs={snapshot.jobs} close={() => setSelected(undefined)} t={t}/> : null}</main>
+  const pagination = snapshot?.jobPagination ?? {}
+  const switchWorkspace = event => {
+    setWorkspace(event.target.value)
+    setOffset(0)
+    setSelected(undefined)
+  }
+  const openJob = job => {
+    setWorkspace(snapshot.workspace.id)
+    setSelected({ job, workspace: snapshot.workspace.id })
+  }
+  return <main className="hse-root"><div className="hse-page"><section className="hse-hero" style={{ '--ocean-image': `url(${oceanBackground})` }}><button className="hse-refresh" onClick={() => void state.load()}>{t('refresh')}</button><div className="hse-eyebrow"><span className="hse-whale" aria-hidden="true">🐳</span>{t('eyebrow')}</div><h1>{t('heroTitle')}</h1><p>{t('heroBody')}</p><div className="hse-stats">{stats.map(([label, value]) => <div className="hse-stat" key={label}><span>{label}</span><b>{value}</b></div>)}</div></section><div className="hse-head"><div><h2>{t('jobs')}</h2><p>{t('jobsHint')}</p></div>{snapshot?.workspaces?.length ? <select className="hse-select" aria-label={t('workspaceSelect')} value={snapshot.workspace?.id ?? ''} onChange={switchWorkspace}>{snapshot.workspaces.map(item => <option value={item.id} key={item.id}>{item.label} · {item.root}</option>)}</select> : null}</div>{snapshot?.workspace ? <div className="hse-hook-state"><b>{t('workspace')}: {snapshot.workspace.label}</b><br/>{snapshot.config.projectRoot} · {snapshot.config.jobsDir}</div> : null}{state.status === 'loading' ? <div className="hse-empty"><div className="hse-spin"/>{t('loading')}</div> : state.status === 'error' && !snapshot ? <div className="hse-error">{state.error}<br/><button className="hse-button" onClick={() => void state.load()}>{t('retry')}</button></div> : !snapshot?.jobs?.length ? <div className="hse-empty">{t('empty')}</div> : <><div className="hse-list">{snapshot.jobs.map(job => <JobCard job={job} t={t} open={openJob} key={job.name}/>)}</div><div className="hse-pager"><span>{pagination.total ? `${offset + 1}–${Math.min(offset + (snapshot.jobs?.length ?? 0), pagination.total)} / ${pagination.total}` : '0 / 0'}</span><button disabled={!offset} onClick={() => setOffset(Math.max(0, offset - (pagination.limit ?? 20)))}>{t('previous')}</button><button disabled={!pagination.hasMore} onClick={() => setOffset(offset + (pagination.limit ?? 20))}>{t('next')}</button></div></>}</div>{selected ? <Workbench job={selected.job} workspace={selected.workspace} jobs={snapshot.jobs} close={() => setSelected(undefined)} t={t}/> : null}</main>
+}
+
+function VersionPanel({ t }) {
+  const state = useVersionCheck()
+  const [copied, setCopied] = useState(false)
+  const value = state.value
+  const status = state.status === 'loading' ? 'loading' : state.status === 'error' ? 'unavailable' : value?.status ?? 'unavailable'
+  const statusLabel = status === 'loading' ? t('checkingUpdate') : status === 'update-available' ? t('updateAvailable') : status === 'up-to-date' ? t('upToDate') : t('updateUnavailable')
+  const copy = async () => {
+    if (!value?.command) return
+    try {
+      await navigator.clipboard.writeText(value.command)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1_500)
+    } catch { setCopied(false) }
+  }
+  return <section className="hse-version" data-status={status} aria-live="polite">
+    <header className="hse-version-head"><h3>🐳 {t('pluginVersion')}</h3><span className="hse-version-badge">{statusLabel}</span></header>
+    {value ? <div className="hse-version-grid"><div className="hse-version-card"><span>{t('currentVersion')}</span><b>{value.currentVersion}</b></div><div className="hse-version-card"><span>{t('latestVersion')}</span><b>{value.latestVersion ?? '—'}</b></div></div> : null}
+    {status === 'update-available' ? <><p className="hse-version-copy">{t('updateHint')}</p><code className="hse-update-command">{value.command}</code></> : null}
+    {status === 'unavailable' ? <p className="hse-version-copy">{t('offlineUpdateHint')}</p> : null}
+    {value?.stale ? <p className="hse-version-copy">{t('staleVersion')}</p> : null}
+    <div className="hse-version-actions">
+      {value?.command ? <button className="hse-primary" type="button" onClick={() => void copy()}>{copied ? t('updateCommandCopied') : t('copyUpdateCommand')}</button> : null}
+      {value?.releaseUrl ? <a href={value.releaseUrl} target="_blank" rel="noreferrer">{t('viewRelease')}</a> : null}
+      {status !== 'loading' ? <button type="button" onClick={() => void state.load(true)}>{t('checkAgain')}</button> : null}
+      {value?.checkedAt ? <small>{t('checkedAt')}: {new Date(value.checkedAt).toLocaleString()}</small> : null}
+    </div>
+  </section>
 }
 
 function DoctorView({ t }) {
   const state = useDashboard(false)
-  return <main className="hse-root"><div className="hse-settings"><h2>{t('setupDoctor')}</h2><p>{t('setupHint')}</p><div className="hse-checks">{Object.entries(state.value?.checks ?? {}).map(([key, check]) => <div className="hse-check" key={key}><b className={check.status === 'ok' ? 'hse-valid' : 'hse-invalid'}>{key} · {check.status}</b><small>{check.detail}</small></div>)}</div></div></main>
+  const [projectRoot, setProjectRoot] = useState('')
+  const [mutation, setMutation] = useState({ status: 'idle' })
+  useEffect(() => { if (state.value?.config?.projectRoot) setProjectRoot(state.value.config.projectRoot) }, [state.value?.config?.projectRoot])
+  const switchRoot = async () => {
+    setMutation({ status: 'saving' })
+    try {
+      await mutate('project-root', { projectRoot })
+      await state.load()
+      setMutation({ status: 'saved' })
+    } catch (error) {
+      setMutation({ status: 'error', error: error.message })
+    }
+  }
+  const credentialTiers = [[t('sessionCredential'), t('supported'), t('sessionCredentialHint'), true], [t('credentialStore'), t('hostServiceRequired'), t('credentialStoreHint'), false], [t('plaintextCredential'), t('forbidden'), t('plaintextCredentialHint'), false]]
+  const rootSource = state.value?.config?.projectRootSource === 'agent-session' ? t('projectRootAgent') : state.value?.config?.projectRootSource === 'manual' ? t('projectRootManual') : t('projectRootConfigured')
+  return <main className="hse-root"><div className="hse-settings"><h2>{t('setupDoctor')}</h2><p>{t('setupHint')}</p><VersionPanel t={t}/><div className="hse-root-switch"><label htmlFor="hse-project-root">{t('projectRoot')}</label><input id="hse-project-root" value={projectRoot} onChange={event => setProjectRoot(event.target.value)} spellCheck={false}/><button type="button" disabled={mutation.status === 'saving' || !projectRoot} onClick={() => void switchRoot()}>{mutation.status === 'saving' ? t('switchingProjectRoot') : t('switchProjectRoot')}</button><small>{mutation.status === 'error' ? mutation.error : mutation.status === 'saved' ? t('projectRootUpdated') : t('projectRootHint')}</small><small>{rootSource}</small></div><div className="hse-checks">{Object.entries(state.value?.checks ?? {}).map(([key, check]) => <div className="hse-check" key={key}><b className={check.status === 'ok' ? 'hse-valid' : 'hse-invalid'}>{key} · {check.status}</b><small>{check.detail}</small></div>)}</div><h3>{t('credentialPolicy')}</h3><div className="hse-checks">{credentialTiers.map(([label, status, hint, active]) => <div className="hse-check" key={label}><b className={active ? 'hse-valid' : 'hse-invalid'}>{label} · {status}</b><small>{hint}</small></div>)}</div></div></main>
 }
 
 function blockText(block) { return isRecord(block) && Array.isArray(block.content) ? block.content.filter(item => item?.type === 'text').map(item => item.text).join('\n') : '' }
@@ -516,7 +596,7 @@ export function apply(ctx) {
   ctx.slots.inject('conversation.view', () => ctx.slots.register({ name: 'conversation.view', id: 'harbor-evolution', order: 30, locale: NS, label: () => t('tab'), inject: injected }, DashboardView))
   ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id: 'harbor-evolution', order: 35, label: () => t('settings'), inject: injected }, DoctorView))
   ctx.slots.inject('tool.call.toolview', function* registerTools() {
-    for (const key of ['harbor_candidate_snapshot', 'harbor_evolution_init', 'harbor_evolution_doctor', 'harbor_dataset_validate', 'harbor_context_preview', 'harbor_eval_run', 'harbor_eval_result', 'harbor_evaluator_inspect', 'harbor_evaluator_update', 'harbor_ground_truth_init', 'harbor_evaluator_meta_evaluate', 'harbor_candidate_compare']) yield ctx.slots.register({ name: 'tool.call.toolview', key, inject: injected }, HarborToolView)
+    for (const key of ['harbor_candidate_snapshot', 'harbor_model_binding', 'harbor_evolution_init', 'harbor_evolution_doctor', 'harbor_quick_diagnostic_init', 'harbor_dataset_validate', 'harbor_context_preview', 'harbor_eval_run', 'harbor_eval_result', 'harbor_evaluator_inspect', 'harbor_evaluator_update', 'harbor_ground_truth_init', 'harbor_evaluator_meta_evaluate', 'harbor_candidate_compare']) yield ctx.slots.register({ name: 'tool.call.toolview', key, inject: injected }, HarborToolView)
   })
 }
 

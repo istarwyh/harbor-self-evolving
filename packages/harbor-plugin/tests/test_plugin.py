@@ -53,6 +53,10 @@ async def test_plugin_persists_strict_identity_artifacts(tmp_path: Path):
     assert preview["tasks"][0]["instruction"] == "Find the requested source and cite it.\n"
     assert "verifier" not in preview["tasks"][0]
     assert (job / "evaluation-stack-manifest.json").is_file()
+    sources = json.loads((job / "evaluation-stack-sources.json").read_text())
+    assert sources["schema_version"] == 1
+    assert sources["stack_digest"]
+    assert sources["components"]["evaluator"]["files"]
     assert (job / "architecture-doctor.json").is_file()
     lifecycle = json.loads((job / "trial-lifecycle.json").read_text())
     assert lifecycle["dataset_total"] == 1

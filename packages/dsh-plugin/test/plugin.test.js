@@ -5,7 +5,7 @@ import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 
-import { apply } from '../index.js'
+import { apply, synchronizeWorkbenchProjectRoot } from '../index.js'
 
 test('Cordis plugin registers the bundled evolution Skill and strict architecture tools', () => {
   const tools = []
@@ -19,7 +19,6 @@ test('Cordis plugin registers the bundled evolution Skill and strict architectur
     jobsDir: 'jobs',
     harborBin: 'harbor',
     harborDshBin: 'harbor-dsh',
-    dshVersion: '0.1.0-rc.6',
     agentImportPath: 'harbor_dsh_evolution.agent:DshCandidateAgent',
     pluginImportPath: 'dsh-evolution',
     pythonPath: '',
@@ -27,8 +26,10 @@ test('Cordis plugin registers the bundled evolution Skill and strict architectur
   })
   assert.deepEqual(tools.map(tool => tool.name), [
     'harbor_candidate_snapshot',
+    'harbor_model_binding',
     'harbor_evolution_init',
     'harbor_evolution_doctor',
+    'harbor_quick_diagnostic_init',
     'harbor_dataset_validate',
     'harbor_context_preview',
     'harbor_eval_run',
@@ -52,6 +53,10 @@ test('Cordis plugin registers the bundled evolution Skill and strict architectur
   assert.match(skills[0].content, /生成器 \(Generator\)/)
   assert.match(skills[0].content, /评测器（含评测标准） \(Evaluator\)/)
   assert.match(skills[0].content, /优化器 \(Optimizer\)/)
+  assert.match(skills[0].content, /harbor_model_binding/)
+  assert.match(skills[0].content, /Synthesize one Dataset-level recommendation/)
+  assert.match(skills[0].content, /评测集整体优化建议/)
+  assert.match(skills[0].content, /including every server-side page/)
   assert.match(skills[0].content, /Never ask a first-time user to enumerate Evaluation Stack roles/)
   assert.match(skills[0].content, /derive `projectRoot` from the calling session/)
   assert.doesNotMatch(skills[0].content, /configured to a different `projectRoot`/)
@@ -68,6 +73,44 @@ test('published package exposes the DSH bundle patch', async () => {
   assert.equal(packageJson.exports['./cordis.patch.yml'], './cordis.patch.yml')
   assert.equal(packageJson.exports['./schemas/evaluation-result.schema.json'], './schemas/evaluation-result.schema.json')
   assert.equal(packageJson.exports['./schemas/ground-truth.schema.json'], './schemas/ground-truth.schema.json')
+  assert.deepEqual(packageJson.harborEvolution, {
+    runtimePolicy: 'follow-latest',
+    dshRuntimeVersion: 'latest',
+    candidateAcpPackage: '@deepseek-ai/dsh-acp-demo@latest',
+  })
+})
+
+test('model binding tool snapshots the current model without exposing Host credentials', async () => {
+  const tools = []
+  const ctx = {
+    skills: { register() {} },
+    tools: { register(tool) { tools.push(tool) } },
+    agentDefaultModel: { currentSelection: () => ({ provider: 'other', model: 'model-a', reasoningEffort: 'high' }) },
+    llm: {
+      listProviders: () => [{ id: 'other' }],
+      resolveModelInfo: async (_provider, model) => ({ id: model }),
+    },
+    get: () => undefined,
+  }
+  apply(ctx, {
+    projectRoot: '.', jobsDir: 'jobs', harborBin: 'harbor', harborDshBin: 'harbor-dsh',
+    agentImportPath: 'harbor_dsh_evolution.agent:DshCandidateAgent',
+    pluginImportPath: 'dsh-evolution', pythonPath: '', timeoutMs: 1000,
+    candidateProvider: '', candidateModel: '', candidateReasoningEffort: '',
+  })
+
+  const tool = tools.find(item => item.name === 'harbor_model_binding')
+  const result = JSON.parse(await tool.execute({}, toolExecution(path.resolve('.'))))
+
+  assert.deepEqual(result.candidate_model_binding, {
+    schema_version: 1,
+    source: 'skill-agent-default',
+    provider: 'other',
+    model: 'model-a',
+    reasoning_effort: 'high',
+  })
+  assert.equal(result.transport, 'dsh-host-broker')
+  assert.doesNotMatch(JSON.stringify(result), /auth\.json|api[_-]?key|token/i)
 })
 
 function toolExecution(cwd) {
@@ -75,6 +118,17 @@ function toolExecution(cwd) {
     agent: { session: { header: { cwd } } },
   }
 }
+
+test('Agent tool invocation activates its Session root for the shared Web Workbench', () => {
+  const current = path.resolve('/tmp/harbor-current-session')
+  let activated
+  const service = {
+    activateProjectRoot(projectRoot, source) { activated = { projectRoot, source } },
+  }
+
+  assert.equal(synchronizeWorkbenchProjectRoot(service, toolExecution(current)), current)
+  assert.deepEqual(activated, { projectRoot: current, source: 'agent-session' })
+})
 
 async function writeCandidate(projectRoot, name) {
   const candidate = path.join(projectRoot, 'candidate')
@@ -101,7 +155,6 @@ test('Agent tools isolate concurrent calls by the calling session working direct
     jobsDir: 'jobs',
     harborBin: 'harbor',
     harborDshBin: 'harbor-dsh',
-    dshVersion: '0.1.0-rc.6',
     agentImportPath: 'harbor_dsh_evolution.agent:DshCandidateAgent',
     pluginImportPath: 'dsh-evolution',
     pythonPath: '',
@@ -135,10 +188,16 @@ test('bundled Skill ships realistic low-friction onboarding evals', async () => 
   )
 
   assert.equal(evals.skill_name, 'evolve-agent-with-harbor')
-  assert.equal(evals.evals.length, 4)
+  assert.equal(evals.evals.length, 8)
   assert.ok(evals.evals.every(item => item.assertions.length >= 3))
   assert.match(evals.evals[0].expected_output, /评测集、生成器、评测器（评测标准）和优化器/)
   assert.match(evals.evals[1].expected_output, /单任务诊断评测/)
   assert.match(evals.evals[2].expected_output, /不回显或持久化 secret/)
   assert.match(evals.evals[3].expected_output, /不因路径不同而拒绝初始化/)
+  assert.match(evals.evals[4].expected_output, /dsh-host-broker Capability/)
+  assert.match(evals.evals[5].expected_output, /不要求用户编写 GT\/Observation JSON/)
+  assert.match(evals.evals[6].expected_output, /explicit\/inferred\/unresolved/)
+  assert.match(evals.evals[7].expected_output, /评测集级整体结论/)
+  assert.match(evals.evals[7].expected_output, /回滚条件/)
+  assert.doesNotMatch(JSON.stringify(evals), /\/Users\/|XiaoHui Harness\/workspace/)
 })

@@ -4,7 +4,7 @@ import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 
-import { computeCandidate, snapshotCandidate } from '../lib/candidate.js'
+import { computeCandidate, loadModelBinding, snapshotCandidate } from '../lib/candidate.js'
 
 test('candidate digest is stable and excludes its manifest', async () => {
   const candidate = await mkdtemp(path.join(os.tmpdir(), 'dsh-candidate-'))
@@ -25,6 +25,13 @@ test('candidate identity defaults to package.json', async () => {
   const manifest = await snapshotCandidate(candidate)
   assert.equal(manifest.candidate_id, 'business-agent')
   assert.equal(manifest.version, '2.1.0')
+  assert.deepEqual(manifest.runtime, {
+    kind: 'deepseek-harness',
+    policy: 'follow-latest',
+    version: 'latest',
+    package: '@deepseek-ai/dsh-acp-demo@latest',
+    transport: 'acp',
+  })
 })
 
 test('candidate digest matches the Python cross-language vector', async () => {
@@ -46,4 +53,29 @@ test('candidate snapshot requires a lockfile and rejects credential files', asyn
   await writeFile(path.join(candidate, 'package-lock.json'), '{"name":"demo","lockfileVersion":3}\n')
   await writeFile(path.join(candidate, '.env.local'), 'TOKEN=do-not-store\n')
   await assert.rejects(snapshotCandidate(candidate), /credential-bearing/)
+})
+
+test('model binding is validated, digest-bound, and copied into Candidate metadata', async () => {
+  const candidate = await mkdtemp(path.join(os.tmpdir(), 'dsh-candidate-model-'))
+  await writeFile(path.join(candidate, 'cordis.yml'), '- name: demo\n')
+  await writeFile(path.join(candidate, 'package.json'), '{"name":"demo","version":"1.0.0"}\n')
+  await writeFile(path.join(candidate, 'package-lock.json'), '{"name":"demo","lockfileVersion":3}\n')
+  const binding = {
+    schema_version: 1,
+    source: 'skill-agent-default',
+    provider: 'openai-codex',
+    model: 'gpt-test',
+    reasoning_effort: 'high',
+  }
+  await writeFile(path.join(candidate, 'model-binding.json'), `${JSON.stringify(binding)}\n`)
+
+  const manifest = await snapshotCandidate(candidate)
+
+  assert.deepEqual(await loadModelBinding(candidate), binding)
+  assert.deepEqual(manifest.metadata.model_binding, binding)
+  assert.equal(manifest.files.some(item => item.path === 'model-binding.json'), true)
+  assert.doesNotMatch(JSON.stringify(manifest), /auth\.json|api[_-]?key|token/i)
+
+  await writeFile(path.join(candidate, 'model-binding.json'), `${JSON.stringify({ ...binding, token: 'forbidden' })}\n`)
+  await assert.rejects(snapshotCandidate(candidate), /unsupported or secret-bearing fields/)
 })

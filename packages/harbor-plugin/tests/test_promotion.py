@@ -100,3 +100,14 @@ def test_rejects_invalid_or_incomplete_score_coverage():
         "NO_VALID_QUALITY_SCORE",
         "TRIAL_COVERAGE_INCOMPLETE",
     }.issubset(codes(report))
+
+
+def test_rejects_diagnostic_only_policy_even_when_scores_improve():
+    policy = {**POLICY, "diagnostic_only": True}
+    report = evaluate_promotion(
+        summary("v1", reward=0.4, citation_accuracy=0.8, latency=2, search_validity=1),
+        summary("v2", reward=0.8, citation_accuracy=0.9, latency=2.5, search_validity=1),
+        policy,
+    )
+    assert report["decision"] == "REJECT"
+    assert "DIAGNOSTIC_ONLY_POLICY" in codes(report)

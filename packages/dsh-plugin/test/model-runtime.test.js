@@ -92,6 +92,32 @@ test('allows a complete explicit Candidate provider and model override', async (
   })
 })
 
+test('returns a non-secret current-model Candidate draft and honors its pinned identity', async () => {
+  const { value } = runtime()
+  assert.deepEqual(await value.currentBinding(), {
+    schema_version: 1,
+    source: 'skill-agent-default',
+    provider: 'openai-codex',
+    model: 'gpt-test',
+    reasoning_effort: 'high',
+  })
+
+  const pinned = await value.resolve({}, {
+    provider: 'other',
+    model: 'pinned-model',
+    reasoning_effort: 'low',
+  })
+  assert.equal(pinned.provider, 'other')
+  assert.equal(pinned.model, 'pinned-model')
+  assert.equal(pinned.reasoning_effort, 'low')
+  await assert.rejects(
+    value.resolve({ candidateProvider: 'other', candidateModel: 'different-model', candidateReasoningEffort: 'low' }, {
+      provider: 'other', model: 'pinned-model', reasoning_effort: 'low',
+    }),
+    /CANDIDATE_MODEL_BINDING_CONFLICT/,
+  )
+})
+
 test('fails before Harbor starts when GPT Auth is not signed in', async () => {
   const { value } = runtime({ status: { configured: false } })
   await assert.rejects(value.resolve(), /complete GPT Auth in Settings/)
