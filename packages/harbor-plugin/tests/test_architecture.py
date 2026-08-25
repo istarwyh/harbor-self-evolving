@@ -168,7 +168,12 @@ def test_initializer_is_non_overwriting_and_creates_strict_project(tmp_path: Pat
     first = initialize_project(**args)
     second = initialize_project(**args)
     assert ".harbor/evaluation-stack.yml" in first["created"]
+    assert ".harbor/workspace.json" in first["created"]
     assert ".harbor/evaluation-stack.yml" in second["preserved"]
+    descriptor = json.loads((tmp_path / ".harbor/workspace.json").read_text())
+    assert descriptor["workspace_id"] == "search"
+    assert descriptor["jobs"] == "jobs"
+    assert descriptor["stack"] == ".harbor/evaluation-stack.yml"
     assert (tmp_path / "policies" / "promotion.json").is_file()
 
 
@@ -194,3 +199,7 @@ def test_initializer_rejects_different_stack_id_and_supports_namespaced_workspac
     assert nested["stack_path"] == "harbor-projects/other/.harbor/evaluation-stack.yml"
     stack = yaml.safe_load((tmp_path / nested["stack_path"]).read_text())
     assert stack["components"]["evaluator"]["entry"].startswith("harbor-projects/other/")
+    descriptor = json.loads((tmp_path / "harbor-projects/other/.harbor/workspace.json").read_text())
+    assert descriptor["workspace_id"] == "other"
+    assert descriptor["path_base"] == "workspace"
+    assert descriptor["jobs"] == "jobs"

@@ -693,6 +693,7 @@ def _registry(job_dir: Path, assessment_paths: list[Path]) -> dict[str, Any]:
         ("dataset", "Dataset Manifest", "dataset-manifest.json", 1, False),
         ("dataset", "Dataset Preview", "dataset-preview.json", 1, False),
         ("evaluation-stack", "Evaluation Stack", "evaluation-stack-manifest.json", 1, True),
+        ("evaluation-stack", "Evaluation Stack Sources", "evaluation-stack-sources.json", 1, False),
         ("evaluation-stack", "Evaluation Context", "evaluation-context.json", 2, True),
         ("evaluation-stack", "Evaluation Contract", "evaluation-contract.json", 1, True),
         ("reporter", "Population Report", "population-report.json", 2, False),

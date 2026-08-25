@@ -25,6 +25,13 @@ test('candidate identity defaults to package.json', async () => {
   const manifest = await snapshotCandidate(candidate)
   assert.equal(manifest.candidate_id, 'business-agent')
   assert.equal(manifest.version, '2.1.0')
+  assert.deepEqual(manifest.runtime, {
+    kind: 'deepseek-harness',
+    policy: 'follow-latest',
+    version: 'latest',
+    package: '@deepseek-ai/dsh-acp-demo@latest',
+    transport: 'acp',
+  })
 })
 
 test('candidate digest matches the Python cross-language vector', async () => {

@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto'
 import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
+import { CANDIDATE_ACP_PACKAGE, DSH_RUNTIME_VERSION, RUNTIME_POLICY } from './runtime-identity.js'
+
 export const MANIFEST_NAME = 'candidate-manifest.json'
 export const MODEL_BINDING_NAME = 'model-binding.json'
 const DIGEST_PREFIX = Buffer.from('harbor-dsh-candidate-v1\0')
@@ -138,9 +140,8 @@ export async function snapshotCandidate(candidateDir, options = {}) {
   }
   const candidateId = options.candidateId ?? packageJson.name
   const version = options.version ?? packageJson.version
-  const runtimeVersion = options.runtimeVersion ?? '0.1.0-rc.6'
-  if (!candidateId || !version || !runtimeVersion) {
-    throw new Error('Candidate id, version, and runtime version must not be empty; set package.json name/version or pass explicit values')
+  if (!candidateId || !version) {
+    throw new Error('Candidate id and version must not be empty; set package.json name/version or pass explicit values')
   }
   const computed = await computeCandidate(root)
   const metadata = { ...(options.metadata ?? {}) }
@@ -159,7 +160,9 @@ export async function snapshotCandidate(candidateDir, options = {}) {
     created_at: new Date().toISOString(),
     runtime: {
       kind: 'deepseek-harness',
-      version: String(runtimeVersion),
+      policy: RUNTIME_POLICY,
+      version: DSH_RUNTIME_VERSION,
+      package: CANDIDATE_ACP_PACKAGE,
       transport: 'acp',
     },
     files: computed.files,

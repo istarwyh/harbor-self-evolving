@@ -38,18 +38,20 @@ Candidate manifest ──────────────┐
 Dataset manifest ────────────────┼─ full_digest（完整审计）
 Evaluation Stack full identity ──┤
 Candidate model binding ─────────┤
-runtime + Job mode ──────────────┘
+Harbor/Adapter runtime + mode ──┘
 
 Dataset identity ────────────────┐
 Integration/Renderer/Evaluator ──┤
 Rubric/Judge ────────────────────┼─ digest（可比较性）
 Candidate model binding ─────────┤
-semantic Runner + runtime ───────┘
+semantic Runner + integration ───┘
 ```
 
 Candidate 不进入可比较 digest：v1/v2 必须是不同 Candidate digest，但必须共享同一把评测尺子。Diagnoser、Optimizer、Reporter 和 `semantic: false` Runner 会进入完整审计，却不改变 reward 可比较性。
 
-以下变化必须建立 fresh baseline：Dataset id/version/source、Integration、Renderer、Evaluator、Rubric、Judge、语义 Runner、Candidate provider/model/reasoning effort、Harbor 或 Adapter runtime。Policy 是独立版本化的决策合同，可以在已有指标足够时重新应用，不会改写 Context。
+以下变化必须建立 fresh baseline：Dataset id/version/source、Integration、Renderer、Evaluator、Rubric、Judge、语义 Runner、Candidate provider/model/reasoning effort、Harbor 或 Adapter integration identity。Policy 是独立版本化的决策合同，可以在已有指标足够时重新应用，不会改写 Context。
+
+DSH 与 Candidate ACP runtime 默认使用 `latest`。这是明确的维护性选择：它不会因旧 rc 版本不一致阻断 Job，也不承诺逐字节重放旧运行时。如果最新版变化疑似影响结果，应在当前最新版下补跑 Baseline，而不是回退并长期维护旧运行时。
 
 ### Host Model Broker
 

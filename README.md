@@ -23,7 +23,7 @@ cd /absolute/path/to/your-agent-workspace
 npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 ```
 
-安装器会让 npm Plugin 与 Python Adapter 使用同一个正式版本；需要完全固定版本时，把 `latest` 改为 `0.7.2`。
+安装器会让 npm Plugin 与 Python Adapter 使用同一个正式版本；需要完全固定版本时，把 `latest` 改为 `0.7.3`。
 
 默认安装到 DSH 的 `web` profile。`setup` 会一次完成：
 
@@ -38,7 +38,7 @@ npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 
 ```bash
 cd /absolute/path/to/your-agent-workspace
-DSH_HOME="$HOME/.dsh" pnpm dlx @deepseek-ai/dsh@0.1.0-rc.6 web
+DSH_HOME="$HOME/.dsh" pnpm dlx @deepseek-ai/dsh@latest web
 ```
 
 然后在聊天中输入：
@@ -53,7 +53,7 @@ Skill 会先检查文件，再围绕四个用户可理解的概念补齐必要�
 在 Web profile 中还会出现三个可见入口：
 
 - 对话页的 `Harbor` Tab：先看轻量 Job 结果，再打开按需加载的 Evaluation Workbench。
-- Job 工作台：九个阶段跟随 DSH 语言设置；先直接展示固定的 Candidate / Dataset / Evaluation Stack / Runtime 身份，再展示 Agent 收到的 query 与 instruction、Harbor 收集的页面/文档/结构化产物、评测器 Ground Truth 元评测、逐 Trial 判分、Population 有效覆盖、受控优化假设和 Baseline 回归 Gate。完整 JSON 只留在折叠审计区。
+- Job 工作台：九个阶段跟随 DSH 语言设置；先直接展示 Candidate / Dataset / Evaluation Stack / 模型身份和“运行时追随最新版”策略，再展示 Agent 收到的 query 与 instruction、Harbor 收集的页面/文档/结构化产物、评测器 Ground Truth 元评测、逐 Trial 判分、Population 有效覆盖、受控优化假设和 Baseline 回归 Gate。完整 JSON 只留在折叠审计区。
 - 评测器页：直接查看 `script` 或 `llm-as-judge` 的统一接口、三元 Criterion、Rubric 与实现源码；只能受控修改 Descriptor 授权的文件，并强制创建新的 Evaluator / Stack 身份。
 - `harbor-dsh-evaluator/v1`：统一 `script` 与 `llm-as-judge` 的输入、三元 Criteria 输出、实现身份和可编辑文件；详情见 [`docs/evaluator-interface.md`](docs/evaluator-interface.md)。
 - 工具调用中的 Harbor 专属卡片：直接理解初始化、Doctor、Context 预览、评测与 Gate。

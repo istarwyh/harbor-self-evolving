@@ -30,7 +30,6 @@ def _parser() -> argparse.ArgumentParser:
     snapshot.add_argument("candidate_dir", type=Path)
     snapshot.add_argument("--id", dest="candidate_id")
     snapshot.add_argument("--version")
-    snapshot.add_argument("--runtime-version", default="0.1.0-rc.6")
 
     verify = commands.add_parser("verify", help="Verify a Candidate digest")
     verify.add_argument("candidate_dir", type=Path)
@@ -161,7 +160,11 @@ def main() -> int:
     args = _parser().parse_args()
     exit_code = 0
     if args.command == "snapshot":
-        result = snapshot_candidate(args.candidate_dir, candidate_id=args.candidate_id, version=args.version, runtime_version=args.runtime_version).to_dict()
+        result = snapshot_candidate(
+            args.candidate_dir,
+            candidate_id=args.candidate_id,
+            version=args.version,
+        ).to_dict()
     elif args.command == "verify":
         result = verify_candidate(args.candidate_dir, expected_digest=args.digest).to_dict()
     elif args.command == "summarize":

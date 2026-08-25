@@ -8,6 +8,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from harbor_dsh_evolution.runtime_identity import (
+    DEFAULT_CANDIDATE_ACP_PACKAGE,
+    DEFAULT_DSH_RUNTIME_VERSION,
+    RUNTIME_POLICY,
+)
+
 MANIFEST_NAME = "candidate-manifest.json"
 MODEL_BINDING_NAME = "model-binding.json"
 _DIGEST_PREFIX = b"harbor-dsh-candidate-v1\0"
@@ -198,7 +204,6 @@ def snapshot_candidate(
     *,
     candidate_id: str | None = None,
     version: str | None = None,
-    runtime_version: str = "0.1.0-rc.6",
     metadata: dict[str, Any] | None = None,
 ) -> CandidateManifest:
     candidate_dir = candidate_dir.expanduser().resolve(strict=True)
@@ -212,9 +217,9 @@ def snapshot_candidate(
         candidate_id = str(package.get("name") or "")
     if version is None:
         version = str(package.get("version") or "")
-    if not candidate_id or not version or not runtime_version:
+    if not candidate_id or not version:
         raise ValueError(
-            "Candidate id, version, and runtime version must not be empty; "
+            "Candidate id and version must not be empty; "
             "set package.json name/version or pass explicit values"
         )
 
@@ -236,7 +241,9 @@ def snapshot_candidate(
         created_at=datetime.now(timezone.utc).isoformat(),
         runtime={
             "kind": "deepseek-harness",
-            "version": runtime_version,
+            "policy": RUNTIME_POLICY,
+            "version": DEFAULT_DSH_RUNTIME_VERSION,
+            "package": DEFAULT_CANDIDATE_ACP_PACKAGE,
             "transport": "acp",
         },
         files=files,

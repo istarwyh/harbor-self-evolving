@@ -1,11 +1,11 @@
 ---
 name: evolve-agent-with-harbor
-description: Architect, initialize, run, diagnose, compare, and safely improve a DeepSeek Harness business Agent with Harbor Trial Lifecycle, Score Validity, Evidence Provenance, Evaluation Stack, Context v2, Architecture Doctor, and explicit Promotion Gate. Use for Harbor setup, Agent self-evolution, vertical-search evaluation loops, running Job inspection, failed Trial diagnosis, Candidate optimization, evaluator governance or meta-evaluation, and promotion decisions.
+description: Architect, initialize, run, diagnose, compare, and safely improve a DeepSeek Harness business Agent or Evaluator with Harbor. Use for low-friction Harbor setup, Agent self-evolution, vertical-search evaluation loops, running Job inspection, failed Trial diagnosis, Candidate optimization, evaluator governance, turning reviewed reports and natural-language scoring feedback into evaluator meta-evaluation data, or explicit promotion decisions.
 ---
 
 # Evolve Agent With Harbor
 
-Build a reproducible improvement loop around four concepts that users can describe in business language:
+Build a maintainable, evidence-bearing improvement loop around four concepts that users can describe in business language. The DSH and Candidate ACP runtime follows the latest published release by default; record that policy honestly and do not block a Job on an older pinned runtime:
 
 - **评测集 (Dataset)** — what should be tested: one Query, a file, a directory of instructions, or an existing Harbor Dataset.
 - **生成器 (Generator)** — who produces the answer or artifact: a curl request, a local Agent entry, or an Agent already found in the workspace.
@@ -44,7 +44,7 @@ Do not turn an inspection or diagnostic request into Agent mutation or deploymen
 
 Inspect the current workspace before asking questions. Look for Agent entry files, package metadata, curl examples, Dataset instructions, existing Harbor configuration/Jobs, tests, and available Codex or Claude Code commands. Reuse reliable findings and say what was inferred; do not ask the user to transcribe information already present in files.
 
-When no Harbor workspace exists, propose `./harbor-evolution/` under the current session working directory as the managed evaluation workspace. Agent-facing Harbor Tools derive `projectRoot` from the calling session for every invocation and keep imported snapshots and generated evaluation files inside that request-local root. Treat the Plugin's configured `projectRoot` only as the Web Workbench and non-Agent fallback; do not block initialization merely because it differs from the current session working directory.
+When no Harbor workspace exists, propose `./harbor-evolution/` under the current session working directory as the managed evaluation workspace. Agent-facing Harbor Tools derive `projectRoot` from the calling session for every invocation and keep imported snapshots and generated evaluation files inside that request-local root. Every Harbor Tool call also activates that Session root for the Web Workbench; the Plugin's configured `projectRoot` is only the startup/manual fallback. Do not block initialization merely because the fallback differs from the current session working directory.
 
 Ask only for missing parts of the four-concept intake, using the user's language and short examples:
 
@@ -139,7 +139,7 @@ A fresh baseline is required when any of these change:
 - Integration, Renderer, Evaluator, or Rubric identity.
 - Judge provider, model, version, or parameters.
 - Runner marked `semantic: true`.
-- Harbor or integration runtime identity.
+- Harbor or Adapter integration identity. DSH and Candidate ACP themselves follow `latest`; do not reject a Job for an older pinned rc. If latest-runtime drift plausibly changes behavior, recommend a fresh baseline on the current latest runtime instead of restoring and maintaining the old runtime.
 
 Diagnoser, Optimizer, Reporter, and non-semantic Runner changes remain comparable but change the full audit digest. A Candidate digest must differ from the baseline Candidate digest. Promotion Policy is reapplied as a separately versioned decision contract; changing it does not rewrite Evaluation Context.
 
@@ -179,6 +179,26 @@ Use the formal terminal states precisely:
 - `cancelled`: preserve the attempt and do not score it.
 
 For retry or resume, retain the old attempt and create a new attempt. Never replace an assessment or event history in place.
+
+### Synthesize one Dataset-level recommendation
+
+When the user opens an evaluation report or asks what to improve, do not stop at aggregate metrics and do not merely repeat per-Trial recommendations. The current Agent acting as Optimizer must synthesize one concrete **评测集整体优化建议** from the complete Dataset evidence. This synthesis is non-reward-affecting Optimizer output, not a new Evaluator score and not a recommendation invented on behalf of the Evaluator.
+
+1. Inspect all Trial assessments, including every server-side page. Never infer a Dataset conclusion from only the first page, selected badcases, or the lowest score.
+2. Confirm terminal-state and valid-score coverage first. Keep infrastructure and evaluation errors outside Candidate-quality patterns. If coverage is insufficient, say that a trustworthy business optimization recommendation cannot yet be made and recommend repairing the owning evaluation layer.
+3. Group valid results by Criterion, recurring reason/recommendation, Query or population slice. Report the affected count as `N / valid Trials`, distinguish repeated patterns from isolated cases, and identify representative Trial ids or instructions.
+4. Read the corresponding generated artifacts before assigning ownership. Choose the highest-leverage repeated weakness that is Candidate-owned; do not optimize the Candidate around a Dataset, Evaluator, Rubric, Judge, Renderer, or infrastructure defect.
+5. Produce one prioritized recommendation with this user-facing shape:
+
+```text
+评测集整体结论：<what is already reliable and the dominant weakness>
+关键证据：<Criterion and score distribution; N/M affected; representative Trials>
+优先优化建议：<one specific Candidate behavior or implementation change>
+预期效果：<which metric/pattern should improve and what must not regress>
+验证方式：<same Dataset/Context regression Job; protected metrics and rollback condition>
+```
+
+Base the recommendation on the Evaluator's recorded scores, reasons, recommendations, and the actual Candidate artifacts. Do not invent missing reasons, average incompatible Criteria, or present correlation as a proven root cause. If the evidence supports several changes, rank them but recommend only one controlled next experiment. If the user accepts it, translate it into an `optimization-report/v2`-compatible hypothesis with evidence refs, mutation and forbidden surfaces, guardrails, rollback condition, and a comparable next Job before changing the Candidate.
 
 ### Propose one controlled change
 
@@ -234,6 +254,25 @@ Rerun `harbor_dataset_validate` and `harbor_evolution_doctor` before retrying. P
 
 ## Handle evaluator meta-evaluation
 
+Read `references/evaluator-upgrade.md` before handling reviewed reports, expert comments, scoring notes, evaluator calibration, or meta-evaluation. Keep protocol names out of the initial user interaction.
+
+Start from evidence the user already has. Ask only:
+
+> 请提供一些已经被评价过的报告，以及对应的评分、问题或修改建议。你可以直接粘贴文本，也可以提供文件或目录路径。我会整理成评测器元评测集，并只请你确认有歧义的评分。
+
+Accept one report, several pasted report/review pairs, or a directory. Do not initially ask the user for GT JSON, Criterion ids, provenance fields, repeat policy, Evaluator identity, or meta-metric thresholds. Inspect the active Rubric and infer stable internal ids and versions after understanding the material.
+
+For every report/review pair:
+
+1. Preserve the original report and review as source evidence. Never replace them with only the normalized JSON.
+2. Extract Criterion, score, reason, any reviewer-provided recommendation, and the exact review excerpt supporting the extraction.
+3. Mark each extracted decision internally as `explicit`, `inferred`, or `unresolved`.
+4. Map a natural-language judgment to the active score scale only when the Rubric makes the mapping defensible. Treat the mapped value as a draft, not confirmed GT.
+5. Show one compact table with report, Criterion, proposed score, reason, recommendation, and status. Ask only targeted questions for `inferred` or `unresolved` rows.
+6. Create formal GT only after the user confirms the draft. Never silently fill a missing score, reason, source, or independence claim. A missing reviewer recommendation may remain empty and must not be attributed to the reviewer.
+
+Use plain language in the confirmation. Say “标准评分” instead of `ground-truth/v1`, “评测器重复评分” instead of `evaluator-observations/v1`, and “评测器可靠性报告” instead of `meta-evaluation-report/v1`. Protocol names may appear later in an audit or advanced view.
+
 Rotate roles when improving the Evaluator:
 
 - Candidate is the Evaluator/Rubric/Judge version.
@@ -243,7 +282,11 @@ Rotate roles when improving the Evaluator:
 
 GT may be human, programmatic, consensus-based, produced by an independently pinned model, or imported from an external standard. Independence and provenance matter more than the author type. The Candidate evaluator must never see labels before producing its observation.
 
-When GT is missing, clarify its id/version, source kind, owner, provenance, Criteria, case selection, and adjudication process. Then call `harbor_ground_truth_init`; it creates a non-overwriting draft and never invents cases or labels. After cases are populated, collect repeated `evaluator-observations/v1` and call `harbor_evaluator_meta_evaluate`. Report ESF, SCE, RCR, coverage, disagreement slices, latency, and cost as applicable.
+After confirmation, infer a readable GT id/version, source kind, provenance, Criteria, case ids, and initial weights from the accepted material. Show any consequential inference. Call `harbor_ground_truth_init`; it creates a non-overwriting draft and never invents cases or labels. Populate the draft from confirmed rows using ordinary safe file operations, keeping artifact references inside the request-local project root.
+
+Treat one reviewed report as a diagnostic calibration example, not evidence that an Evaluator is generally reliable. With enough cases, propose a tuning/holdout split without burdening the user with the terminology: explain that one group helps improve the Evaluator and an untouched group checks whether the improvement generalizes. Never expose holdout labels to the Candidate evaluator or use its own prior output as GT.
+
+After cases are populated, run the same Evaluator repeatedly on the fixed reports, collect `evaluator-observations/v1`, and call `harbor_evaluator_meta_evaluate`. The user should not have to hand-author either JSON file. Report ESF, SCE, RCR, coverage, disagreement slices, latency, and cost as applicable, then translate them back into direct conclusions: missed problems, false alarms, unstable judgments, and the smallest justified Evaluator/Rubric change.
 
 Manage evaluator Candidates and meta-evaluation Jobs with the same Manifest, Context v2, Doctor, evidence, and Gate rules.
 
@@ -257,6 +300,7 @@ Return:
 - Metric deltas, exception counts, Population groups, and artifact validation.
 - Dataset coverage, terminal-state counts, valid/invalid score counts, and selected attempt policy.
 - Representative Trial evidence and root-cause classes.
+- One Dataset-level overall conclusion and one prioritized, evidence-linked optimization recommendation; explicitly state when score validity or coverage is insufficient for one.
 - Evidence provenance and any capability unavailable on a legacy Job.
 - Controlled change hypothesis and mutation surface.
 - Gate decision with exact reason codes.

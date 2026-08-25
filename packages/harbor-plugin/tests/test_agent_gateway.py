@@ -63,6 +63,7 @@ async def test_candidate_container_receives_only_the_job_gateway_capability(
         candidate_model="gpt-test",
         candidate_reasoning_effort="high",
     )
+    assert agent._candidate_acp_package == "@deepseek-ai/dsh-acp-demo@latest"
     environment = FakeEnvironment()
     await agent.setup(environment)
 

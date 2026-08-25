@@ -66,7 +66,7 @@ export function createApiHandler(load, code = 'request-failed') {
 }
 
 export function createDashboardHandler(service) {
-  return createApiHandler(() => service.dashboard(), 'dashboard-unavailable')
+  return createApiHandler(args => service.dashboard(args), 'dashboard-unavailable')
 }
 
 export function createMutationHandler(update, code = 'update-failed') {

@@ -13,6 +13,7 @@ from harbor.models.agent.context import AgentContext
 
 from harbor_dsh_evolution.candidate import CandidateManifest, verify_candidate
 from harbor_dsh_evolution.runtime_binding import render_runtime_config
+from harbor_dsh_evolution.runtime_identity import DEFAULT_CANDIDATE_ACP_PACKAGE
 
 
 def _required_environment(name: str) -> str:
@@ -30,7 +31,6 @@ class DshCandidateAgent(AcpAgent):
     _RUNTIME_DIR = f"{_REMOTE_ROOT}/.harbor-runtime"
     _RUNTIME_CONFIG = f"{_RUNTIME_DIR}/cordis.yml"
     _GATEWAY_PLUGIN = f"{_RUNTIME_DIR}/llm_gateway.mjs"
-    _DSH_ACP_PACKAGE = "@deepseek-ai/dsh-acp-demo@0.1.0-rc.6"
 
     def __init__(
         self,
@@ -53,6 +53,7 @@ class DshCandidateAgent(AcpAgent):
                 f"requested={candidate_version}, manifest={self.manifest.version}"
         )
         self.candidate_digest = candidate_digest
+        self._candidate_acp_package = DEFAULT_CANDIDATE_ACP_PACKAGE
         self._model_binding = {
             "provider": str(candidate_model_provider or "").strip(),
             "model": str(candidate_model or "").strip(),
@@ -109,7 +110,7 @@ class DshCandidateAgent(AcpAgent):
             "description": "Immutable Cordis composition evaluated through ACP.",
             "distribution": {
                 "npx": {
-                    "package": self._DSH_ACP_PACKAGE,
+                    "package": self._candidate_acp_package,
                     "args": ["--config", self._RUNTIME_CONFIG],
                     "env": {
                         "DSH_SESSION_ROOT": f"{self._REMOTE_ROOT}/.sessions",

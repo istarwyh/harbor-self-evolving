@@ -40,6 +40,9 @@ def test_snapshot_derives_identity_from_package_json(tmp_path: Path):
     manifest = snapshot_candidate(candidate)
     assert manifest.candidate_id == "business-agent"
     assert manifest.version == "2.1.0"
+    assert manifest.runtime["policy"] == "follow-latest"
+    assert manifest.runtime["version"] == "latest"
+    assert manifest.runtime["package"] == "@deepseek-ai/dsh-acp-demo@latest"
 
 
 def test_verify_detects_candidate_mutation(tmp_path: Path):

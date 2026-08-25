@@ -12,7 +12,7 @@ const dictionaries = {
     tab: 'Harbor', settings: 'Harbor 自进化', eyebrow: 'EVALUATION WORKBENCH',
     heroTitle: '看见 Agent 的每一次进步，也看见分数是否值得相信',
     heroBody: 'Harbor 固定实验边界；Trial Lifecycle 展示真实运行过程；Score Validity 阻止基础设施故障伪装成业务 0 分。',
-    refresh: '刷新', jobs: '评测批次', jobsHint: '点击 Job 后，最多再点一次即可进入对应 Trial 的证据。', empty: '还没有可读取的 Harbor Job。请用官方 Skill 完成需求澄清和初始化。',
+    refresh: '刷新', jobs: '评测批次', jobsHint: '点击 Job 后，最多再点一次即可进入对应 Trial 的证据。', workspace: '工作空间', workspaceSelect: '选择 Harbor 工作空间', empty: '还没有可读取的 Harbor Job。请用官方 Skill 完成需求澄清和初始化。',
     completed: '已完成', partial: '完成但有异常', failed: '读取失败', pending: '等待运行', running: '运行中', attention: '需核查',
     candidate: '候选版本', dataset: '评测集', integration: '集成', renderer: '产物呈现', judge: '评测器', meta: '评测器元评测', reporter: '评测报告', optimizer: '优化器', gate: '晋级门禁',
     context: 'Context v2', trials: 'Trials', exceptions: '异常', mode: '模式', close: '关闭', retry: '重试', loading: '正在读取…', noData: '暂无数据', currentStatus: '当前状态',
@@ -22,8 +22,8 @@ const dictionaries = {
     findings: '主要发现', recommendations: '建议', output: '用户可见输出', criteria: '评分维度', provenance: '证据来源', timing: '执行时间', audit: '审计原文',
     compare: '回归比较', baseline: 'Baseline Job', comparable: '可比较', notComparable: '不可比较', improved: '改善样本', regressed: '回归样本', explicitGate: '只读比较不会自动 Gate；需要显式授权后运行确定性 Gate。',
     governance: '评测器治理', governanceHint: '读取 Rubric / Evaluator / Judge 身份与源码。语义改动必须创建新身份，并建立新 Baseline。',
-    artifacts: 'Artifact Registry', setupDoctor: '安装与架构检查', setupHint: '这里显示 Web 工作台实际使用的项目根目录。Agent 工具仍以每次调用的 Session 工作目录为边界。',
-    projectRoot: '当前 projectRoot', switchProjectRoot: '切换并重载', projectRootHint: '请输入已存在的绝对目录。本次 DSH 运行立即生效；永久修改请保存 Plugin 配置。', switchingProjectRoot: '正在切换…', projectRootUpdated: '已切换并重新读取 Harbor Jobs。',
+    artifacts: 'Artifact Registry', setupDoctor: '安装与架构检查', setupHint: '这里显示 Web 工作台实际使用的项目根目录。每次 Harbor Agent Tool 调用都会自动切到该 Session；工具执行仍保持 Session 隔离。',
+    projectRoot: '当前 projectRoot', switchProjectRoot: '切换并重载', projectRootHint: '请输入已存在的绝对目录。本次 DSH 运行立即生效；下一次 Harbor Agent Tool 调用会自动跟随它的 Session。', switchingProjectRoot: '正在切换…', projectRootUpdated: '已切换并重新读取 Harbor Jobs。', projectRootConfigured: '来源：Plugin 启动配置', projectRootAgent: '来源：最近一次 Harbor Agent 调用（自动同步）', projectRootManual: '来源：本次运行手动切换',
     pluginVersion: '插件版本', checkingUpdate: '正在检查更新…', updateAvailable: '发现新版本', upToDate: '已是最新版', updateUnavailable: '暂时无法检查更新', currentVersion: '当前版本', latestVersion: '最新版本', updateHint: '在终端运行下面的命令即可升级 Plugin、Skill 和 Harbor Adapter。升级不会在浏览器中静默执行。', offlineUpdateHint: '这不会影响 Harbor 的任何功能。请检查网络后重试，或在终端运行带 @latest 的安装命令。', copyUpdateCommand: '复制更新命令', updateCommandCopied: '已复制更新命令', checkAgain: '重新检查', viewRelease: '查看发布说明', checkedAt: '检查时间', staleVersion: '当前展示的是最近一次成功检查的结果。',
     credentialPolicy: 'Secret 持久化策略', sessionCredential: '仅本次运行', credentialStore: 'DSH 凭据库', plaintextCredential: '明文 settings', supported: '已支持', hostServiceRequired: '等待 Host credential service', forbidden: '禁止', sessionCredentialHint: '默认。通过环境变量或 Job 临时 capability 注入，不进入评测身份与报告。', credentialStoreHint: '只有 DSH 暴露正式凭据服务后才可启用，当前不会用 settings.yaml 冒充。', plaintextCredentialHint: 'Harbor 不把 Authorization、API key 或 OAuth token 写入项目配置。',
     stageNav: '评测阶段', datasetTasks: '评测任务', datasetSource: '任务来源', taskInstruction: '具体任务要求', instructionFile: '指令文件', snapshot: 'Job 固化快照', historicalFallback: '历史 Job 源文件回读',
@@ -32,7 +32,7 @@ const dictionaries = {
     evaluatorImplementation: '评测器实现', evaluatorKind: '实现类型', evaluatorProtocol: '接口协议', editableFiles: '允许修改的文件', openFile: '打开', editingFile: '正在修改', editSource: '直接修改当前文件', evaluatorVersion: '新 Evaluator 版本', stackVersion: '新 Stack 版本', saveEvaluator: '保存为新身份', saving: '正在保存…', saved: '已保存；下一步请做元评测并建立新 Baseline。', reloadBeforeSave: '源码已变化，请刷新后再保存。', noEvaluatorInterface: '当前 Stack 还没有 harbor-dsh-evaluator/v1 接口，不能从 UI 安全编辑。', editWarning: '保存只更新源码与身份，不会自动运行评测或 Gate。',
     upgradeStep1: '查看当前 Evaluator、Rubric、Judge、评分合同和代表性误判样本。', upgradeStep2: '创建新的评测器身份、版本和源文件；不覆盖历史评测器。', upgradeStep3: '使用独立、可追溯的 GT 运行元评测，检查 ESF、SCE、RCR、延迟和成本。', upgradeStep4: '更新 Evaluation Stack 身份，并预览 Context v2 变化。', upgradeStep5: '在新分数语义下建立全新 Agent Baseline，再比较后续 Candidate。', evaluatorPrompt: '请使用 evolve-agent-with-harbor 升级当前评测器。先读取 governance 证据，澄清 GT 的来源类型、provenance、维护者和目标元指标，再提出新的不可变评测器身份与 fresh-baseline 方案。在我批准受控改动前，不要修改文件或发起评测。',
     queryTrial: '任务 / Trial', statusLabel: '状态', attempt: '尝试', population: '任务数量',
-    experimentIdentity: '本次实验固定了什么', experimentIdentityHint: 'Candidate、Dataset、Evaluation Stack 与 Runtime 共同定义可复现、可比较的实验身份。', immutableCandidateFiles: '候选版本内容', file: '文件', size: '大小', digest: '内容指纹', runtime: '运行时', evaluationStack: 'Evaluation Stack',
+    experimentIdentity: '本次实验使用了什么', experimentIdentityHint: 'Candidate、Dataset、Evaluation Stack 与模型身份共同定义可比较实验；DSH 运行时默认追随最新版，并在证据中明确记录该策略。', immutableCandidateFiles: '候选版本内容', file: '文件', size: '大小', digest: '内容指纹', runtime: '运行时', evaluationStack: 'Evaluation Stack',
     integrationBoundary: '执行与评分边界', hardRequirements: '分数生效前必须满足', populationEvidence: '总体评测证据', metric: '指标', aggregate: '总体值', coverage: '有效覆盖', trialGroups: 'Trial 状态分组',
     controlledHypotheses: '受控优化假设', rootCause: '证据指向', affectedTrials: '影响样本', expectedEffect: '预期指标变化', mutationSurface: '允许改动', forbiddenSurface: '禁止改动', guardrails: '保护条件', rollback: '回滚条件', nextExperiment: '下一次受控实验', noHypotheses: '本批次没有生成受控优化假设。',
     gateEvidence: '已执行的晋级门禁', decision: '门禁结果', policy: '门禁策略', eligible: '满足门禁前提', notEligible: '不满足门禁前提', metricDeltas: '指标变化', newExceptions: '新增异常', artifactRegressions: '产物回归', reasons: '门禁依据',
@@ -43,7 +43,7 @@ const dictionaries = {
     tab: 'Harbor', settings: 'Harbor Evolution', eyebrow: 'EVALUATION WORKBENCH',
     heroTitle: 'See every Agent improvement—and whether the score is trustworthy',
     heroBody: 'Harbor fixes the experiment boundary. Trial Lifecycle shows real execution, while Score Validity keeps infrastructure failures out of quality metrics.',
-    refresh: 'Refresh', jobs: 'Evaluation jobs', jobsHint: 'Open a Job, then reach Trial evidence in at most one more interaction.', empty: 'No readable Harbor Jobs yet. Use the official Skill to clarify and initialize the project.',
+    refresh: 'Refresh', jobs: 'Evaluation jobs', jobsHint: 'Open a Job, then reach Trial evidence in at most one more interaction.', workspace: 'Workspace', workspaceSelect: 'Select Harbor workspace', empty: 'No readable Harbor Jobs yet. Use the official Skill to clarify and initialize the project.',
     completed: 'Completed', partial: 'Completed with errors', failed: 'Read failed', pending: 'Queued', running: 'Running', attention: 'Needs review',
     candidate: 'Candidate', dataset: 'Dataset', integration: 'Integration', renderer: 'Renderer', judge: 'Judge', meta: 'Evaluator meta-evaluation', reporter: 'Reporter', optimizer: 'Optimizer', gate: 'Gate',
     context: 'Context v2', trials: 'Trials', exceptions: 'Exceptions', mode: 'Mode', close: 'Close', retry: 'Retry', loading: 'Loading…', noData: 'No data', currentStatus: 'Current status',
@@ -53,8 +53,8 @@ const dictionaries = {
     findings: 'Findings', recommendations: 'Recommendations', output: 'User-visible output', criteria: 'Criteria', provenance: 'Evidence provenance', timing: 'Timing', audit: 'Raw audit',
     compare: 'Regression comparison', baseline: 'Baseline Job', comparable: 'Comparable', notComparable: 'Not comparable', improved: 'Improved trials', regressed: 'Regressed trials', explicitGate: 'A read-only comparison never runs Gate. Run the deterministic Gate only with explicit authority.',
     governance: 'Evaluator governance', governanceHint: 'Read Rubric, Evaluator, Judge identity, and source. Semantic edits create a new identity and require a fresh baseline.',
-    artifacts: 'Artifact Registry', setupDoctor: 'Installation and architecture checks', setupHint: 'This is the project root currently used by the Web Workbench. Agent tools remain scoped to each calling Session working directory.',
-    projectRoot: 'Current projectRoot', switchProjectRoot: 'Switch and reload', projectRootHint: 'Enter an existing absolute directory. It applies for this DSH process; save Plugin config to persist it.', switchingProjectRoot: 'Switching…', projectRootUpdated: 'Switched and reloaded Harbor Jobs.',
+    artifacts: 'Artifact Registry', setupDoctor: 'Installation and architecture checks', setupHint: 'This is the project root currently used by the Web Workbench. Every Harbor Agent Tool call follows its Session automatically while tool execution remains Session-isolated.',
+    projectRoot: 'Current projectRoot', switchProjectRoot: 'Switch and reload', projectRootHint: 'Enter an existing absolute directory. It applies now; the next Harbor Agent Tool call will follow its Session automatically.', switchingProjectRoot: 'Switching…', projectRootUpdated: 'Switched and reloaded Harbor Jobs.', projectRootConfigured: 'Source: Plugin startup configuration', projectRootAgent: 'Source: most recent Harbor Agent call (automatic)', projectRootManual: 'Source: manually switched for this run',
     pluginVersion: 'Plugin version', checkingUpdate: 'Checking for updates…', updateAvailable: 'Update available', upToDate: 'Up to date', updateUnavailable: 'Update check unavailable', currentVersion: 'Current version', latestVersion: 'Latest version', updateHint: 'Run this command in a terminal to update the Plugin, Skill, and Harbor Adapter. The browser never installs updates silently.', offlineUpdateHint: 'Harbor remains fully functional. Check the network and retry, or run the installer with @latest in a terminal.', copyUpdateCommand: 'Copy update command', updateCommandCopied: 'Update command copied', checkAgain: 'Check again', viewRelease: 'View release notes', checkedAt: 'Checked', staleVersion: 'Showing the most recent successful check.',
     credentialPolicy: 'Secret persistence policy', sessionCredential: 'This run only', credentialStore: 'DSH credential store', plaintextCredential: 'Plaintext settings', supported: 'Supported', hostServiceRequired: 'Host credential service required', forbidden: 'Blocked', sessionCredentialHint: 'Default. Inject through environment variables or a short-lived Job capability; never include it in evaluation identity or reports.', credentialStoreHint: 'Enabled only after DSH exposes a formal credential service; settings.yaml is not treated as a credential store.', plaintextCredentialHint: 'Harbor never writes Authorization, API keys, or OAuth tokens into project settings.',
     stageNav: 'Evaluation stages', datasetTasks: 'Evaluation tasks', datasetSource: 'Task source', taskInstruction: 'Task instruction', instructionFile: 'Instruction file', snapshot: 'Job snapshot', historicalFallback: 'Historical source fallback',
@@ -63,7 +63,7 @@ const dictionaries = {
     evaluatorImplementation: 'Evaluator implementation', evaluatorKind: 'Implementation kind', evaluatorProtocol: 'Interface protocol', editableFiles: 'Files you can modify', openFile: 'Open', editingFile: 'Editing', editSource: 'Edit the current file directly', evaluatorVersion: 'New Evaluator version', stackVersion: 'New Stack version', saveEvaluator: 'Save as new identity', saving: 'Saving…', saved: 'Saved. Meta-evaluate it and establish a fresh Baseline next.', reloadBeforeSave: 'The source changed; reload before saving.', noEvaluatorInterface: 'This Stack has no harbor-dsh-evaluator/v1 interface, so safe UI editing is unavailable.', editWarning: 'Saving updates source and identities only. It never runs an evaluation or Gate.',
     upgradeStep1: 'Inspect the current Evaluator, Rubric, Judge, Contract, and representative false-positive or false-negative Trials.', upgradeStep2: 'Create a new evaluator identity, version, and source file; never overwrite the historical evaluator.', upgradeStep3: 'Meta-evaluate against independently maintained, provenance-bearing GT using ESF, SCE, RCR, latency, and cost as appropriate.', upgradeStep4: 'Update the Evaluation Stack identity and preview the Context v2 impact.', upgradeStep5: 'Establish a fresh Agent baseline under the new score semantics before comparing later Candidates.', evaluatorPrompt: 'Use evolve-agent-with-harbor to upgrade this evaluator. First inspect governance evidence, clarify GT source type, provenance, ownership, and target meta-metrics, then propose a new immutable evaluator identity and fresh-baseline plan. Do not edit files or run an evaluation until I approve the controlled change.',
     queryTrial: 'Task / Trial', statusLabel: 'Status', attempt: 'Attempt', population: 'Population',
-    experimentIdentity: 'Fixed experiment identity', experimentIdentityHint: 'Candidate, Dataset, Evaluation Stack, and Runtime jointly define a reproducible and comparable experiment.', immutableCandidateFiles: 'Candidate contents', file: 'File', size: 'Size', digest: 'Digest', runtime: 'Runtime', evaluationStack: 'Evaluation Stack',
+    experimentIdentity: 'Experiment identity', experimentIdentityHint: 'Candidate, Dataset, Evaluation Stack, and model identity define comparability. The DSH runtime follows the latest release by default and records that policy explicitly.', immutableCandidateFiles: 'Candidate contents', file: 'File', size: 'Size', digest: 'Digest', runtime: 'Runtime', evaluationStack: 'Evaluation Stack',
     integrationBoundary: 'Execution and scoring boundary', hardRequirements: 'Required before a score is valid', populationEvidence: 'Population evidence', metric: 'Metric', aggregate: 'Aggregate', coverage: 'Valid coverage', trialGroups: 'Trial status groups',
     controlledHypotheses: 'Controlled optimization hypotheses', rootCause: 'Evidence points to', affectedTrials: 'Affected trials', expectedEffect: 'Expected metric effect', mutationSurface: 'Allowed mutation', forbiddenSurface: 'Forbidden mutation', guardrails: 'Guardrails', rollback: 'Rollback condition', nextExperiment: 'Next controlled experiment', noHypotheses: 'No controlled optimization hypothesis was generated for this Job.',
     gateEvidence: 'Executed promotion gate', decision: 'Gate result', policy: 'Gate policy', eligible: 'Gate prerequisites satisfied', notEligible: 'Gate prerequisites not satisfied', metricDeltas: 'Metric deltas', newExceptions: 'New exceptions', artifactRegressions: 'Artifact regressions', reasons: 'Gate evidence',
@@ -132,13 +132,13 @@ function nextVersion(value) {
   return match ? `${match[1]}.${match[2]}.${Number(match[3]) + 1}` : ''
 }
 
-function useDashboard(poll = true) {
+function useDashboard(poll = true, workspace = '', offset = 0) {
   const [state, setState] = useState({ status: 'loading' })
   const load = useCallback(async (quiet = false) => {
     if (!quiet) setState(current => ({ ...current, status: current.value ? 'refreshing' : 'loading' }))
-    try { setState({ status: 'ready', value: await api('dashboard') }) }
+    try { setState({ status: 'ready', value: await api('dashboard', { workspace, offset, limit: 20 }) }) }
     catch (error) { setState(current => ({ ...current, status: 'error', error: error.message })) }
-  }, [])
+  }, [workspace, offset])
   useEffect(() => { void load() }, [load])
   useEffect(() => {
     if (!poll || !state.value) return undefined
@@ -196,7 +196,7 @@ function TrialDetail({ detail, t }) {
   </article>
 }
 
-function TrialExplorer({ job, active, t }) {
+function TrialExplorer({ job, workspace, active, t }) {
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState('')
   const [validity, setValidity] = useState('')
@@ -207,20 +207,20 @@ function TrialExplorer({ job, active, t }) {
   const [detail, setDetail] = useState()
   useEffect(() => {
     let cancelled = false
-    const load = () => api('trials', { job, offset, limit: 100, query, status, validity, sort }).then(value => { if (!cancelled) setPage(value) })
+    const load = () => api('trials', { workspace, job, offset, limit: 100, query, status, validity, sort }).then(value => { if (!cancelled) setPage(value) })
     const debounce = window.setTimeout(() => void load(), 120)
     const poll = active ? window.setInterval(() => void load(), 2_500) : undefined
     return () => { cancelled = true; window.clearTimeout(debounce); if (poll) window.clearInterval(poll) }
-  }, [job, offset, query, status, validity, sort, active])
-  const choose = async trial => { setSelected(trial); setDetail(await api('trial', { job, trial })) }
+  }, [workspace, job, offset, query, status, validity, sort, active])
+  const choose = async trial => { setSelected(trial); setDetail(await api('trial', { workspace, job, trial })) }
   return <div className="hse-trial-layout"><div className="hse-trial-list"><div className="hse-trial-tools"><input className="hse-input" value={query} placeholder={t('search')} onChange={event => { setQuery(event.target.value); setOffset(0) }}/><select className="hse-select" value={status} onChange={event => { setStatus(event.target.value); setOffset(0) }}><option value="">{t('all')}</option><option value="completed">completed</option><option value="candidate-quality-failed">candidate-quality-failed</option><option value="infrastructure-error">infrastructure-error</option><option value="evaluation-error">evaluation-error</option><option value="running-agent">running-agent</option><option value="evaluating">evaluating</option></select><select className="hse-select" value={validity} onChange={event => { setValidity(event.target.value); setOffset(0) }}><option value="">{t('validity')}</option><option value="true">{t('valid')}</option><option value="false">{t('invalid')}</option></select><select className="hse-select" value={sort} onChange={event => setSort(event.target.value)}><option value="dataset-order">{t('datasetOrder')}</option><option value="latest-completed">{t('latest')}</option><option value="lowest-score">{t('lowest')}</option><option value="errors">{t('errorsFirst')}</option></select></div>
     <div className="hse-table-wrap"><table className="hse-table"><thead><tr><th>#</th><th>{t('queryTrial')}</th><th>{t('statusLabel')}</th><th>{t('score')}</th><th>{t('attempt')}</th></tr></thead><tbody>{page?.items?.map(trial => <tr key={`${trial.id}-${trial.attempt}`} data-selected={String(selected) === String(trial.id)}><td>{trial.datasetOrder + 1}</td><td><button onClick={() => void choose(trial.id ?? trial.datasetTrial)}>{trial.displayName ?? trial.datasetTrial ?? trial.name}</button></td><td>{trial.status}</td><td>{trial.score?.valid ? format(trial.score.value ?? trial.rewards?.reward) : '—'}</td><td>{trial.attempt}</td></tr>)}</tbody></table></div>
     <div className="hse-pager"><span>{page?.total ? `${offset + 1}–${Math.min(offset + (page.items?.length ?? 0), page.total)} / ${page.total}` : '0 / 0'}</span><button disabled={!offset} onClick={() => setOffset(Math.max(0, offset - 100))}>{t('previous')}</button><button disabled={!page?.hasMore} onClick={() => setOffset(offset + 100)}>{t('next')}</button></div></div><TrialDetail detail={detail} t={t}/></div>
 }
 
-function DatasetPanel({ job, artifacts, t }) {
+function DatasetPanel({ job, workspace, artifacts, t }) {
   const [state, setState] = useState({ status: 'loading' })
-  useEffect(() => { let alive = true; void api('dataset', { job }).then(value => alive && setState({ status: 'ready', value }), error => alive && setState({ status: 'error', error: error.message })); return () => { alive = false } }, [job])
+  useEffect(() => { let alive = true; void api('dataset', { workspace, job }).then(value => alive && setState({ status: 'ready', value }), error => alive && setState({ status: 'error', error: error.message })); return () => { alive = false } }, [workspace, job])
   const dataset = state.value ?? artifacts.datasetPreview ?? artifacts.dataset
   const badcases = (dataset?.tasks ?? []).filter(task => task.metadata?.badcase).length
   return <><section className="hse-section"><div className="hse-grid"><div className="hse-card"><span>ID / version</span><b>{artifacts.dataset?.dataset_id ?? '—'} · {artifacts.dataset?.version ?? '—'}</b><code>{short(artifacts.dataset?.source_digest)}</code></div><div className="hse-card"><span>{t('population')}</span><b>{artifacts.dataset?.task_count ?? dataset?.task_count ?? 0}</b><code>{badcases} {t('badcase')} · {dataset?.source === 'job-snapshot' ? t('snapshot') : dataset?.source === 'historical-source-fallback' ? t('historicalFallback') : '—'}</code></div></div></section>
@@ -272,23 +272,23 @@ function ArtifactPreview({ detail, t }) {
   return <article className="hse-preview"><header className="hse-preview-head"><div><b>{preview.title ?? t('generatedOutput')}</b><span>{preview.kind} · {preview.format}</span></div><div><b>{t('previewSource')}</b><span>{provenance.map(item => item.label ?? item.kind).join(' · ') || preview.source || '—'}</span></div></header>{body}</article>
 }
 
-function RendererPanel({ job, active, component, t }) {
+function RendererPanel({ job, workspace, active, component, t }) {
   const [page, setPage] = useState()
   const [selected, setSelected] = useState()
   const [detail, setDetail] = useState()
-  useEffect(() => { let alive = true; const load = () => api('trials', { job, offset: 0, limit: 100, sort: 'dataset-order' }).then(value => { if (!alive) return; setPage(value); if (value.items?.length) setSelected(current => current ?? value.items[0].id ?? value.items[0].datasetTrial) }); void load(); const poll = active ? window.setInterval(() => void load(), 2_500) : undefined; return () => { alive = false; if (poll) window.clearInterval(poll) } }, [job, active])
-  useEffect(() => { if (!selected) return; let alive = true; void api('trial', { job, trial: selected }).then(value => alive && setDetail(value)); return () => { alive = false } }, [job, selected])
+  useEffect(() => { let alive = true; const load = () => api('trials', { workspace, job, offset: 0, limit: 100, sort: 'dataset-order' }).then(value => { if (!alive) return; setPage(value); if (value.items?.length) setSelected(current => current ?? value.items[0].id ?? value.items[0].datasetTrial) }); void load(); const poll = active ? window.setInterval(() => void load(), 2_500) : undefined; return () => { alive = false; if (poll) window.clearInterval(poll) } }, [workspace, job, active])
+  useEffect(() => { if (!selected) return; let alive = true; void api('trial', { workspace, job, trial: selected }).then(value => alive && setDetail(value)); return () => { alive = false } }, [workspace, job, selected])
   return <><section className="hse-section"><div className="hse-grid"><div className="hse-card"><span>{t('renderer')}</span><b>{component?.id ?? '—'} · {component?.version ?? '—'}</b><code>{short(component?.digest)}</code></div><div className="hse-card"><span>{t('generatedOutput')}</span><b>{page?.items?.length ?? 0} Trials</b><code>{t('previewSource')}: {detail?.preview?.provenance?.map(item => item.label ?? item.kind).join(' · ') || '—'}</code></div></div></section><section className="hse-section"><h3>{t('generatedOutput')}</h3><div className="hse-output-layout"><div className="hse-output-list">{(page?.items ?? []).map((trial, index) => <button type="button" className="hse-output-item" data-active={String(selected) === String(trial.id ?? trial.datasetTrial)} key={`${trial.id}-${trial.attempt}`} onClick={() => setSelected(trial.id ?? trial.datasetTrial)}><b>{index + 1}. {trial.displayName ?? trial.datasetTrial ?? trial.name}</b><span>{trial.status} · attempt {trial.attempt}</span></button>)}</div><ArtifactPreview detail={detail} t={t}/></div></section></>
 }
 
-function TrialAssessmentReport({ job, active, artifacts, t }) {
+function TrialAssessmentReport({ job, workspace, active, artifacts, t }) {
   const [offset, setOffset] = useState(0)
   const [page, setPage] = useState()
   const [selected, setSelected] = useState()
   const [detailState, setDetailState] = useState({ status: 'idle' })
   useEffect(() => {
     let alive = true
-    const load = () => api('trials', { job, offset, limit: REPORT_PAGE_SIZE, sort: 'dataset-order' }).then(value => {
+    const load = () => api('trials', { workspace, job, offset, limit: REPORT_PAGE_SIZE, sort: 'dataset-order' }).then(value => {
       if (!alive) return
       setPage(value)
       if (value.items?.length) setSelected(current => value.items.some(item => String(item.id ?? item.datasetTrial) === String(current)) ? current : value.items[0].id ?? value.items[0].datasetTrial)
@@ -297,15 +297,15 @@ function TrialAssessmentReport({ job, active, artifacts, t }) {
     void load()
     const poll = active ? window.setInterval(() => void load(), 2_500) : undefined
     return () => { alive = false; if (poll) window.clearInterval(poll) }
-  }, [job, active, offset])
+  }, [workspace, job, active, offset])
   useEffect(() => { setOffset(0) }, [job])
   useEffect(() => {
     if (!selected) return
     let alive = true
     setDetailState({ status: 'loading' })
-    void api('trial', { job, trial: selected }).then(value => alive && setDetailState({ status: 'ready', value }), error => alive && setDetailState({ status: 'error', error: error.message }))
+    void api('trial', { workspace, job, trial: selected }).then(value => alive && setDetailState({ status: 'ready', value }), error => alive && setDetailState({ status: 'error', error: error.message }))
     return () => { alive = false }
-  }, [job, selected])
+  }, [workspace, job, selected])
   const labels = metricLabelMap(artifacts)
   const primary = artifacts.contract?.primary_metric ?? 'reward'
   const declared = (artifacts.contract?.metrics ?? []).map(item => item.id).filter(id => id !== primary)
@@ -322,7 +322,7 @@ function TrialAssessmentReport({ job, active, artifacts, t }) {
   </section>
 }
 
-function ReporterPanel({ job, active, artifacts, t }) {
+function ReporterPanel({ job, workspace, active, artifacts, t }) {
   const summary = artifacts.summary ?? {}
   const population = artifacts.population ?? {}
   const metrics = population.metrics ?? summary.metrics ?? {}
@@ -334,21 +334,21 @@ function ReporterPanel({ job, active, artifacts, t }) {
   return <><section className="hse-section"><h3>{t('populationEvidence')}</h3>{configured ? <div className="hse-hook-state" data-executed={Boolean(configured.executed)}><b>{t('hookExecution')}: {configured.id ?? '—'} · {configured.version ?? '—'}</b><br/>{configured.executed ? t('configuredHookRun') : t('configuredHookNotRun')}</div> : null}<div className="hse-kpis"><div className="hse-kpi"><span>{t('trials')}</span><b>{total}</b></div><div className="hse-kpi"><span>{t('valid')}</span><b className="hse-valid">{valid ?? '—'}</b></div><div className="hse-kpi"><span>{t('invalid')}</span><b className="hse-invalid">{summary.n_invalid_scores ?? population.invalid_population_size ?? '—'}</b></div><div className="hse-kpi"><span>{t('exceptions')}</span><b>{summary.n_exceptions ?? 0}</b></div><div className="hse-kpi"><span>{t('health')}</span><b>{summary.artifact_validation?.valid ? 'VALID' : 'CHECK'}</b></div></div></section>
     <section className="hse-section"><div className="hse-table-wrap"><table className="hse-evidence-table"><thead><tr><th>{t('metric')}</th><th>{t('aggregate')}</th><th>{t('coverage')}</th></tr></thead><tbody>{Object.entries(metrics).map(([id, value]) => <tr key={id}><td><b>{labels[id] ?? id}</b><br/><code>{id}</code></td><td>{format(value)}</td><td>{valid ?? '—'} / {total}</td></tr>)}</tbody></table></div></section>
     <section className="hse-section"><h3>{t('trialGroups')}</h3><div className="hse-chip-list">{groups.map(group => <span key={group.id}>{group.id}: {group.count}</span>)}</div></section>
-    <TrialAssessmentReport job={job} active={active} artifacts={artifacts} t={t}/></>
+    <TrialAssessmentReport job={job} workspace={workspace} active={active} artifacts={artifacts} t={t}/></>
 }
 
 function TrialDeltaTable({ title, items }) {
   return <section className="hse-section"><h3>{title} · {items?.length ?? 0}</h3>{items?.length ? <div className="hse-table-wrap"><table className="hse-evidence-table"><thead><tr><th>Trial</th><th>Baseline</th><th>Candidate</th><th>Delta</th></tr></thead><tbody>{items.map(item => <tr key={item.trial}><td>{item.trial}</td><td>{format(item.baseline)}</td><td>{format(item.candidate)}</td><td className="hse-delta" data-positive={(item.delta ?? 0) >= 0}>{item.delta >= 0 ? '+' : ''}{format(item.delta)}</td></tr>)}</tbody></table></div> : <span className="hse-muted">0</span>}</section>
 }
 
-function ComparePanel({ job, jobs, artifacts, t }) {
+function ComparePanel({ job, workspace, jobs, artifacts, t }) {
   const current = jobs.find(item => item.name === job)
   const all = jobs.filter(item => item.name !== job)
   const matched = all.filter(item => item.candidate?.candidate_id === current?.candidate?.candidate_id && item.dataset?.dataset_id === current?.dataset?.dataset_id && item.dataset?.version === current?.dataset?.version && item.mode === current?.mode)
   const candidates = matched.length ? matched : all
   const [baseline, setBaseline] = useState(candidates[0]?.name ?? '')
   const [state, setState] = useState()
-  useEffect(() => { if (!baseline) return; let alive = true; void api('compare', { baseline, candidate: job }).then(value => alive && setState({ value }), error => alive && setState({ error: error.message })); return () => { alive = false } }, [baseline, job])
+  useEffect(() => { if (!baseline) return; let alive = true; void api('compare', { workspace, baseline, candidate: job }).then(value => alive && setState({ value }), error => alive && setState({ error: error.message })); return () => { alive = false } }, [workspace, baseline, job])
   const labels = metricLabelMap(artifacts)
   return <><section className="hse-section"><h3>{t('compare')}</h3><div className="hse-compare-select"><select className="hse-select" value={baseline} onChange={event => setBaseline(event.target.value)}><option value="">{t('baseline')}</option>{candidates.map(item => <option key={item.name} value={item.name}>{item.name}</option>)}</select></div>{state?.error ? <div className="hse-error">{state.error}</div> : state?.value ? <><div className={state.value.comparable ? 'hse-valid' : 'hse-invalid'}>{state.value.comparable ? `✓ ${t('comparable')}` : `× ${t('notComparable')}`}</div><p className="hse-muted">{state.value.note}</p><div className="hse-grid">{Object.entries(state.value.metrics ?? {}).map(([metric, values]) => <div className="hse-card" key={metric}><span>{labels[metric] ?? metric} · {values.direction}</span><b>{format(values.baseline)} → {format(values.candidate)}</b><code className="hse-delta" data-positive={(values.improvement ?? values.delta ?? 0) >= 0}>{typeof values.delta === 'number' ? `${values.delta >= 0 ? '+' : ''}${format(values.delta)}` : '—'}</code></div>)}</div></> : <span className="hse-muted">{t('noData')}</span>}</section>{state?.value ? <><TrialDeltaTable title={t('improved')} items={state.value.improvedTrials}/><TrialDeltaTable title={t('regressed')} items={state.value.regressedTrials}/></> : null}<div className="hse-capability">{t('explicitGate')}</div></>
 }
@@ -388,7 +388,7 @@ function GateEvidencePanel({ artifacts, t }) {
   </>
 }
 
-function EvaluatorEditor({ value, reload, t }) {
+function EvaluatorEditor({ value, workspace, reload, t }) {
   const active = value.evaluatorInterface
   const evaluator = active?.evaluator
   const files = evaluator?.editable_files ?? []
@@ -411,6 +411,7 @@ function EvaluatorEditor({ value, reload, t }) {
     setSaveState({ status: 'saving' })
     try {
       await mutate('evaluator', {
+        workspace,
         stackPath: active.stack.path,
         filePath: selected.path,
         content: draft,
@@ -434,10 +435,10 @@ function EvaluatorEditor({ value, reload, t }) {
   </section>
 }
 
-function GovernancePanel({ job, t }) {
+function GovernancePanel({ job, workspace, t }) {
   const [state, setState] = useState({ status: 'loading' })
   const [copied, setCopied] = useState(false)
-  const load = useCallback(async () => { try { setState({ status: 'ready', value: await api('governance', { job }) }) } catch (error) { setState({ status: 'error', error: error.message }) } }, [job])
+  const load = useCallback(async () => { try { setState({ status: 'ready', value: await api('governance', { workspace, job }) }) } catch (error) { setState({ status: 'error', error: error.message }) } }, [workspace, job])
   useEffect(() => { void load() }, [load])
   if (state.status === 'loading') return <div className="hse-empty"><div className="hse-spin"/>{t('loading')}</div>
   if (state.status === 'error') return <div className="hse-capability">{state.error}</div>
@@ -448,39 +449,43 @@ function GovernancePanel({ job, t }) {
   const prompt = t('evaluatorPrompt')
   const copy = async () => { try { await navigator.clipboard.writeText(prompt); setCopied(true); window.setTimeout(() => setCopied(false), 1_500) } catch { setCopied(false) } }
   return <><section className="hse-section"><h3>{t('currentEvaluator')}</h3><p className="hse-muted">{t('governanceHint')}</p><div className="hse-governance-id"><div className="hse-card"><span>{t('evaluator')}</span><b>{evaluator?.id ?? '—'} · {evaluator?.version ?? '—'}</b><code>{evaluator?.entry ?? '—'}</code></div><div className="hse-card"><span>{t('rubric')}</span><b>{rubric?.id ?? '—'} · {rubric?.version ?? '—'}</b><code>{rubric?.entry ?? '—'}</code></div><div className="hse-card"><span>Judge</span><b>{value.judge?.provider ?? '—'} / {value.judge?.model ?? '—'}</b><code>{value.judge?.version ?? '—'}</code></div></div></section>
-    <EvaluatorEditor value={value} reload={load} t={t}/>
+    <EvaluatorEditor value={value} workspace={workspace} reload={load} t={t}/>
     {[['evaluator', evaluator], ['rubric', rubric]].map(([role, component]) => <section className="hse-section" key={role}><h3>{role === 'evaluator' ? t('evaluator') : t('rubric')} · {component?.id ?? '—'} · {component?.version ?? '—'}</h3><div className="hse-grid"><div className="hse-card"><span>{t('sourceCode')}</span><b>{component?.entry ?? '—'}</b><code>{short(component?.digest)}</code></div><div className="hse-card"><span>Reward semantics</span><b>{component?.reward_affecting ? 'reward-affecting' : 'non-reward'}</b><code>{component?.source?.error ?? 'read-only'}</code></div></div>{component?.source?.text ? <details className="hse-source-details"><summary>{t('sourceCode')}</summary><pre className="hse-source">{component.source.text}</pre></details> : <div className="hse-capability">{component?.source?.error}</div>}</section>)}
     <section className="hse-section hse-upgrade"><h3>{t('upgradeEvaluator')}</h3><p className="hse-muted">{t('upgradeHint')}</p><ol>{[1, 2, 3, 4, 5].map(index => <li key={index}>{t(`upgradeStep${index}`)}</li>)}</ol><div className="hse-grid"><div className="hse-card"><span>{t('freshBaseline')}</span><b>Evaluator / Rubric / Judge identity</b><code>{(workflow.freshBaselineRequiredWhen ?? []).join(' · ')}</code></div><div className="hse-card"><span>{t('metaEvaluation')}</span><b>Independent GT · ESF · SCE · RCR</b><code>No automatic evaluation or Gate</code></div></div><pre className="hse-prompt">{prompt}</pre><div className="hse-prompt-actions"><button className="hse-button" type="button" onClick={() => void copy()}>{copied ? t('copied') : t('copyPrompt')}</button></div></section></>
 }
 
-function MetaEvaluationPanel({ job, t }) {
+function MetaEvaluationPanel({ job, workspace, t }) {
   const [state, setState] = useState({ status: 'loading' })
+  const [offset, setOffset] = useState(0)
+  const pageSize = 20
   useEffect(() => {
     let alive = true
-    void api('meta', { job }).then(value => alive && setState({ status: 'ready', value }), error => alive && setState({ status: 'error', error: error.message }))
+    void api('meta', { workspace, job, offset, limit: pageSize }).then(value => alive && setState({ status: 'ready', value }), error => alive && setState({ status: 'error', error: error.message }))
     return () => { alive = false }
-  }, [job])
+  }, [workspace, job, offset])
+  useEffect(() => { setOffset(0) }, [workspace, job])
   if (state.status === 'loading') return <div className="hse-empty"><div className="hse-spin"/>{t('loading')}</div>
   if (state.status === 'error') return <div className="hse-error">{state.error}</div>
   const value = state.value ?? {}
   const groundTruth = value.groundTruth
   const report = value.report
   const metrics = report?.metrics ?? {}
+  const pagination = value.disagreementPagination ?? {}
   return <>
     <section className="hse-section"><h3>{t('metaWorkflow')}</h3><p className="hse-muted">{t('metaWorkflowHint')}</p><div className="hse-meta-flow"><div><b>1. Evaluator Candidate</b><br/>{value.workflow?.candidate}</div><div><b>2. Fixed artifacts + GT</b><br/>{value.workflow?.dataset}</div><div><b>3. Repeated observations</b><br/>{value.workflow?.output}</div><div><b>4. ESF / SCE / RCR</b><br/>{value.workflow?.verifier}</div></div></section>
     <section className="hse-section"><h3>{t('groundTruth')}</h3>{groundTruth ? <><div className="hse-grid"><div className="hse-card"><span>ID / version</span><b>{groundTruth.id} · {groundTruth.version}</b><code>{groundTruth.path}</code></div><div className="hse-card"><span>{t('gtSource')}</span><b>{groundTruth.source?.kind}</b><code>{groundTruth.source?.description}</code></div><div className="hse-card"><span>{t('gtCases')}</span><b>{groundTruth.caseCount}</b><code>{groundTruth.criteria?.map(item => item.label ?? item.id).join(' · ')}</code></div><div className="hse-card"><span>{t('gtBadcases')}</span><b>{groundTruth.badcaseCount}</b><code>{t('gtProvenance')}: {groundTruth.source?.provenance}</code></div></div></> : <div className="hse-capability"><b>{t('groundTruthRequired')}</b><br/>{t('gtKinds')}</div>}<div className="hse-hook-state" data-executed={Boolean(report)}><b>{t('metaNext')}</b><br/>{value.workflow?.nextAction}</div></section>
-    {report ? <><section className="hse-section"><h3>Evaluator · {report.evaluator?.id} · {report.evaluator?.version}</h3><div className="hse-kpis"><div className="hse-kpi"><span>ESF ↑</span><b>{format(metrics.esf)}</b></div><div className="hse-kpi"><span>SCE ↓</span><b>{format(metrics.sce)}</b></div><div className="hse-kpi"><span>RCR ↑</span><b>{format(metrics.rcr)}</b></div><div className="hse-kpi"><span>{t('coverage')}</span><b>{format(report.coverage?.rate)}</b></div><div className="hse-kpi"><span>{t('disagreements')}</span><b>{report.disagreements?.length ?? 0}</b></div></div></section>{report.disagreements?.length ? <section className="hse-section"><h3>{t('disagreements')}</h3><div className="hse-table-wrap"><table className="hse-evidence-table"><thead><tr><th>Case</th><th>Criterion</th><th>GT</th><th>Observed</th></tr></thead><tbody>{report.disagreements.slice(0, 20).map((item, index) => <tr key={`${item.case_id}-${item.repeat}-${item.criterion_id}-${index}`}><td>{item.case_id}</td><td>{item.criterion_id}</td><td>{format(item.ground_truth)}</td><td>{format(item.observed)}</td></tr>)}</tbody></table></div></section> : null}</> : null}
+    {report ? <><section className="hse-section"><h3>Evaluator · {report.evaluator?.id} · {report.evaluator?.version}</h3><div className="hse-kpis"><div className="hse-kpi"><span>ESF ↑</span><b>{format(metrics.esf)}</b></div><div className="hse-kpi"><span>SCE ↓</span><b>{format(metrics.sce)}</b></div><div className="hse-kpi"><span>RCR ↑</span><b>{format(metrics.rcr)}</b></div><div className="hse-kpi"><span>{t('coverage')}</span><b>{format(report.coverage?.rate)}</b></div><div className="hse-kpi"><span>{t('disagreements')}</span><b>{pagination.total ?? report.disagreements?.length ?? 0}</b></div></div></section>{pagination.total ? <section className="hse-section"><h3>{t('disagreements')}</h3><div className="hse-table-wrap"><table className="hse-evidence-table"><thead><tr><th>Case</th><th>Criterion</th><th>GT</th><th>Observed</th></tr></thead><tbody>{(report.disagreements ?? []).map((item, index) => <tr key={`${item.case_id}-${item.repeat}-${item.criterion_id}-${index}`}><td>{item.case_id}</td><td>{item.criterion_id}</td><td>{format(item.ground_truth)}</td><td>{format(item.observed)}</td></tr>)}</tbody></table></div><div className="hse-pager"><span>{pagination.total ? `${offset + 1}–${Math.min(offset + (report.disagreements?.length ?? 0), pagination.total)} / ${pagination.total}` : '0 / 0'}</span><button disabled={!offset} onClick={() => setOffset(Math.max(0, offset - pageSize))}>{t('previous')}</button><button disabled={!pagination.hasMore} onClick={() => setOffset(offset + pageSize)}>{t('next')}</button></div></section> : null}</> : null}
   </>
 }
 
-function Workbench({ job, jobs, close, t }) {
+function Workbench({ job, workspace, jobs, close, t }) {
   const [state, setState] = useState({ status: 'loading' })
   const [stage, setStage] = useState('candidate')
   const activeJob = jobs.find(item => item.name === job)
   const load = useCallback(async () => {
-    try { setState({ status: 'ready', value: await api('job', { job }) }) }
+    try { setState({ status: 'ready', value: await api('job', { workspace, job }) }) }
     catch (error) { setState({ status: 'error', error: error.message }) }
-  }, [job])
+  }, [workspace, job])
   useEffect(() => { void load() }, [load])
   useEffect(() => { if (!activeJob?.progress?.active) return undefined; const timer = window.setInterval(() => void load(), 2_500); return () => window.clearInterval(timer) }, [activeJob?.progress?.active, load])
   useEffect(() => { const escape = event => event.key === 'Escape' && close(); window.addEventListener('keydown', escape); return () => window.removeEventListener('keydown', escape) }, [close])
@@ -489,13 +494,13 @@ function Workbench({ job, jobs, close, t }) {
   const component = artifacts.stack?.components?.[stage]
   let content
   if (stage === 'candidate') content = <CandidatePanel artifacts={artifacts} t={t}/>
-  else if (stage === 'dataset') content = <DatasetPanel job={job} artifacts={artifacts} t={t}/>
-  else if (stage === 'renderer') content = <RendererPanel job={job} active={Boolean(activeJob?.progress?.active)} component={component} t={t}/>
-  else if (stage === 'judge') content = <><GovernancePanel job={job} t={t}/><section className="hse-section"><h3>{t('trials')} / {t('evidence')}</h3><TrialExplorer job={job} active={Boolean(activeJob?.progress?.active)} t={t}/></section></>
-  else if (stage === 'meta') content = <MetaEvaluationPanel job={job} t={t}/>
-  else if (stage === 'reporter') content = <ReporterPanel job={job} active={Boolean(activeJob?.progress?.active)} artifacts={artifacts} t={t}/>
+  else if (stage === 'dataset') content = <DatasetPanel job={job} workspace={workspace} artifacts={artifacts} t={t}/>
+  else if (stage === 'renderer') content = <RendererPanel job={job} workspace={workspace} active={Boolean(activeJob?.progress?.active)} component={component} t={t}/>
+  else if (stage === 'judge') content = <><GovernancePanel job={job} workspace={workspace} t={t}/><section className="hse-section"><h3>{t('trials')} / {t('evidence')}</h3><TrialExplorer job={job} workspace={workspace} active={Boolean(activeJob?.progress?.active)} t={t}/></section></>
+  else if (stage === 'meta') content = <MetaEvaluationPanel job={job} workspace={workspace} t={t}/>
+  else if (stage === 'reporter') content = <ReporterPanel job={job} workspace={workspace} active={Boolean(activeJob?.progress?.active)} artifacts={artifacts} t={t}/>
   else if (stage === 'optimizer') content = <OptimizerPanel artifacts={artifacts} t={t}/>
-  else if (stage === 'gate') content = <><ComparePanel job={job} jobs={jobs} artifacts={artifacts} t={t}/><GateEvidencePanel artifacts={artifacts} t={t}/></>
+  else if (stage === 'gate') content = <><ComparePanel job={job} workspace={workspace} jobs={jobs} artifacts={artifacts} t={t}/><GateEvidencePanel artifacts={artifacts} t={t}/></>
   else content = stage === 'integration' ? <ContractPanel artifacts={artifacts} component={component} t={t}/> : <section className="hse-section"><div className="hse-components"><div className="hse-component"><span>{stage}{component?.reward_affecting ? ' · reward-affecting' : ''}</span><b>{component?.id ?? '—'} · {component?.version ?? '—'}</b><code>{short(component?.digest)}</code></div></div></section>
   return <div className="hse-overlay" role="presentation" onMouseDown={event => event.target === event.currentTarget && close()}><aside className="hse-drawer" role="dialog" aria-modal="true" aria-label={job}>
     <header className="hse-drawer-head"><div><h2>{job}</h2><p>{activeJob?.candidate?.candidate_id ?? '—'} · {activeJob?.candidate?.version ?? '—'} · {activeJob?.mode ?? '—'} · {activeJob?.progress?.completed ?? 0}/{activeJob?.progress?.total ?? 0}</p></div><button type="button" className="hse-close" onClick={close}>{t('close')}</button></header>
@@ -504,11 +509,23 @@ function Workbench({ job, jobs, close, t }) {
 }
 
 function DashboardView({ t }) {
-  const state = useDashboard(true)
+  const [workspace, setWorkspace] = useState('')
+  const [offset, setOffset] = useState(0)
+  const state = useDashboard(true, workspace, offset)
   const [selected, setSelected] = useState()
   const snapshot = state.value
   const stats = [[t('jobs'), snapshot?.overview?.totalJobs ?? '—'], [t('completed'), snapshot?.overview?.completedJobs ?? '—'], [t('running'), snapshot?.overview?.activeJobs ?? '—'], [snapshot?.overview?.latestMetric?.name ?? t('score'), format(snapshot?.overview?.latestMetric?.value)]]
-  return <main className="hse-root"><div className="hse-page"><section className="hse-hero" style={{ '--ocean-image': `url(${oceanBackground})` }}><button className="hse-refresh" onClick={() => void state.load()}>{t('refresh')}</button><div className="hse-eyebrow"><span className="hse-whale" aria-hidden="true">🐳</span>{t('eyebrow')}</div><h1>{t('heroTitle')}</h1><p>{t('heroBody')}</p><div className="hse-stats">{stats.map(([label, value]) => <div className="hse-stat" key={label}><span>{label}</span><b>{value}</b></div>)}</div></section><div className="hse-head"><h2>{t('jobs')}</h2><p>{t('jobsHint')}</p></div>{state.status === 'loading' ? <div className="hse-empty"><div className="hse-spin"/>{t('loading')}</div> : state.status === 'error' && !snapshot ? <div className="hse-error">{state.error}<br/><button className="hse-button" onClick={() => void state.load()}>{t('retry')}</button></div> : !snapshot?.jobs?.length ? <div className="hse-empty">{t('empty')}</div> : <div className="hse-list">{snapshot.jobs.map(job => <JobCard job={job} t={t} open={setSelected} key={job.name}/>)}</div>}</div>{selected ? <Workbench job={selected} jobs={snapshot.jobs} close={() => setSelected(undefined)} t={t}/> : null}</main>
+  const pagination = snapshot?.jobPagination ?? {}
+  const switchWorkspace = event => {
+    setWorkspace(event.target.value)
+    setOffset(0)
+    setSelected(undefined)
+  }
+  const openJob = job => {
+    setWorkspace(snapshot.workspace.id)
+    setSelected({ job, workspace: snapshot.workspace.id })
+  }
+  return <main className="hse-root"><div className="hse-page"><section className="hse-hero" style={{ '--ocean-image': `url(${oceanBackground})` }}><button className="hse-refresh" onClick={() => void state.load()}>{t('refresh')}</button><div className="hse-eyebrow"><span className="hse-whale" aria-hidden="true">🐳</span>{t('eyebrow')}</div><h1>{t('heroTitle')}</h1><p>{t('heroBody')}</p><div className="hse-stats">{stats.map(([label, value]) => <div className="hse-stat" key={label}><span>{label}</span><b>{value}</b></div>)}</div></section><div className="hse-head"><div><h2>{t('jobs')}</h2><p>{t('jobsHint')}</p></div>{snapshot?.workspaces?.length ? <select className="hse-select" aria-label={t('workspaceSelect')} value={snapshot.workspace?.id ?? ''} onChange={switchWorkspace}>{snapshot.workspaces.map(item => <option value={item.id} key={item.id}>{item.label} · {item.root}</option>)}</select> : null}</div>{snapshot?.workspace ? <div className="hse-hook-state"><b>{t('workspace')}: {snapshot.workspace.label}</b><br/>{snapshot.config.projectRoot} · {snapshot.config.jobsDir}</div> : null}{state.status === 'loading' ? <div className="hse-empty"><div className="hse-spin"/>{t('loading')}</div> : state.status === 'error' && !snapshot ? <div className="hse-error">{state.error}<br/><button className="hse-button" onClick={() => void state.load()}>{t('retry')}</button></div> : !snapshot?.jobs?.length ? <div className="hse-empty">{t('empty')}</div> : <><div className="hse-list">{snapshot.jobs.map(job => <JobCard job={job} t={t} open={openJob} key={job.name}/>)}</div><div className="hse-pager"><span>{pagination.total ? `${offset + 1}–${Math.min(offset + (snapshot.jobs?.length ?? 0), pagination.total)} / ${pagination.total}` : '0 / 0'}</span><button disabled={!offset} onClick={() => setOffset(Math.max(0, offset - (pagination.limit ?? 20)))}>{t('previous')}</button><button disabled={!pagination.hasMore} onClick={() => setOffset(offset + (pagination.limit ?? 20))}>{t('next')}</button></div></>}</div>{selected ? <Workbench job={selected.job} workspace={selected.workspace} jobs={snapshot.jobs} close={() => setSelected(undefined)} t={t}/> : null}</main>
 }
 
 function VersionPanel({ t }) {
@@ -556,7 +573,8 @@ function DoctorView({ t }) {
     }
   }
   const credentialTiers = [[t('sessionCredential'), t('supported'), t('sessionCredentialHint'), true], [t('credentialStore'), t('hostServiceRequired'), t('credentialStoreHint'), false], [t('plaintextCredential'), t('forbidden'), t('plaintextCredentialHint'), false]]
-  return <main className="hse-root"><div className="hse-settings"><h2>{t('setupDoctor')}</h2><p>{t('setupHint')}</p><VersionPanel t={t}/><div className="hse-root-switch"><label htmlFor="hse-project-root">{t('projectRoot')}</label><input id="hse-project-root" value={projectRoot} onChange={event => setProjectRoot(event.target.value)} spellCheck={false}/><button type="button" disabled={mutation.status === 'saving' || !projectRoot} onClick={() => void switchRoot()}>{mutation.status === 'saving' ? t('switchingProjectRoot') : t('switchProjectRoot')}</button><small>{mutation.status === 'error' ? mutation.error : mutation.status === 'saved' ? t('projectRootUpdated') : t('projectRootHint')}</small></div><div className="hse-checks">{Object.entries(state.value?.checks ?? {}).map(([key, check]) => <div className="hse-check" key={key}><b className={check.status === 'ok' ? 'hse-valid' : 'hse-invalid'}>{key} · {check.status}</b><small>{check.detail}</small></div>)}</div><h3>{t('credentialPolicy')}</h3><div className="hse-checks">{credentialTiers.map(([label, status, hint, active]) => <div className="hse-check" key={label}><b className={active ? 'hse-valid' : 'hse-invalid'}>{label} · {status}</b><small>{hint}</small></div>)}</div></div></main>
+  const rootSource = state.value?.config?.projectRootSource === 'agent-session' ? t('projectRootAgent') : state.value?.config?.projectRootSource === 'manual' ? t('projectRootManual') : t('projectRootConfigured')
+  return <main className="hse-root"><div className="hse-settings"><h2>{t('setupDoctor')}</h2><p>{t('setupHint')}</p><VersionPanel t={t}/><div className="hse-root-switch"><label htmlFor="hse-project-root">{t('projectRoot')}</label><input id="hse-project-root" value={projectRoot} onChange={event => setProjectRoot(event.target.value)} spellCheck={false}/><button type="button" disabled={mutation.status === 'saving' || !projectRoot} onClick={() => void switchRoot()}>{mutation.status === 'saving' ? t('switchingProjectRoot') : t('switchProjectRoot')}</button><small>{mutation.status === 'error' ? mutation.error : mutation.status === 'saved' ? t('projectRootUpdated') : t('projectRootHint')}</small><small>{rootSource}</small></div><div className="hse-checks">{Object.entries(state.value?.checks ?? {}).map(([key, check]) => <div className="hse-check" key={key}><b className={check.status === 'ok' ? 'hse-valid' : 'hse-invalid'}>{key} · {check.status}</b><small>{check.detail}</small></div>)}</div><h3>{t('credentialPolicy')}</h3><div className="hse-checks">{credentialTiers.map(([label, status, hint, active]) => <div className="hse-check" key={label}><b className={active ? 'hse-valid' : 'hse-invalid'}>{label} · {status}</b><small>{hint}</small></div>)}</div></div></main>
 }
 
 function blockText(block) { return isRecord(block) && Array.isArray(block.content) ? block.content.filter(item => item?.type === 'text').map(item => item.text).join('\n') : '' }

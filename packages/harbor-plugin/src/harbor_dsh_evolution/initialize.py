@@ -203,6 +203,24 @@ def evaluate(payload):
         "candidate_root": (workspace_relative / "candidates").as_posix(),
     }
     _write_new(workspace_root / ".harbor/evolution.yml", yaml.safe_dump(evolution, sort_keys=False), created, existing, project_root)
+    workspace_descriptor = {
+        "schema_version": 1,
+        "workspace_id": stack_id,
+        "path_base": "workspace",
+        "workspace_root": ".",
+        "stack": ".harbor/evaluation-stack.yml",
+        "jobs": "jobs",
+        "promotion_policy": "policies/promotion.json",
+        "candidate_root": "candidates",
+        "meta_artifact_index": ".harbor/meta-artifacts.json",
+    }
+    _write_new(
+        workspace_root / ".harbor/workspace.json",
+        json.dumps(workspace_descriptor, ensure_ascii=False, indent=2) + "\n",
+        created,
+        existing,
+        project_root,
+    )
     policy = {
         "schema_version": 2,
         "policy_id": policy_id,

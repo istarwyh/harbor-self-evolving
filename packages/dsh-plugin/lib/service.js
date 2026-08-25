@@ -4,6 +4,7 @@ import path from 'node:path'
 import { loadModelBinding } from './candidate.js'
 
 import {
+  discoverWorkspaceConfigs,
   readComparison,
   readDashboardSnapshot,
   readDatasetPreview,
@@ -54,10 +55,54 @@ export async function resolveEvaluatorStackPath(config, governance, explicitPath
 /** One Host-side boundary shared by Agent tools and the Web dashboard. */
 export class EvolutionService {
   constructor(config, metadata = {}, modelRuntime) {
-    this.config = config
+    this.config = { jobsDir: 'jobs', ...config }
     this.metadata = metadata
     this.modelRuntime = modelRuntime
     this.versionChecker = metadata.versionChecker ?? createVersionChecker()
+    this.projectRoots = new Map()
+    this.workspaceConfigs = new Map()
+    this.activeProjectRoot = path.resolve(this.config.projectRoot)
+    this._registerProjectRoot(this.activeProjectRoot, metadata.projectRootSource ?? 'configured')
+  }
+
+  _registerProjectRoot(projectRoot, source) {
+    const resolved = path.resolve(projectRoot)
+    this.projectRoots.set(resolved, { projectRoot: resolved, source, activatedAt: new Date().toISOString() })
+    this.activeProjectRoot = resolved
+    return this.projectRoots.get(resolved)
+  }
+
+  async _refreshWorkspaces() {
+    const discovered = []
+    this.workspaceConfigs.clear()
+    for (const [identity, root] of this.projectRoots.entries()) {
+      try {
+        const details = await stat(root.projectRoot)
+        if (!details.isDirectory()) throw new Error('not a directory')
+      } catch {
+        this.projectRoots.delete(identity)
+        continue
+      }
+      const configs = await discoverWorkspaceConfigs({ ...this.config, projectRoot: root.projectRoot })
+      for (const config of configs) {
+        const value = { ...config, projectRootSource: root.source }
+        this.workspaceConfigs.set(config.workspaceId, value)
+        discovered.push(value)
+      }
+    }
+    return discovered
+  }
+
+  async _webContext(args = {}) {
+    const workspaces = await this._refreshWorkspaces()
+    const requested = String(args.workspace ?? '').trim()
+    let config = requested ? this.workspaceConfigs.get(requested) : undefined
+    if (requested && !config) throw new Error('Workspace is unavailable; reload Harbor and select an active workspace')
+    config ??= workspaces.find(item => item.projectRoot === this.activeProjectRoot && item.workspaceRoot === '.')
+      ?? workspaces.find(item => item.projectRoot === this.activeProjectRoot)
+      ?? workspaces[0]
+    if (!config) throw new Error('No Harbor workspace is available')
+    return { config, workspaces }
   }
 
   snapshot(args) {
@@ -119,14 +164,32 @@ export class EvolutionService {
     return previewContext(this.config, { ...args, candidateModelBinding })
   }
 
-  dashboard() {
-    return readDashboardSnapshot(this.config, this.metadata)
+  async dashboard(args = {}) {
+    const { config, workspaces } = await this._webContext(args)
+    return readDashboardSnapshot(config, {
+      ...this.metadata,
+      projectRootSource: config.projectRootSource,
+      workspaces: workspaces.map(item => ({
+        id: item.workspaceId,
+        label: item.workspaceLabel,
+        root: item.workspaceRoot,
+        projectRoot: item.projectRoot,
+        jobsDir: item.jobsDir,
+        stackPath: item.stackPath,
+        source: item.projectRootSource,
+      })),
+    }, args)
   }
 
-  version(args = {}) {
+  async version(args = {}) {
+    let config = this.config
+    if (args.workspace) ({ config } = await this._webContext(args))
+    else {
+      try { ({ config } = await this._webContext(args)) } catch {}
+    }
     return this.versionChecker({
       currentVersion: this.metadata.pluginVersion ?? 'development',
-      projectRoot: this.config.projectRoot,
+      projectRoot: config.projectRoot,
       refresh: args.refresh === true || args.refresh === 'true',
     })
   }
@@ -147,60 +210,91 @@ export class EvolutionService {
     }
   }
 
+  activateProjectRoot(requested, source = 'agent-session') {
+    if (!path.isAbsolute(requested)) throw new Error('projectRoot must be an absolute directory path')
+    const resolved = path.resolve(requested)
+    this._registerProjectRoot(resolved, source)
+    return {
+      projectRoot: resolved,
+      reloaded: true,
+      source,
+      scope: 'Web Workbench only; Agent tools remain isolated to each calling session working directory.',
+    }
+  }
+
   async setProjectRoot(args) {
     const requested = String(args?.projectRoot ?? '').trim()
     if (!path.isAbsolute(requested)) throw new Error('projectRoot must be an absolute directory path')
     const resolved = path.resolve(requested)
     const details = await stat(resolved)
     if (!details.isDirectory()) throw new Error('projectRoot must point to an existing directory')
-    this.config.projectRoot = resolved
-    return {
-      projectRoot: resolved,
-      reloaded: true,
-      scope: 'Web Workbench only; Agent tools continue to use each calling session working directory.',
-    }
+    return this.activateProjectRoot(resolved, 'manual')
   }
 
-  job(args) {
-    return readJobDetail(this.config, args)
+  async job(args) {
+    const { config } = await this._webContext(args)
+    return readJobDetail(config, args)
   }
 
-  trials(args) {
-    return readTrialsPage(this.config, args)
+  async trials(args) {
+    const { config } = await this._webContext(args)
+    return readTrialsPage(config, args)
   }
 
-  trial(args) {
-    return readTrialDetail(this.config, args)
+  async trial(args) {
+    const { config } = await this._webContext(args)
+    return readTrialDetail(config, args)
   }
 
-  dataset(args) {
-    return readDatasetPreview(this.config, args)
+  async dataset(args) {
+    const { config } = await this._webContext(args)
+    return readDatasetPreview(config, args)
   }
 
-  progress(args) {
-    return readJobProgress(this.config, args)
+  async progress(args) {
+    const { config } = await this._webContext(args)
+    return readJobProgress(config, args)
   }
 
-  comparison(args) {
-    return readComparison(this.config, args)
+  async comparison(args) {
+    const { config } = await this._webContext(args)
+    return readComparison(config, args)
   }
 
   async governance(args) {
-    const governance = await readEvaluatorGovernance(this.config, args)
+    const { config } = await this._webContext(args)
+    const governance = await readEvaluatorGovernance(config, args)
     try {
-      const stackPath = await resolveEvaluatorStackPath(this.config, governance, args.stackPath)
-      governance.evaluatorInterface = await inspectEvaluator(this.config, { ...args, stackPath })
-      governance.editingPolicy.browserWriteEnabled = true
-      governance.editingPolicy.stackPath = governance.evaluatorInterface.stack?.path
-      governance.editingPolicy.saveBehavior = 'Update one descriptor-authorized file with optimistic concurrency and create new Evaluator and Stack identities.'
+      const stackPath = await resolveEvaluatorStackPath(config, governance, args.stackPath)
+      const current = await inspectEvaluator(config, { ...args, stackPath })
+      const historicalEvaluator = governance.components?.evaluator
+      const identityMatches = current.stack?.id === governance.stackIdentity.id
+        && current.stack?.version === governance.stackIdentity.version
+        && current.evaluator?.evaluator_id === historicalEvaluator?.id
+        && current.evaluator?.version === historicalEvaluator?.version
+        && current.evaluator?.digest === historicalEvaluator?.digest
+      if (!identityMatches) {
+        governance.evaluatorInterface = {
+          error: 'The live Evaluator no longer matches this historical Job. Historical sources remain readable, but editing is disabled until you open a Job with the current Stack identity.',
+        }
+        governance.editingPolicy.identityMatch = false
+      } else {
+        governance.evaluatorInterface = current
+        governance.editingPolicy.browserWriteEnabled = true
+        governance.editingPolicy.identityMatch = true
+        governance.editingPolicy.stackPath = current.stack?.path
+        governance.editingPolicy.saveBehavior = 'Update one descriptor-authorized file with optimistic concurrency and create new Evaluator and Stack identities.'
+      }
     } catch (error) {
       governance.evaluatorInterface = { error: error instanceof Error ? error.message : String(error) }
+      governance.editingPolicy.identityMatch = false
     }
     return governance
   }
 
-  evaluator(args) {
-    return updateEvaluator(this.config, args)
+  async evaluator(args) {
+    const config = args.workspace ? (await this._webContext(args)).config : this.config
+    return updateEvaluator(config, args)
   }
 
   evaluatorInspect(args) {
@@ -216,13 +310,15 @@ export class EvolutionService {
   }
 
   async meta(args) {
-    const governance = await readEvaluatorGovernance(this.config, args)
-    const stackPath = await resolveEvaluatorStackPath(this.config, governance, args.stackPath)
-    if (!stackPath) return readMetaEvaluation(this.config)
-    const stackDirectory = path.dirname(path.resolve(this.config.projectRoot, stackPath))
+    const { config } = await this._webContext(args)
+    const governance = await readEvaluatorGovernance(config, args)
+    const stackPath = await resolveEvaluatorStackPath(config, governance, args.stackPath)
+    if (!stackPath) return readMetaEvaluation(config, args)
+    const stackDirectory = path.dirname(path.resolve(config.projectRoot, stackPath))
     const evaluationRoot = path.dirname(stackDirectory)
-    return readMetaEvaluation(this.config, {
-      evaluationRoot: path.relative(this.config.projectRoot, evaluationRoot),
+    return readMetaEvaluation(config, {
+      ...args,
+      evaluationRoot: path.relative(config.projectRoot, evaluationRoot),
     })
   }
 }

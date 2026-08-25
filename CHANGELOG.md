@@ -2,13 +2,16 @@
 
 All notable changes to this project are documented in this file.
 
-## Unreleased
+## 0.7.3 - 2026-08-25
 
 - Make `projectRoot` visible and hot-reloadable in Settings, return path-containment errors with the active root and concrete repair guidance, and reject a different existing Stack identity with `STACK_ALREADY_EXISTS_DIFFERENT_ID` while supporting namespaced `workspaceSubdir` projects.
 - Validate Dataset task resolution through Harbor's runtime parser, generate Harbor 1.4 Task templates, align Summary validity with `evaluation-result.json`, and add Docker/ACP preflight plus redacted failure tails with actionable error codes.
 - Add a permanently non-promotable Quick Diagnostic scaffold for first-run wiring checks, including Doctor and Gate enforcement of its diagnostic-only identity.
 - Check the npm registry from the Host only when Harbor Settings opens, cache successful checks, and show installed/latest versions plus an exact copyable update command without silently changing the user's DSH profile. Registry failures stay non-blocking and separate from installation health.
 - Add an explicit, non-secret `model-binding.json` Candidate identity and `harbor_model_binding` tool. Pinned models still run exclusively through the per-Job Host Model Broker; Host OAuth/API credentials never enter the Candidate container or Harbor artifacts.
+- Follow the latest published DSH and Candidate ACP runtime by default, record that maintenance policy explicitly, and require a fresh baseline on meaningful runtime drift instead of hard-coding an old release candidate.
+- Remove machine-specific Workbench assumptions: activate the latest Agent session root, discover namespaced Stacks and evaluator sources inside the active project, snapshot governance sources into each Job, and keep historical reads attached to Job-owned evidence.
+- Make evaluator meta-evaluation accept reviewed reports plus natural-language scores and comments, then guide the Agent to normalize only confirmed Ground Truth. Evaluation reporting now requires one evidence-linked Dataset-level conclusion and one controlled optimization recommendation synthesized from all Trial pages.
 
 ## 0.7.2 - 2026-08-24
 

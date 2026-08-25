@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises'
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
 import { MANIFEST_NAME, snapshotCandidate } from './candidate.js'
@@ -18,12 +18,40 @@ export function resolveWithin(root, value, label) {
   return resolved
 }
 
+const META_ARTIFACT_INDEX = '.harbor/meta-artifacts.json'
+
+function inferEvaluationRoot(projectRoot, artifactPath, explicitRoot) {
+  if (explicitRoot) return resolveWithin(projectRoot, explicitRoot, 'evaluationRoot')
+  const relative = path.relative(projectRoot, artifactPath)
+  const parts = relative.split(path.sep)
+  const marker = parts.lastIndexOf('.harbor')
+  return marker >= 0 ? path.resolve(projectRoot, ...parts.slice(0, marker)) : path.resolve(projectRoot)
+}
+
+async function recordMetaArtifact(config, artifactPath, key, explicitRoot) {
+  const evaluationRoot = inferEvaluationRoot(config.projectRoot, artifactPath, explicitRoot)
+  const registeredArtifact = resolveWithin(evaluationRoot, artifactPath, key)
+  const indexPath = resolveWithin(evaluationRoot, META_ARTIFACT_INDEX, 'metaArtifactIndex')
+  let current = { schema_version: 1, artifacts: {} }
+  try {
+    const parsed = JSON.parse(await readFile(indexPath, 'utf8'))
+    if (parsed?.schema_version === 1 && parsed.artifacts && typeof parsed.artifacts === 'object') current = parsed
+  } catch (error) {
+    if (error.code !== 'ENOENT' && !(error instanceof SyntaxError)) throw error
+  }
+  current.artifacts[key] = path.relative(evaluationRoot, registeredArtifact).split(path.sep).join('/')
+  await mkdir(path.dirname(indexPath), { recursive: true })
+  const temporary = `${indexPath}.${process.pid}.tmp`
+  await writeFile(temporary, `${JSON.stringify(current, null, 2)}\n`, 'utf8')
+  await rename(temporary, indexPath)
+  return path.relative(config.projectRoot, indexPath).split(path.sep).join('/')
+}
+
 export async function snapshot(config, args) {
   const candidateDir = resolveWithin(config.projectRoot, args.candidatePath, 'candidatePath')
   return snapshotCandidate(candidateDir, {
     candidateId: args.candidateId,
     version: args.version,
-    runtimeVersion: config.dshVersion,
   })
 }
 
@@ -85,7 +113,7 @@ export async function updateEvaluator(config, args) {
 
 export async function initializeGroundTruth(config, args) {
   const output = resolveWithin(config.projectRoot, args.outputPath ?? '.harbor/ground-truth.json', 'outputPath')
-  return cliJson(config, [
+  const result = await cliJson(config, [
     'ground-truth', 'init',
     '--project-root', config.projectRoot,
     '--output', output,
@@ -96,19 +124,25 @@ export async function initializeGroundTruth(config, args) {
     '--provenance', String(args.provenance ?? ''),
     '--criteria', String(args.criteria ?? ''),
   ])
+  result.artifact_index = await recordMetaArtifact(config, output, 'ground_truth', args.evaluationRoot)
+  return result
 }
 
 export async function runMetaEvaluation(config, args) {
   const groundTruth = resolveWithin(config.projectRoot, args.groundTruthPath ?? '.harbor/ground-truth.json', 'groundTruthPath')
   const observations = resolveWithin(config.projectRoot, args.observationsPath, 'observationsPath')
   const output = resolveWithin(config.projectRoot, args.outputPath ?? '.harbor/meta-evaluation-report.json', 'outputPath')
-  return cliJson(config, [
+  const result = await cliJson(config, [
     'meta-evaluate',
     '--project-root', config.projectRoot,
     '--ground-truth', groundTruth,
     '--observations', observations,
     '--output', output,
   ])
+  const evaluationRoot = args.evaluationRoot
+    ?? inferEvaluationRoot(config.projectRoot, groundTruth)
+  result.artifact_index = await recordMetaArtifact(config, output, 'meta_evaluation_report', evaluationRoot)
+  return result
 }
 
 function strictInputs(config, args) {
