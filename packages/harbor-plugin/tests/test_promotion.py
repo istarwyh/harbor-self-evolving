@@ -111,3 +111,18 @@ def test_rejects_diagnostic_only_policy_even_when_scores_improve():
     )
     assert report["decision"] == "REJECT"
     assert "DIAGNOSTIC_ONLY_POLICY" in codes(report)
+
+
+def test_historical_generation_evaluation_is_hard_rejected_from_promotion():
+    baseline = summary("v1", reward=0.4)
+    candidate = summary("historical", reward=1)
+    candidate["job_kind"] = "historical-generation-evaluation"
+    candidate["evaluation_context"] = {
+        "schema_version": 1,
+        "protocol": "historical-generation-evaluation-context/v1",
+    }
+    report = evaluate_promotion(baseline, candidate, POLICY)
+    assert report["decision"] == "REJECT"
+    assert report["comparable"] is False
+    assert report["gate_eligible"] is False
+    assert codes(report) == {"UNSUPPORTED_JOB_KIND_FOR_PROMOTION"}

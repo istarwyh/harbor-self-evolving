@@ -9,6 +9,11 @@ import yaml
 from harbor_dsh_evolution.candidate import snapshot_candidate
 from harbor_dsh_evolution.context import build_evaluation_context
 from harbor_dsh_evolution.dataset import snapshot_dataset
+from harbor_dsh_evolution.identity import canonical_digest
+from harbor_dsh_evolution.session_batch import (
+    generation_batch_digest,
+    observation_digest,
+)
 
 
 MODEL_BINDING = {
@@ -17,6 +22,12 @@ MODEL_BINDING = {
     "reasoning_effort": "high",
     "transport": "dsh-host-broker",
     "protocol": "dsh-host-model-gateway/v1",
+}
+
+HISTORICAL_JUDGE_BINDING = {
+    "judge_provider": "judge-provider",
+    "judge_model": "judge-model",
+    "judge_reasoning_effort": "high",
 }
 
 
@@ -133,3 +144,144 @@ def make_context(root: Path, candidate: Path, dataset: Path, stack: Path, *, mod
         mode=mode,
         candidate_model_binding=MODEL_BINDING,
     )
+
+
+def make_historical_batch(root: Path, *, count: int = 1):
+    batch_root = root / ".harbor" / "private" / "session-batches" / "batch-test"
+    sessions = batch_root / "sessions"
+    sessions.mkdir(parents=True)
+    policy = {
+        "id": "dsh-session-default-redaction",
+        "version": "1.0.0",
+        "projection": "direct-human-and-assembled-assistant-text",
+        "tool_payloads": "omit",
+        "reasoning": "omit",
+        "attachments": "omit",
+        "credentials": "redact-and-fail-closed",
+    }
+    policy["digest"] = canonical_digest(
+        policy, namespace="harbor-dsh-session-redaction-policy-v1"
+    )
+    records = []
+    observations = {}
+    for index in range(1, count + 1):
+        trial_id = f"session-{index:04d}"
+        source_ref = canonical_digest(
+            {"trial": trial_id}, namespace="test-historical-source-ref"
+        )
+        source_digest = canonical_digest(
+            {"events": index}, namespace="test-historical-source"
+        )
+        observation = {
+            "schema_version": 1,
+            "protocol": "dsh-session-observation/v1",
+            "record_kind": "dsh-session",
+            "execution_mode": "observe-existing",
+            "trial_id": trial_id,
+            "source": {
+                "ref": source_ref,
+                "captured_through_seq": 2,
+                "source_digest": source_digest,
+                "created_at": "2026-08-30T00:00:00Z",
+                "last_activity_at": f"2026-08-30T00:00:{index:02d}Z",
+                "last_turn_reason": "completed",
+                "session_format_version": 1,
+            },
+            "generator": {
+                "agent_preset": "default",
+                "model_segments": [{"provider": "test", "model": "generator"}],
+            },
+            "task": {
+                "title": f"Historical task {index}",
+                "initial_user_goal": f"Complete historical task {index}",
+                "turn_count": 1,
+            },
+            "visible_transcript": [
+                {
+                    "event_seq": 1,
+                    "message_ref": canonical_digest(
+                        {"id": f"user-{index}"},
+                        namespace="harbor-dsh-session-message-ref-v1",
+                    ),
+                    "role": "user",
+                    "content": [{"type": "text", "text": f"Complete task {index}"}],
+                    "time": "2026-08-30T00:00:00Z",
+                },
+                {
+                    "event_seq": 2,
+                    "message_ref": canonical_digest(
+                        {"id": f"assistant-{index}"},
+                        namespace="harbor-dsh-session-message-ref-v1",
+                    ),
+                    "role": "assistant",
+                    "content": [{"type": "text", "text": f"Completed task {index}"}],
+                    "time": f"2026-08-30T00:00:{index:02d}Z",
+                },
+            ],
+            "execution": {"tools": [], "turns": [], "usage": {}},
+            "feedback": {"items": []},
+            "completeness": {
+                "transcript_complete": True,
+                "tool_payloads_complete": False,
+                "attachments_complete": False,
+                "truncations": [],
+            },
+            "redaction": {"replacements": 0, "truncations": 0, "omitted_blocks": 0},
+        }
+        observation["digest"] = observation_digest(observation)
+        relative = f"sessions/{trial_id}.json"
+        (batch_root / relative).write_text(
+            json.dumps(observation, ensure_ascii=False, indent=2) + "\n"
+        )
+        observations[trial_id] = observation
+        records.append(
+            {
+                "trial_id": trial_id,
+                "record_kind": "dsh-session",
+                "source_ref": source_ref,
+                "captured_through_seq": 2,
+                "source_digest": source_digest,
+                "observation_digest": observation["digest"],
+                "last_activity_at": observation["source"]["last_activity_at"],
+                "generator": {
+                    "agent_preset": "default",
+                    "model_routes": [{"provider": "test", "model": "generator"}],
+                    "homogeneous": True,
+                },
+                "observation_path": relative,
+            }
+        )
+    batch = {
+        "schema_version": 1,
+        "protocol": "historical-generation-batch/v1",
+        "batch_id": "batch-test",
+        "created_at": "2026-08-30T00:01:00Z",
+        "project": {
+            "cwd_digest": canonical_digest(
+                {"cwd": str(root.resolve())}, namespace="harbor-dsh-project-cwd-v1"
+            )
+        },
+        "selection": {
+            "scope": "exact-cwd",
+            "order": "last-activity-desc",
+            "requested_limit": count,
+            "selected_count": count,
+            "current_session_excluded": True,
+        },
+        "source": {
+            "kind": "dsh-session",
+            "adapter": "dsh-session-query",
+            "session_format_versions": [1],
+        },
+        "redaction_policy": policy,
+        "records": records,
+        "generator_population": {
+            "homogeneous": True,
+            "agent_presets": ["default"],
+            "model_routes": ["test/generator"],
+        },
+    }
+    batch["digest"] = generation_batch_digest(batch)
+    path = batch_root / "historical-generation-batch.json"
+    path.write_text(json.dumps(batch, ensure_ascii=False, indent=2) + "\n")
+    return path, batch, observations

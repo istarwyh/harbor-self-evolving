@@ -99,3 +99,27 @@ def test_lifecycle_never_assigns_an_unknown_harbor_task_to_an_unrelated_dataset_
     assert [item["phase"] for item in snapshot["trials"][:2]] == ["queued", "queued"]
     assert snapshot["trials"][2]["dataset_trial"] == "suite/unexpected"
     assert snapshot["trials"][2]["execution_id"] == "execution-x"
+
+
+def test_historical_lifecycle_records_completed_unscored_as_normal_terminal_state(
+    tmp_path: Path,
+):
+    store = TrialLifecycleStore(
+        tmp_path,
+        job="historical-job",
+        job_kind="historical-generation-evaluation",
+        tasks=[{"id": "session-1"}],
+    )
+    store.initialize()
+    current = event("session-1", "execution-1", "historical-trial")
+    store.transition(current, "loading-observation")
+    store.transition(current, "running-adapter")
+    store.finalize_score(
+        "execution-1",
+        phase="completed-unscored",
+        score={"value": None, "valid": False, "invalid_reasons": ["criteria-unscored"]},
+    )
+    snapshot = json.loads((tmp_path / "trial-lifecycle.json").read_text())
+    assert snapshot["job_kind"] == "historical-generation-evaluation"
+    assert snapshot["counts"] == {"completed-unscored": 1}
+    assert snapshot["trials"][0]["terminal"] is True
