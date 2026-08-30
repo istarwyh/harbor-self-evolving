@@ -23,14 +23,14 @@ cd /absolute/path/to/your-agent-workspace
 npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 ```
 
-安装器会让 npm Plugin 与 Python Adapter 使用同一个正式版本；需要完全固定版本时，把 `latest` 改为 `0.7.3`。
+安装器会让 npm Plugin 与 Python Adapter 使用同一个正式版本；需要完全固定版本时，把 `latest` 改为 `0.8.0`。
 
 默认安装到 DSH 的 `web` profile。`setup` 会一次完成：
 
 1. 建立独立的 Harbor Python 环境并安装匹配版本的 Adapter。
 2. 把 Plugin + Skill 安装进选定的 DSH profile。
 3. 持久化 `projectRoot`、Job 目录和两个 Harbor 可执行文件路径。
-4. 验证 Harbor、`dsh-evolution` entry point 和 `harbor-dsh` CLI。
+4. 验证 Harbor、`dsh-evolution` / `dsh-historical-evaluation` entry point 和 `harbor-dsh` CLI。
 
 它只更新 profile 中的 `harbor-evolution` 配置块，不会覆盖其他用户配置；重复执行会更新同一个安装，不会产生重复条目。
 
@@ -50,7 +50,7 @@ DSH_HOME="$HOME/.dsh" pnpm dlx @deepseek-ai/dsh@latest web
 
 Skill 会先检查文件，再围绕四个用户可理解的概念补齐必要信息：**评测集（测什么）**、**生成器（谁来回答）**、**评测器/评测标准（怎样算好）**、**优化器（谁根据结果改进）**。单条 Query、文件路径、curl 和本地 Agent 路径都可以直接提供；其余版本标识、适配器、产物呈现、诊断与报告配置由 Skill 推断并汇总成一张确认卡。只有用户选择“查看高级配置”时，才展开 Evaluation Stack、Judge、Contract 和 Policy 等专业字段。
 
-在 Web profile 中还会出现三个可见入口：
+在 Web profile 中还会出现这些可见入口：
 
 - 对话页的 `Harbor` Tab：先看轻量 Job 结果，再打开按需加载的 Evaluation Workbench。
 - Job 工作台：九个阶段跟随 DSH 语言设置；先直接展示 Candidate / Dataset / Evaluation Stack / 模型身份和“运行时追随最新版”策略，再展示 Agent 收到的 query 与 instruction、Harbor 收集的页面/文档/结构化产物、评测器 Ground Truth 元评测、逐 Trial 判分、Population 有效覆盖、受控优化假设和 Baseline 回归 Gate。完整 JSON 只留在折叠审计区。
@@ -75,13 +75,15 @@ GUI 当前是观察与诊断面，评测、比较等高成本动作仍由官方 
 
 ## 用户实际获得的能力
 
-Plugin 注册 14 个确定性工具：
+Plugin 注册 16 个确定性工具：
 
 - `harbor_candidate_snapshot`：固化不可变 Candidate。
 - `harbor_model_binding`：把当前 DSH 默认模型生成为不含凭证的 `model-binding.json` 草案；写入 Candidate 后会进入 digest，并在后续 Job 中通过 Host Model Broker 固定复用。
 - `harbor_evolution_init`：在需求确认后创建不覆盖已有文件的标准 Evaluation Stack 结构。
 - `harbor_evolution_doctor`：检查角色边界、God Runner、Dataset、Candidate 和 Policy。
 - `harbor_quick_diagnostic_init`：用一个 Query 和 Rubric 草稿生成 Harbor 1.4 wiring 诊断工程；明确不可用于 Baseline 或晋级。
+- `harbor_session_diagnostic_preview`：只读预览当前工作区最近完成的 DSH 会话、安全元数据、Judge 身份、耦合关系和本地保留范围，并返回短期确认令牌。
+- `harbor_session_diagnostic_run`：确认后冻结脱敏会话，按“一条会话一个 Trial”运行不可晋级的 Historical Generation Evaluation Job；不会重新执行 Candidate。
 - `harbor_dataset_validate`：验证任务、路径、敏感字段、Dataset source digest，并复现 Harbor 的运行时 Task 解析；Dataset 根目录下必须是一级 Task 子目录，`task.toml` 使用 `schema_version = "1.4"` 和 `org/name`。
 - `harbor_context_preview`：预览 Context v2、可比 baseline 和 fresh-baseline 要求。
 - `harbor_eval_run`：运行显式的 `diagnostic` 或 `promotion-eligible` Job。

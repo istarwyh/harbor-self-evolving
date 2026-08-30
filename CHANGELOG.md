@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.8.0 - 2026-08-30
+
+- Add Historical Generation Evaluation as a first-class `observe-existing` path: the bundled Skill previews up to ten recent completed DSH Sessions from the exact Agent workspace, asks for confirmation, and evaluates one immutable Session per Harbor Trial without rerunning or promoting a Candidate.
+- Add privacy-preserving Session selection and materialization with owner-bound expiring tokens, raw Session-id canaries, transcript/tool/feedback redaction, exact source-digest revalidation, effective Agent Preset provenance, symlink-safe private storage, and explicit local retention warnings.
+- Add the `dsh-historical-evaluation` Harbor plugin, deterministic Session Observation Agent, immutable Historical Batch/Dataset/Stack materialization, Evaluator v2 applicability and coverage semantics, and the normal `completed-unscored` terminal state for evidence-based abstention.
+- Freeze and attest the actual Host Judge provider, model, reasoning effort, protocol, Job and Batch binding before scoring; disclose same-model diagnostic coupling and keep the short-lived Broker capability out of arguments and artifacts.
+- Add Historical Summary v4 plus validated Trial assessments, Population/Diagnosis/Optimization reports, strict completion sentinels, resume-safe lifecycle recovery, missing-Trial cardinality checks, non-promotable Gate behavior, and Workbench views for generation provenance, Trial/Criterion coverage and Evaluator meta-evaluation `not-run` status.
+- Validate the complete real Session Query → Preview → confirmation → Harbor/Docker → Host Judge → Summary/Workbench path. The real run also removed a non-portable default `temperature` argument rejected by `openai-codex` and now leaves Provider-specific parameters unset unless explicitly supported.
+
 ## 0.7.3 - 2026-08-25
 
 - Make `projectRoot` visible and hot-reloadable in Settings, return path-containment errors with the active root and concrete repair guidance, and reject a different existing Stack identity with `STACK_ALREADY_EXISTS_DIFFERENT_ID` while supporting namespaced `workspaceSubdir` projects.
