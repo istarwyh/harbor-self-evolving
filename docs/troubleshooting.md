@@ -42,6 +42,33 @@ dataset/
 
 Doctor 的 runtime preflight 会检查 Docker daemon、credential helper、base image 本地可用性和 ACP 依赖可证明性。无法从 Dockerfile 证明的预装依赖只给 warning；Docker 不可用则在 Job 前快速失败。
 
+### Historical Session 失败
+
+| 原因码 | 含义 | 下一步 |
+| --- | --- | --- |
+| `NO_ELIGIBLE_SESSIONS` | 当前 exact-cwd 没有已完成、顶层、含直接用户输入与 Agent 输出的业务会话 | 先完成真实业务任务，确认 Session cwd，或改用显式 Query/Dataset |
+| `SESSION_SELECTION_TOO_EXPENSIVE` | 候选超过 `sessionMaxReads`，当前没有 cursor | 用更窄的 ISO-8601 `createdAfter` 重新 Preview，或改用显式 Dataset |
+| `SESSION_SAMPLE_CHANGED` | Preview 后会话事件、seq 或 digest 变化 | 重新 Preview；不要复用旧 token |
+| `SESSION_FEEDBACK_CHANGED` | Feedback 可用性、读取状态或内容发生变化 | 重新 Preview 并重新确认 |
+| `SESSION_OBSERVATION_TOO_LARGE` | 单条脱敏 Observation 超过安全上限 | 缩小任务证据，或把确认后的材料整理成显式 Dataset |
+| `HISTORICAL_JUDGE_NOT_CONFIRMED` | Run 尝试覆盖 Preview 已冻结的 Judge | 在 Preview 选择 Judge，Run 只传 `selectionToken` 和可选 `jobName` |
+| `HISTORICAL_JOB_INCOMPLETE` | Harbor 退出但没有生成有效 Summary/completion sentinel | 检查 Harbor plugin 安装、Job log 和 `dsh-historical-evaluation` 生命周期 |
+| `HISTORICAL_JOB_ARTIFACT_VALIDATION_FAILED` | Summary、completion、Batch identity、coverage 或 Trial 数不一致 | 不使用该结果；保留 Job 证据并修复缺失/陈旧产物后重跑 |
+
+`completed-unscored` 不是失败码。它表示 Trial 已完成，但至少一个 required Criterion 因证据不足而弃权；Workbench 应展示缺失 Criterion、原因和 Trial/Criterion coverage，不应显示质量 0 分。
+
+### Apple Silicon 误选 x86_64 Python
+
+若 setup 在 Apple Silicon 上选择了 x86_64 Miniconda Python，随后 `cryptography` 报 `can't find crate for core/std` 或缺少 `x86_64-apple-darwin` Rust target，这是本机混合架构，不是 Harbor 插件缺包。优先让 `uv` 使用匹配机器架构的 managed Python：
+
+```bash
+UV_PYTHON_PREFERENCE=only-managed \
+UV_PYTHON_DOWNLOADS=automatic \
+npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
+```
+
+setup 后用 Python 的 `platform.machine()`、`harbor --version` 和 `harbor plugins list` 复核解释器架构与两个插件入口。
+
 ## 评测器产物口径
 
 声明 `harbor-dsh-evaluator/v1` 后，每个 Trial 都必须产出 `evaluation-result/v1`，且每个 Criterion 都包含 score、reason 和 recommendation。Summary 直接复用 Trial Assessment 的有效性判断，因此不会再出现详情无效但总体仍计入分数的情况。

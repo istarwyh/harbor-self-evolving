@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.8.1 - 2026-08-30
+
+- Align the repository, npm package, Python Adapter, coding-agent installation instructions, and user guides on the 0.8 Historical Session workflow, sixteen DSH tools, and both Harbor plugin entry points.
+- Add practical Preview/confirmation, privacy/retention, `completed-unscored`, error-recovery, and mixed-architecture Python installation guidance for Historical Generation Evaluation.
+- Add a documentation consistency test so future releases cannot silently regress the current version, tool count, dual-plugin verification, or Historical semantics across public documentation surfaces.
+
 ## 0.8.0 - 2026-08-30
 
 - Add Historical Generation Evaluation as a first-class `observe-existing` path: the bundled Skill previews up to ten recent completed DSH Sessions from the exact Agent workspace, asks for confirmation, and evaluates one immutable Session per Harbor Trial without rerunning or promoting a Candidate.

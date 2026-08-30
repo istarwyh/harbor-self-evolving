@@ -14,10 +14,12 @@ npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 
 The setup command installs both required runtimes:
 
-- `harbor-dsh-evolution==0.8.0` in a managed Python environment.
-- `dsh-harbor-evolution@0.8.0` in the selected DSH profile.
+- `harbor-dsh-evolution==0.8.1` in a managed Python environment.
+- `dsh-harbor-evolution@0.8.1` in the selected DSH profile.
 
 It then stores the absolute Harbor executable paths and a fallback `projectRoot` in the profile's `harbor-evolution` block and verifies the integration. Agent Tool calls always use the calling session's absolute working directory as their project root; the configured value remains the Web Workbench and non-Agent fallback. Existing unrelated profile entries are preserved, and rerunning setup updates the same block.
+
+Successful setup requires `harbor plugins list` to discover both `dsh-evolution` for Candidate Jobs and `dsh-historical-evaluation` for observe-existing Session Jobs.
 
 The default profile is `web`. Use `--profile headless` only when that is the profile you actually run. See all options with:
 
@@ -64,6 +66,14 @@ In the `web` profile, the same package also registers:
 The Web UI is intentionally read-only. Starting an evaluation or deciding promotion remains an explicit Agent + Skill workflow, so a page refresh can never launch an expensive Job.
 
 A direct evaluation requires `candidatePath`, `datasetPath`, `stackPath`, and explicit `mode`; `promotion-eligible` additionally requires `policyPath`. Prefer the Skill because it will not run or compare Jobs until the material identities and evaluation contract are resolved.
+
+## Historical Session cold start
+
+When the user does not provide a Dataset, the Skill first calls `harbor_session_diagnostic_preview` for up to ten recent completed business Sessions from the Agent's exact working directory. Preview returns only safe metadata and a short-lived confirmation token. Its confirmation card identifies the Evaluator and Judge, discloses same-model coupling and estimated requests, and warns that redacted evidence will remain under `.harbor/private` and `jobs`; it never exposes raw Session ids or transcripts.
+
+After explicit confirmation, `harbor_session_diagnostic_run` receives only the `selectionToken` and an optional Job name. It revalidates the frozen Session and Feedback digests, materializes an immutable Historical Batch plus matching Dataset and Stack, and evaluates one Session Observation per Harbor Trial. The Job does not rerun a Candidate, cannot enter Promotion Gate, and records Evaluator Meta-Evaluation as `not-run` because evaluator reliability requires a separate independent Ground Truth workflow.
+
+A Historical Trial may finish as `completed-unscored` when required evidence is insufficient. That is a normal Evaluator abstention, not a zero score or infrastructure failure; use Trial and Criterion coverage to interpret the result.
 
 ## Candidate model binding
 

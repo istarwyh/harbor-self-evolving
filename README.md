@@ -6,9 +6,9 @@
 
 | 交付物 | 用户得到什么 |
 | --- | --- |
-| DSH Plugin：`dsh-harbor-evolution` | 在自己的 DSH 中获得 Evaluation Workbench、14 个严格评测工具和结构化结果卡片 |
+| DSH Plugin：`dsh-harbor-evolution` | 在自己的 DSH 中获得 Evaluation Workbench、16 个严格评测工具和结构化结果卡片 |
 | 本项目官方 Skill：`evolve-agent-with-harbor` | Agent 知道如何澄清、初始化 Evaluation Stack、运行 Doctor、建立 baseline、诊断、回归和 Gate |
-| Harbor Adapter：`harbor-dsh-evolution` | 固化 Candidate、Dataset、Evaluation Stack、Context v2、Trial 证据与 Promotion Gate |
+| Harbor Adapter：`harbor-dsh-evolution` | 同时提供 Candidate Evaluation 与 Historical Generation Evaluation，固化 Dataset/Stack、Trial 证据、可信 Summary 和 Promotion 边界 |
 
 `examples/` 是帮助理解和二次开发的参考实现，不是使用插件的前提。这里的“本项目官方 Skill”表示由本项目维护，并不表示 DeepSeek 官方背书。
 
@@ -23,7 +23,7 @@ cd /absolute/path/to/your-agent-workspace
 npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 ```
 
-安装器会让 npm Plugin 与 Python Adapter 使用同一个正式版本；需要完全固定版本时，把 `latest` 改为 `0.8.0`。
+安装器会让 npm Plugin 与 Python Adapter 使用同一个正式版本；需要完全固定版本时，把 `latest` 改为 `0.8.1`。
 
 默认安装到 DSH 的 `web` profile。`setup` 会一次完成：
 
