@@ -30,6 +30,8 @@ test('Cordis plugin registers the bundled evolution Skill and strict architectur
     'harbor_evolution_init',
     'harbor_evolution_doctor',
     'harbor_quick_diagnostic_init',
+    'harbor_session_diagnostic_preview',
+    'harbor_session_diagnostic_run',
     'harbor_dataset_validate',
     'harbor_context_preview',
     'harbor_eval_run',
@@ -72,6 +74,11 @@ test('published package exposes the DSH bundle patch', async () => {
   assert.equal(packageJson.dsh.bundle.patch, './cordis.patch.yml')
   assert.equal(packageJson.exports['./cordis.patch.yml'], './cordis.patch.yml')
   assert.equal(packageJson.exports['./schemas/evaluation-result.schema.json'], './schemas/evaluation-result.schema.json')
+  assert.equal(packageJson.exports['./schemas/evaluation-result-v2.schema.json'], './schemas/evaluation-result-v2.schema.json')
+  assert.equal(packageJson.exports['./schemas/historical-generation-batch.schema.json'], './schemas/historical-generation-batch.schema.json')
+  assert.equal(packageJson.exports['./schemas/dsh-session-observation.schema.json'], './schemas/dsh-session-observation.schema.json')
+  assert.equal(packageJson.exports['./schemas/historical-evaluation-context.schema.json'], './schemas/historical-evaluation-context.schema.json')
+  assert.equal(packageJson.exports['./schemas/historical-evaluation-summary.schema.json'], './schemas/historical-evaluation-summary.schema.json')
   assert.equal(packageJson.exports['./schemas/ground-truth.schema.json'], './schemas/ground-truth.schema.json')
   assert.deepEqual(packageJson.harborEvolution, {
     runtimePolicy: 'follow-latest',
@@ -115,9 +122,37 @@ test('model binding tool snapshots the current model without exposing Host crede
 
 function toolExecution(cwd) {
   return {
-    agent: { session: { header: { cwd } } },
+    agent: { session: { header: { id: `session-at-${cwd}`, cwd } } },
   }
 }
+
+test('Session diagnostic tools remain registered and fail explicitly without Session Query capability', async () => {
+  const tools = []
+  const root = await mkdtemp(path.join(os.tmpdir(), 'harbor-no-session-query-'))
+  apply({
+    skills: { register() {} },
+    tools: { register(tool) { tools.push(tool) } },
+    get() { return undefined },
+  }, {
+    projectRoot: root,
+    jobsDir: 'jobs',
+    harborBin: 'harbor',
+    harborDshBin: 'harbor-dsh',
+    agentImportPath: 'harbor_dsh_evolution.agent:DshCandidateAgent',
+    pluginImportPath: 'dsh-evolution',
+    pythonPath: '',
+    timeoutMs: 1000,
+  })
+
+  const preview = tools.find(tool => tool.name === 'harbor_session_diagnostic_preview')
+  assert.ok(preview.parameters.properties.evaluatorProvider)
+  const run = tools.find(tool => tool.name === 'harbor_session_diagnostic_run')
+  assert.equal(run.parameters.properties.evaluatorProvider, undefined)
+  await assert.rejects(
+    preview.execute({}, toolExecution(root)),
+    /DSH_SESSION_QUERY_UNAVAILABLE/,
+  )
+})
 
 test('Agent tool invocation activates its Session root for the shared Web Workbench', () => {
   const current = path.resolve('/tmp/harbor-current-session')
@@ -191,6 +226,9 @@ test('bundled Skill ships realistic low-friction onboarding evals', async () => 
   assert.equal(evals.evals.length, 8)
   assert.ok(evals.evals.every(item => item.assertions.length >= 3))
   assert.match(evals.evals[0].expected_output, /评测集、生成器、评测器（评测标准）和优化器/)
+  assert.match(evals.evals[0].expected_output, /\.harbor\/private 与 jobs.*VCS 风险/)
+  assert.match(evals.evals[0].expected_output, /MVP 不接受自定义 stackPath/)
+  assert.match(evals.evals[0].expected_output, /已有独立 GT\/meta-evaluate 流程仍可单独使用/)
   assert.match(evals.evals[1].expected_output, /单任务诊断评测/)
   assert.match(evals.evals[2].expected_output, /不回显或持久化 secret/)
   assert.match(evals.evals[3].expected_output, /不因路径不同而拒绝初始化/)

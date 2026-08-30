@@ -11,6 +11,7 @@ import {
   resolveSetupOptions,
   setupIntegration,
   upsertHarborProfileEntry,
+  verifyHarborPlugins,
 } from '../lib/setup.js'
 
 test('setup follows the latest DSH runtime release', () => {
@@ -77,6 +78,14 @@ test('local plugin specs are distinguished from registry and GitHub specs', asyn
   assert.equal(await resolveLocalPluginDirectory('github:istarwyh/harbor-self-evolving'), undefined)
 })
 
+test('setup requires both Candidate and Historical Harbor plugins', () => {
+  assert.doesNotThrow(() => verifyHarborPlugins('dsh-evolution\ndsh-historical-evaluation\n'))
+  assert.throws(
+    () => verifyHarborPlugins('dsh-evolution\n'),
+    /dsh-historical-evaluation/,
+  )
+})
+
 test('setup installs both runtimes, writes an idempotent profile patch, and verifies Harbor', async () => {
   const temporary = await mkdtemp(path.join(os.tmpdir(), 'dsh-harbor-setup-'))
   const projectRoot = path.join(temporary, 'agent')
@@ -95,7 +104,9 @@ test('setup installs both runtimes, writes an idempotent profile patch, and veri
   const calls = []
   const run = async (command, args, options = {}) => {
     calls.push({ command, args, options })
-    if (args[0] === 'plugins') return { code: 0, stdout: 'dsh-evolution  plugin', stderr: '' }
+    if (args[0] === 'plugins') {
+      return { code: 0, stdout: 'dsh-evolution  plugin\ndsh-historical-evaluation  plugin', stderr: '' }
+    }
     if (args[0] === '--version') return { code: 0, stdout: `${command} 1.0`, stderr: '' }
     return { code: 0, stdout: 'ok', stderr: '' }
   }

@@ -4,7 +4,7 @@ import test from 'node:test'
 
 import React from 'react'
 
-test('built Web client registers the Evaluation Workbench, Doctor, and fourteen Tool views', async () => {
+test('built Web client registers the Evaluation Workbench, Doctor, and sixteen Tool views', async () => {
   const bundle = await readFile(new URL('../lib/client.js', import.meta.url), 'utf8')
   const source = await readFile(new URL('../src/client/index.jsx', import.meta.url), 'utf8')
   let descriptor
@@ -56,6 +56,8 @@ test('built Web client registers the Evaluation Workbench, Doctor, and fourteen 
     'tool.call.toolview',
     'tool.call.toolview',
     'tool.call.toolview',
+    'tool.call.toolview',
+    'tool.call.toolview',
   ])
   assert.equal(registrations[0].options.id, 'harbor-evolution')
   assert.equal(registrations[1].options.id, 'harbor-evolution')
@@ -65,6 +67,8 @@ test('built Web client registers the Evaluation Workbench, Doctor, and fourteen 
     'harbor_evolution_init',
     'harbor_evolution_doctor',
     'harbor_quick_diagnostic_init',
+    'harbor_session_diagnostic_preview',
+    'harbor_session_diagnostic_run',
     'harbor_dataset_validate',
     'harbor_context_preview',
     'harbor_eval_run',
@@ -85,10 +89,21 @@ test('built Web client registers the Evaluation Workbench, Doctor, and fourteen 
   assert.match(source, /openFile: '打开'.*editingFile: '正在修改'/s, 'Evaluator files must be presented as directly openable and editable')
   assert.match(source, /trial\.displayName \?\? trial\.datasetTrial/, 'Trial lists must lead with the user instruction instead of Harbor random IDs')
   assert.match(source, /stage === 'judge'\) content = <><GovernancePanel/, 'Judge stage must start with actionable evaluator governance')
+  assert.match(source, /function judgeIdentityDetails[\s\S]*judge\?\.coupling[\s\S]*judge\?\.reasoning_effort[\s\S]*judge\?\.transport/, 'Judge governance must surface coupling and configured runtime identity details')
+  assert.match(source, /<code>\{judgeIdentityDetails\(value\.judge\)\}<\/code>/, 'Judge identity details must be rendered in the main governance card')
+  assert.match(bundle, /judgeIdentityDetails/, 'the portable Web bundle must include Judge coupling visibility')
   assert.match(source, /function TrialAssessmentReport/, 'Reporter stage must expose per-Trial scores, reasons, and recommendations')
   assert.match(source, /REPORT_PAGE_SIZE = 10/, 'Reporter stage must paginate per-Trial assessments')
   assert.match(source, /hse-report-compare/, 'Reporter stage must compare the artifact with its assessment side by side')
   assert.match(source, /function MetaEvaluationPanel/, 'Ground Truth and evaluator meta-evaluation must have a separate stage')
+  assert.match(source, /function HistoricalTargetPanel/, 'Historical Jobs must replace Candidate identity with the immutable Generation Record target')
+  assert.match(source, /generatorPopulation.*coverage/s, 'Historical Jobs must expose Generator population and scoring coverage')
+  assert.match(source, /completed-unscored/, 'Historical abstentions must remain visible instead of becoming business score zero')
+  assert.match(source, /function HistoricalMetaEvaluationPanel/, 'Historical Meta must render the status frozen in the Job context')
+  assert.match(source, /downstream_analysis\?\.evaluator_meta_evaluation/, 'Historical Meta must not borrow an unrelated workspace-level meta-evaluation')
+  assert.match(source, /function HistoricalGatePanel/, 'Historical Jobs must render a dedicated non-promotion Gate state')
+  assert.match(source, /UNSUPPORTED_JOB_KIND_FOR_PROMOTION/, 'Historical Gate must expose the stable N\/A reason code')
+  assert.match(source, /contextSupported = detail\?\.capabilities\?\.contextSupported \?\? detail\?\.capabilities\?\.contextV2/, 'both Candidate Context v2 and Historical Context v1 must be recognized as supported')
   assert.match(source, /switchProjectRoot/, 'Doctor settings must expose a hot-reloadable Web Workbench projectRoot')
   assert.match(source, /projectRootAgent/, 'Doctor settings must explain when the Workbench root follows the latest Agent session')
   assert.match(source, /workspaceSelect/, 'Workbench must expose an explicit workspace selector')

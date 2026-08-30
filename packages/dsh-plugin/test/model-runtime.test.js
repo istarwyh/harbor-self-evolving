@@ -118,6 +118,23 @@ test('returns a non-secret current-model Candidate draft and honors its pinned i
   )
 })
 
+test('Historical Judge default resolves the current Agent model without Candidate overrides', async () => {
+  const { value } = runtime({
+    config: {
+      candidateProvider: 'other',
+      candidateModel: 'configured-candidate',
+      candidateReasoningEffort: 'low',
+    },
+  })
+  const binding = await value.resolveCurrent()
+  assert.equal(binding.provider, 'openai-codex')
+  assert.equal(binding.model, 'gpt-test')
+  assert.equal(binding.reasoning_effort, 'high')
+
+  const halfConfigured = runtime({ config: { candidateProvider: 'other' } }).value
+  assert.equal((await halfConfigured.resolveCurrent()).model, 'gpt-test')
+})
+
 test('fails before Harbor starts when GPT Auth is not signed in', async () => {
   const { value } = runtime({ status: { configured: false } })
   await assert.rejects(value.resolve(), /complete GPT Auth in Settings/)
