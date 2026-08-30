@@ -57,6 +57,24 @@ DSH 与 Candidate ACP runtime 默认使用 `latest`。这是明确的维护性�
 
 每个 Plugin Job 都在 Host 侧冻结当前 DSH Agent 模型，然后创建仅绑定本机的短期 Broker。Candidate 通过容器内临时 `.harbor-runtime` 的 `dsh-host` Adapter 发起请求；Broker 以固定模型身份转发给 Host `llm.stream()`，并忽略 Candidate 伪造的 provider、model 与 signal。容器只拥有随机 Job Token 文件（`0600`），不拥有 GPT Auth/Codex OAuth 或任何上游 API Key。Job 结束、失败或超时时 Broker 会 abort 尚未完成的推理并释放 Server。
 
+## 已有生成结果的 Historical 路径
+
+当用户没有提供 Dataset 时，原 DSH Agent 仍是生成器；最近完成的真实 Session 是它已经产生的行为证据。Historical Generation Evaluation 不创建或执行 Candidate：
+
+```text
+exact-cwd DSH Sessions
+→ safe Preview + explicit confirmation
+→ redacted historical-generation-batch/v1
+→ matching Harbor 1.4 Dataset + immutable Historical Stack
+→ SessionObservationAgent（1 Session = 1 Trial）
+→ Evaluator v2 applicability / Criterion coverage
+→ Summary v4 + Historical Workbench
+```
+
+`dsh-historical-evaluation` 在 Job 创建前要求 Batch、Dataset 和 Stack 已同步物化；Observation Agent 只读取冻结记录，不调用模型或工具重放原任务。Judge 的 provider/model/reasoning、Broker protocol、Job 和 Batch digest 会在评分前互证。若 Judge 与历史生成器使用同一模型，Context 明确标记 `same-host-model-diagnostic-only`，不能声称独立裁判。
+
+Historical Job 固定为 `observe-existing`、diagnostic、Gate N/A。它不包含 Candidate，也不在 Job 内证明 Evaluator 可靠；严格的 Evaluator Meta-Evaluation 仍需要独立 Ground Truth。required Criterion 因证据不足正常弃权时，Trial 是 `completed-unscored`，不是质量 0 分或评测错误。
+
 ## 严格数据流
 
 ```text
@@ -85,7 +103,7 @@ Job 启动时按 Dataset 顺序预登记全部 Trial。Harbor Hook 只推进状�
 queued → preparing-environment → preparing-agent → running-agent
        → running-integration → rendering → evaluating
        → completed | candidate-quality-failed | infrastructure-error
-                   | evaluation-error | cancelled
+                   | evaluation-error | completed-unscored | cancelled
 ```
 
 `trial-events.jsonl` 追加写历史，`trial-lifecycle.json` 原子更新当前快照。Retry 创建新 `attempt`，旧 attempt 与 assessment 永不覆盖。Job 进度的分母来自 Dataset total，而不是已经被发现的 Trial 数。
@@ -99,6 +117,8 @@ score.valid: 是否满足输入、Agent、Integration、Renderer、Judge、Schem
 ```
 
 基础设施或评测器失败时，即使 raw reward 是数字，`score.value` 仍为 `null`，UI 显示 `—`。Population 和 Gate 只使用有效分数。
+
+`completed-unscored` 只用于 Historical Trial 的正常证据弃权：它计入 Trial/Criterion coverage 和状态人口，但不进入 reward 聚合，也不增加 invalid-score 数。
 
 ## Post-processing 与 Gate 边界
 

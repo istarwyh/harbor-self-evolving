@@ -57,11 +57,29 @@ harbor_candidate_snapshot
 
 `harbor_eval_run` 必须传 `candidatePath`、`datasetPath`、`stackPath` 和 `mode`；`promotion-eligible` 还必须传 `policyPath`。它会在启动 Harbor 前再次运行严格检查。
 
-## 5. Workbench 与大批量 Jobs
+## 5. 用最近 DSH 会话冷启动
+
+没有显式 Dataset 时，官方 Skill 默认走已有生成结果的诊断分支：
+
+```text
+harbor_session_diagnostic_preview(limit=10)
+→ 展示安全会话元数据、排除原因、Judge、coupling、成本与本地保留范围
+→ 用户明确确认
+→ harbor_session_diagnostic_run(selectionToken)
+→ historical-generation-evaluation Job
+```
+
+Preview 只读取当前 Agent Session 的 exact-cwd，默认最近 10 条已完成顶层业务会话；一条会话对应一个 Trial。它不会返回原始 Session id、正文或工具 payload。`createdAfter` 可缩小候选范围，当前没有 cursor；超过读取预算时必须缩小时间范围或改用显式 Dataset。
+
+确认令牌绑定用户 Session、工作区、样本、Feedback 状态与 Judge 身份，15 分钟内单次使用。Run 会再次校验所有源 digest，然后把脱敏 Batch 写入 `.harbor/private/session-batches`，并在 `jobs` 保留 Historical 证据。运行前检查两个目录的 VCS 与保留策略。
+
+Historical Job 不接受外部自定义 Stack，不执行 Candidate，也不能比较或晋级。`completed-unscored` 表示 Evaluator 因证据不足正常弃权；应分别报告 Trial/Criterion coverage，而不是把它换算成 0 分。确认后的 badcase 可以再固化为回归 Dataset，进入普通 Candidate 路径。
+
+## 6. Workbench 与大批量 Jobs
 
 Harbor Tab 总览只读取轻量 Summary。打开 Job 后按需读取完整产物；Trials 由服务端分页、搜索和筛选，单页最多 100。Trial detail 返回脱敏、截断的 assessment，不返回完整原始 SSE。原始 Harbor `result.json`/trajectory 仍留在 Job 目录供受控离线审计。
 
-## 6. CI/CD
+## 7. CI/CD
 
 ```text
 Optimizer branch / PR
@@ -76,7 +94,7 @@ Optimizer branch / PR
 
 当前本地 Adapter 通过 ACP 上传 Candidate。评测已部署服务时可新增 endpoint/image Integration，但继续复用 Manifest、Stack、Context、Artifacts 和 Gate。Harbor 不负责生产发布。
 
-## 7. 稳定性规则
+## 8. 稳定性规则
 
 - 固定 Dataset、环境镜像 digest、Judge 和 reward-affecting Stack 组件。
 - 所有指标声明方向；不要假设都是 `/10` 或越大越好。

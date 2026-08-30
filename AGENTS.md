@@ -12,8 +12,8 @@ npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 
 Follow the restart command printed by setup. Verify that:
 
-- the selected DSH profile depends on an exact registry version such as `"dsh-harbor-evolution": "0.7.0"`, not `link:...`;
-- `harbor plugins list` contains `dsh-evolution`;
+- the selected DSH profile depends on the exact current registry version `"dsh-harbor-evolution": "0.8.1"`, not `link:...`;
+- `harbor plugins list` contains both `dsh-evolution` and `dsh-historical-evaluation`;
 - the bundled `evolve-agent-with-harbor` Skill is present.
 
 Do not clone this repository and run `dsh plugin add ./packages/dsh-plugin` for a normal user installation. That creates a machine-local `link:` dependency, ties the profile to the checkout path, and omits the Python Adapter setup.
