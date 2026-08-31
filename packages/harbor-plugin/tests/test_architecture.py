@@ -5,7 +5,7 @@ import yaml
 import harbor_dsh_evolution.doctor as doctor_module
 
 from harbor_dsh_evolution.dataset import build_dataset_preview, snapshot_dataset, validate_dataset
-from harbor_dsh_evolution.doctor import architecture_doctor
+from harbor_dsh_evolution.doctor import architecture_doctor, docker_runtime_check
 from harbor_dsh_evolution.initialize import initialize_project
 from harbor_dsh_evolution.stack import snapshot_stack
 
@@ -155,6 +155,38 @@ def test_runtime_doctor_reports_missing_local_image_and_unproven_acp_dependencie
     codes = {item["code"] for item in result["findings"]}
     assert "DOCKER_BASE_IMAGE_NOT_LOCAL" in codes
     assert "ACP_SETUP_READINESS_UNPROVEN" in codes
+
+
+def test_docker_runtime_check_blocks_an_unresolvable_credential_helper(tmp_path: Path, monkeypatch):
+    docker_config = tmp_path / ".docker"
+    docker_config.mkdir()
+    (docker_config / "config.json").write_text('{"credsStore":"missing-helper"}')
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setattr(doctor_module.sys, "platform", "linux")
+    monkeypatch.setattr(
+        doctor_module.shutil,
+        "which",
+        lambda name: "/usr/bin/docker" if name == "docker" else None,
+    )
+
+    class Result:
+        returncode = 0
+        stdout = "27.0.0"
+        stderr = ""
+
+    monkeypatch.setattr(doctor_module.subprocess, "run", lambda *_args, **_kwargs: Result())
+    result = docker_runtime_check()
+
+    assert result["valid"] is False
+    assert result["findings"] == [{
+        "level": "error",
+        "code": "DOCKER_CREDENTIAL_HELPER_MISSING",
+        "message": (
+            "Docker config references docker-credential-missing-helper, but it is not resolvable; "
+            "any `docker build`/`pull` will fail. Install the helper on PATH (or set `credsStore` "
+            "to a helper you have), then rerun Doctor and retry the Job."
+        ),
+    }]
 
 
 def test_initializer_is_non_overwriting_and_creates_strict_project(tmp_path: Path):

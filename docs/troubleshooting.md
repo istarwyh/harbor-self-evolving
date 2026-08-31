@@ -39,8 +39,9 @@ dataset/
 - `EVALUATOR_RESULT_MISSING`：Verifier 除 `reward.json` 外，还必须写 `/logs/verifier/evaluation-result.json`。
 - `DATASET_NOT_RESOLVED`：修复上述 Harbor 1.4 Task 结构并重新生成 Dataset Manifest。
 - `DOCKER_CREDENTIAL_HELPER`：修复 Docker 配置引用的 helper，或使用已经验证存在于本机的镜像。
+- `HISTORICAL_DOCKER_PREFLIGHT_FAILED`：Historical Job 尚未创建；先按返回的 `DOCKER_*` 根因修复 CLI、daemon 或 credential helper，再重新确认运行。
 
-Doctor 的 runtime preflight 会检查 Docker daemon、credential helper、base image 本地可用性和 ACP 依赖可证明性。无法从 Dockerfile 证明的预装依赖只给 warning；Docker 不可用则在 Job 前快速失败。
+Doctor 的 runtime preflight 会检查 Docker daemon、credential helper、base image 本地可用性和 ACP 依赖可证明性。无法从 Dockerfile 证明的预装依赖只给 warning；Historical Session 路径还会在创建 Job 前自动运行同一组 CLI、daemon 和 helper 阻塞检查。macOS GUI 进程会在子进程 `PATH` 中补入 Docker Desktop 的 `Resources/bin`，不会修改全局环境。
 
 ### Historical Session 失败
 

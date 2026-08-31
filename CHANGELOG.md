@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.8.3 - 2026-09-01
+
+- Make GUI-launched macOS Harness processes inherit Docker Desktop's credential-helper directory without mutating the Host environment or duplicating `PATH` entries.
+- Fail Historical Session evaluation before creating a Harbor Job when Docker CLI, daemon, or configured credential helpers are unavailable.
+- Surface the first redacted infrastructure cause and repair guidance in Trial evidence instead of reporting downstream missing artifacts as independent failures.
+
 ## 0.8.2 - 2026-08-31
 
 - Add a product-first `Evaluate recent Sessions` Workbench launcher with safe Preview, explicit confirmation, background execution, refresh recovery, actionable errors, and automatic Job opening.

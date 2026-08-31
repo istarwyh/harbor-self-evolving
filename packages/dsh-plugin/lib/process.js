@@ -13,10 +13,13 @@ const DOCKER_DESKTOP_BIN = '/Applications/Docker.app/Contents/Resources/bin'
  * to PATH for every child process we spawn so Harbor inherits a resolvable
  * helper. The change is macOS-only, existence-checked, and idempotent.
  */
-export function dockerDesktopAwareEnv(env) {
+export function dockerDesktopAwareEnv(env, {
+  platform = process.platform,
+  pathExists = existsSync,
+} = {}) {
   const base = env ?? process.env
-  if (process.platform !== 'darwin') return base
-  if (!existsSync(DOCKER_DESKTOP_BIN)) return base
+  if (platform !== 'darwin') return base
+  if (!pathExists(DOCKER_DESKTOP_BIN)) return base
   const current = String(base.PATH ?? '')
   const segments = current.split(path.delimiter).filter(Boolean)
   if (segments.includes(DOCKER_DESKTOP_BIN)) return base
