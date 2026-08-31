@@ -50,6 +50,9 @@ Doctor 的 runtime preflight 会检查 Docker daemon、credential helper、base 
 | `SESSION_SELECTION_TOO_EXPENSIVE` | 候选超过 `sessionMaxReads`，当前没有 cursor | 用更窄的 ISO-8601 `createdAfter` 重新 Preview，或改用显式 Dataset |
 | `SESSION_SAMPLE_CHANGED` | Preview 后会话事件、seq 或 digest 变化 | 重新 Preview；不要复用旧 token |
 | `SESSION_FEEDBACK_CHANGED` | Feedback 可用性、读取状态或内容发生变化 | 重新 Preview 并重新确认 |
+| `HISTORICAL_PREVIEW_INVALID` | Web 预览已过期、被消费或 Host 进程重启 | 点击“重新预览”；浏览器不会持久化或接收 selection token |
+| `HISTORICAL_PREVIEW_WORKSPACE_MISMATCH` | Preview 后切换了 Harbor 工作空间 | 回到目标工作空间并重新 Preview |
+| `HISTORICAL_JOB_ALREADY_RUNNING` | 当前工作空间已有 Web Historical Job 在后台运行 | 点击“查看运行状态”；不要重复启动 |
 | `SESSION_OBSERVATION_TOO_LARGE` | 单条脱敏 Observation 超过安全上限 | 缩小任务证据，或把确认后的材料整理成显式 Dataset |
 | `HISTORICAL_JUDGE_NOT_CONFIRMED` | Run 尝试覆盖 Preview 已冻结的 Judge | 在 Preview 选择 Judge，Run 只传 `selectionToken` 和可选 `jobName` |
 | `HISTORICAL_JOB_INCOMPLETE` | Harbor 退出但没有生成有效 Summary/completion sentinel | 检查 Harbor plugin 安装、Job log 和 `dsh-historical-evaluation` 生命周期 |

@@ -53,13 +53,14 @@ Skill 会先检查文件，再围绕四个用户可理解的概念补齐必要�
 在 Web profile 中还会出现这些可见入口：
 
 - 对话页的 `Harbor` Tab：先看轻量 Job 结果，再打开按需加载的 Evaluation Workbench。
+- `评测最近会话`：在当前工作空间直接预览最多 10 条合格会话；只有用户看完 Evaluator/Judge、成本和保留边界并点击确认，才会后台启动诊断 Job，完成后自动打开结果。
 - Job 工作台：九个阶段跟随 DSH 语言设置；先直接展示 Candidate / Dataset / Evaluation Stack / 模型身份和“运行时追随最新版”策略，再展示 Agent 收到的 query 与 instruction、Harbor 收集的页面/文档/结构化产物、评测器 Ground Truth 元评测、逐 Trial 判分、Population 有效覆盖、受控优化假设和 Baseline 回归 Gate。完整 JSON 只留在折叠审计区。
 - 评测器页：直接查看 `script` 或 `llm-as-judge` 的统一接口、三元 Criterion、Rubric 与实现源码；只能受控修改 Descriptor 授权的文件，并强制创建新的 Evaluator / Stack 身份。
 - `harbor-dsh-evaluator/v1`：统一 `script` 与 `llm-as-judge` 的输入、三元 Criteria 输出、实现身份和可编辑文件；详情见 [`docs/evaluator-interface.md`](docs/evaluator-interface.md)。
 - 工具调用中的 Harbor 专属卡片：直接理解初始化、Doctor、Context 预览、评测与 Gate。
 - “设置 → Harbor 自进化”：检查项目目录、Evaluation Stack、Jobs 和两个 Harbor CLI 是否就绪；显示当前/最新插件版本及精确更新命令，但不会静默安装。
 
-GUI 当前是观察与诊断面，评测、比较等高成本动作仍由官方 Skill 在澄清需求后调用工具执行；它不会在浏览器后台静默启动 Job。
+GUI 默认仍是观察与诊断面，但为最常用的 Historical Session 冷启动提供了一个窄而明确的写入口：`预览 → 用户确认 → 后台运行 → 自动打开 Job`。页面刷新、普通读取和工作空间切换都不会启动 Job；Candidate 评测、比较与 Promotion Gate 等高成本或可晋级动作仍由官方 Skill 在澄清需求后显式执行。
 
 常用安装选项：
 

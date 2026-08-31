@@ -24,7 +24,7 @@ DSH_HOME="$HOME/.dsh" pnpm dlx @deepseek-ai/dsh@latest web
 
 Web 中应出现：
 
-1. `Harbor` Tab：轻量 Job 总览；点击 Job 打开 Evaluation Workbench。
+1. `Harbor` Tab：轻量 Job 总览；`评测最近会话` 按钮；点击 Job 打开 Evaluation Workbench。
 2. “设置 → Harbor 自进化”：项目、Stack、Jobs、Harbor CLI 检查。
 3. Harbor Tool 调用卡片。
 
@@ -52,6 +52,17 @@ harbor_candidate_compare
 输入 `/evolve` 应看到 `evolve-agent-with-harbor` Skill。
 
 ## 第一次诊断：默认复用最近会话
+
+最简单的入口不需要输入命令：
+
+1. 打开对话页的 `Harbor` Tab，确认当前工作空间正确。
+2. 点击 `评测最近会话`。页面只读预览最多 10 条合格会话的安全元数据。
+3. 核对会话数量、Evaluator/Judge、模型耦合、预计请求、有效期和本地证据目录。
+4. 点击 `确认并开始评测`。Job 在后台运行；窗口可以关闭，完成后 Workbench 会自动打开对应 Job。
+
+浏览器只持有 opaque Preview id，selection token 始终保留在 Host 内存。重复点击确认不会启动第二个 Job；刷新页面会恢复当前工作空间仍在运行的操作。页面刷新本身不会启动任何评测。
+
+如果希望先通过对话澄清 Dataset、Evaluator 或其他业务语义，继续使用 Skill：
 
 ```text
 /evolve-agent-with-harbor

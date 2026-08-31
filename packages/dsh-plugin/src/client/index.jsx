@@ -12,7 +12,8 @@ const dictionaries = {
     tab: 'Harbor', settings: 'Harbor 自进化', eyebrow: 'EVALUATION WORKBENCH',
     heroTitle: '看见 Agent 的每一次进步，也看见分数是否值得相信',
     heroBody: 'Harbor 固定实验边界；Trial Lifecycle 展示真实运行过程；Score Validity 阻止基础设施故障伪装成业务 0 分。',
-    refresh: '刷新', jobs: '评测批次', jobsHint: '点击 Job 后，最多再点一次即可进入对应 Trial 的证据。', workspace: '工作空间', workspaceSelect: '选择 Harbor 工作空间', empty: '还没有可读取的 Harbor Job。请用官方 Skill 完成需求澄清和初始化。',
+    refresh: '刷新', jobs: '评测批次', jobsHint: '点击 Job 后，最多再点一次即可进入对应 Trial 的证据。', workspace: '工作空间', workspaceSelect: '选择 Harbor 工作空间', empty: '还没有 Harbor Job。可以先评测这个工作空间最近完成的真实会话。',
+    historicalLaunch: '评测最近会话', historicalLaunchShort: '开始评测', historicalLaunchHint: '最多 10 条 · 先预览再运行', historicalLaunchBody: '用当前 DSH Agent 已完成的真实任务做诊断，不重新运行 Candidate。', historicalPreparing: '正在查找可评测会话…', historicalPreparingShort: '读取中…', historicalPreviewTitle: '确认历史会话评测', historicalPreviewHint: '这里只展示安全元数据。确认前不会写入 Batch，也不会启动 Harbor Job。', historicalConfirm: '确认并开始评测', historicalStarting: '正在启动…', historicalRunning: '历史会话评测运行中', historicalRunningHint: '可以关闭此窗口继续工作。Harbor 会在后台运行，完成后自动打开 Job。', historicalActive: '查看运行状态', historicalActiveShort: '查看状态', historicalCompleted: '评测完成，正在打开 Job…', recentSessions: '本次会话样本', selectedSessions: '选中会话', requestEstimate: '预计 Judge 请求', tokenExpiry: '预览有效期', generatorRole: '生成器', generatorRoleValue: '产生这些会话的 DSH Agent', evaluatorIdentity: '评测器身份', judgeIdentity: 'Judge 身份', coupling: '模型耦合', evidenceRetention: '证据保留', historicalBoundaries: '本次运行边界', historicalBoundaryDetail: '不运行 Candidate · 不做评测器元评测 · 不进入 Gate / 晋级', feedbackCounts: '反馈', turnCounts: '轮次', toolCounts: '工具调用', previewAgain: '重新预览', recent30Days: '仅看最近 30 天', noEligibleHint: '当前工作空间没有符合条件的已完成顶层会话。先在这个目录完成一个有用户输入和 Agent 输出的真实任务，或改用显式 Dataset。', narrowScanHint: '这个工作空间的会话太多。可以把扫描范围缩到最近 30 天后重试。', changedSessionHint: '预览后会话、反馈或工作空间发生了变化。为了避免评错证据，请重新预览。', historicalGenericError: '没有启动 Job。请检查提示后重新预览。', cancel: '取消',
     completed: '已完成', partial: '完成但有异常', failed: '读取失败', pending: '等待运行', running: '运行中', attention: '需核查',
     candidate: '候选版本', dataset: '评测集', integration: '集成', renderer: '产物呈现', judge: '评测器', meta: '评测器元评测', reporter: '评测报告', optimizer: '优化器', gate: '晋级门禁',
     historicalTarget: '历史生成记录', generationRecords: '会话记录', generationSource: '生成来源', generatorPopulation: '生成器群体', executionMode: '执行方式', observationMode: '只观察已有结果', batch: '批次', scoredTrials: '已评分 Trials', unscoredTrials: '未评分 Trials', homogeneousPopulation: '同构生成器群体', mixedPopulation: '混合生成器群体',
@@ -45,7 +46,8 @@ const dictionaries = {
     tab: 'Harbor', settings: 'Harbor Evolution', eyebrow: 'EVALUATION WORKBENCH',
     heroTitle: 'See every Agent improvement—and whether the score is trustworthy',
     heroBody: 'Harbor fixes the experiment boundary. Trial Lifecycle shows real execution, while Score Validity keeps infrastructure failures out of quality metrics.',
-    refresh: 'Refresh', jobs: 'Evaluation jobs', jobsHint: 'Open a Job, then reach Trial evidence in at most one more interaction.', workspace: 'Workspace', workspaceSelect: 'Select Harbor workspace', empty: 'No readable Harbor Jobs yet. Use the official Skill to clarify and initialize the project.',
+    refresh: 'Refresh', jobs: 'Evaluation jobs', jobsHint: 'Open a Job, then reach Trial evidence in at most one more interaction.', workspace: 'Workspace', workspaceSelect: 'Select Harbor workspace', empty: 'No Harbor Jobs yet. Start by evaluating recent completed Sessions in this workspace.',
+    historicalLaunch: 'Evaluate recent Sessions', historicalLaunchShort: 'Start evaluation', historicalLaunchHint: 'Up to 10 · preview before running', historicalLaunchBody: 'Diagnose real tasks already completed by the current DSH Agent without rerunning a Candidate.', historicalPreparing: 'Finding eligible Sessions…', historicalPreparingShort: 'Loading…', historicalPreviewTitle: 'Confirm Historical Session evaluation', historicalPreviewHint: 'Only safe metadata is shown. No Batch is written and no Harbor Job starts until you confirm.', historicalConfirm: 'Confirm and start evaluation', historicalStarting: 'Starting…', historicalRunning: 'Historical Session evaluation is running', historicalRunningHint: 'You can close this window and keep working. Harbor runs in the background and opens the Job when it completes.', historicalActive: 'View run status', historicalActiveShort: 'View status', historicalCompleted: 'Evaluation complete. Opening the Job…', recentSessions: 'Session sample', selectedSessions: 'Selected Sessions', requestEstimate: 'Estimated Judge requests', tokenExpiry: 'Preview expires', generatorRole: 'Generator', generatorRoleValue: 'The DSH Agent that produced these Sessions', evaluatorIdentity: 'Evaluator identity', judgeIdentity: 'Judge identity', coupling: 'Model coupling', evidenceRetention: 'Evidence retention', historicalBoundaries: 'Run boundaries', historicalBoundaryDetail: 'No Candidate run · no Evaluator meta-evaluation · no Gate or promotion', feedbackCounts: 'Feedback', turnCounts: 'Turns', toolCounts: 'Tool calls', previewAgain: 'Preview again', recent30Days: 'Only last 30 days', noEligibleHint: 'No eligible completed top-level Sessions were found in this workspace. Complete a real task here with direct user input and Agent output, or use an explicit Dataset.', narrowScanHint: 'This workspace has too many Sessions to scan safely. Narrow the scan to the last 30 days and try again.', changedSessionHint: 'A Session, its feedback, or the workspace changed after Preview. Preview again so Harbor cannot evaluate stale evidence.', historicalGenericError: 'No Job was started. Review the message and preview again.', cancel: 'Cancel',
     completed: 'Completed', partial: 'Completed with errors', failed: 'Read failed', pending: 'Queued', running: 'Running', attention: 'Needs review',
     candidate: 'Candidate', dataset: 'Dataset', integration: 'Integration', renderer: 'Renderer', judge: 'Judge', meta: 'Evaluator meta-evaluation', reporter: 'Reporter', optimizer: 'Optimizer', gate: 'Gate',
     historicalTarget: 'Historical generation records', generationRecords: 'Session records', generationSource: 'Generation source', generatorPopulation: 'Generator population', executionMode: 'Execution mode', observationMode: 'Observe existing results only', batch: 'Batch', scoredTrials: 'Scored Trials', unscoredTrials: 'Unscored Trials', homogeneousPopulation: 'Homogeneous generator population', mixedPopulation: 'Mixed generator population',
@@ -88,8 +90,11 @@ const CSS = `
 .hse-identity-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.hse-evidence-table{width:100%;border-collapse:collapse;font-size:10px}.hse-evidence-table th,.hse-evidence-table td{padding:9px;border-bottom:1px solid var(--dsw-alias-border-l1,#dce4f0);text-align:left;vertical-align:top}.hse-evidence-table th{color:var(--dsw-alias-label-secondary,#748096);font-weight:500}.hse-evidence-table code{overflow-wrap:anywhere}.hse-chip-list{display:flex;gap:6px;flex-wrap:wrap}.hse-chip-list span{padding:6px 8px;border-radius:999px;background:#2875ff12;font-size:9px}.hse-hypotheses{display:grid;gap:10px}.hse-hypothesis{padding:14px;border:1px solid #2875ff3d;border-radius:12px;background:linear-gradient(145deg,#2875ff0c,#44d9ff05)}.hse-hypothesis h4{margin:0 0 10px;font-size:13px}.hse-hypothesis dl{display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px 12px;margin:0;font-size:10px}.hse-hypothesis dt{color:var(--dsw-alias-label-secondary,#748096)}.hse-hypothesis dd{margin:0;overflow-wrap:anywhere}.hse-gate-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.hse-decision{padding:8px 12px;border-radius:999px;color:#126d50;background:#23ba8318;font-weight:800}.hse-decision[data-pass=false]{color:#b52f45;background:#ee647818}
 .hse-report-table button{border:0;color:var(--ocean-600);background:none;text-align:left;cursor:pointer;font:inherit}.hse-report-table tr[data-selected=true]{background:#2875ff10}.hse-report-score{font-size:15px;font-weight:800}.hse-report-score[data-valid=false]{color:var(--coral-500)}.hse-report-detail{margin-top:12px;border:1px solid #2875ff40;border-radius:13px;overflow:hidden}.hse-report-detail-head{display:flex;justify-content:space-between;gap:12px;padding:14px 16px;background:linear-gradient(145deg,#2875ff14,#44d9ff08)}.hse-report-detail-head h4{margin:0;font-size:14px}.hse-report-detail-head span,.hse-report-detail-head code{display:block;margin-top:4px;color:var(--dsw-alias-label-secondary,#748096);font-size:9px}.hse-report-detail-head b{font-size:25px}.hse-report-criteria{display:grid;gap:9px;padding:14px}.hse-report-criterion{padding:12px;border-radius:10px;background:var(--dsw-alias-bg-layer-1,#f3f7fb)}.hse-report-criterion header{display:flex;justify-content:space-between;gap:10px}.hse-report-criterion header b:last-child{font-size:17px}.hse-report-criterion dl{display:grid;grid-template-columns:92px minmax(0,1fr);gap:8px 10px;margin:10px 0 0;font-size:10px;line-height:1.55}.hse-report-criterion dt{color:var(--dsw-alias-label-secondary,#748096)}.hse-report-criterion dd{margin:0;overflow-wrap:anywhere}.hse-report-recommendation{color:var(--ocean-600)}
 .hse-stage-nav{grid-template-columns:repeat(9,minmax(88px,1fr))}.hse-report-compare{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;padding:14px;align-items:start}.hse-report-compare .hse-report-criteria{padding:0}.hse-meta-flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.hse-meta-flow div{position:relative;padding:13px;border-radius:10px;background:#2875ff0f;font-size:10px}.hse-meta-flow div:not(:last-child):after{content:'→';position:absolute;right:-8px;top:50%;z-index:1;color:var(--ocean-600);font-weight:800}.hse-badcase{color:#b52f45;background:#ee647817!important}.hse-hook-state{margin-bottom:12px;padding:11px 13px;border-left:3px solid var(--ocean-600);border-radius:8px;background:#2875ff0d;font-size:10px}.hse-hook-state[data-executed=false]{border-color:var(--amber-500);background:#e4a23b12}
+.hse-launch-card{display:flex;align-items:center;gap:13px;margin:0 0 18px;padding:15px 17px;border:1px solid #2875ff40;border-radius:16px;background:linear-gradient(135deg,#2875ff16,#44d9ff0b);box-shadow:0 10px 30px #0a4b8f0d}.hse-launch-mark{display:grid;place-items:center;flex:0 0 38px;height:38px;border-radius:12px;color:#fff;background:linear-gradient(145deg,var(--ocean-600),var(--ocean-300));box-shadow:0 8px 18px #2875ff35;font-size:18px}.hse-launch-copy{display:grid;gap:3px;min-width:0}.hse-launch-copy b{font-size:13px}.hse-launch-copy span{color:var(--dsw-alias-label-secondary,#68778d);font-size:10px;line-height:1.5}.hse-launch-copy small{color:var(--ocean-600);font-size:9px;font-weight:800}.hse-launch-button{margin-left:auto;padding:10px 15px;border:0;border-radius:10px;color:#fff;background:var(--whale-500);box-shadow:0 8px 20px #2875ff30;cursor:pointer;font:inherit;font-size:11px;font-weight:800;white-space:nowrap}.hse-launch-button:disabled{opacity:.55;cursor:wait}.hse-launch-overlay{position:fixed;inset:0;z-index:1200;display:grid;place-items:center;padding:18px;background:#03152fa3;backdrop-filter:blur(5px)}.hse-launch-dialog{display:flex;flex-direction:column;width:min(780px,calc(100vw - 32px));max-height:min(860px,calc(100vh - 36px));overflow:hidden;border:1px solid var(--dsw-alias-border-l1,#d7e2ef);border-radius:20px;color:var(--dsw-alias-label-primary,#1d2a3d);background:var(--dsw-alias-bg-layer-2,#fff);box-shadow:0 28px 90px #03152f6b}.hse-launch-head{display:flex;justify-content:space-between;gap:20px;padding:20px 22px 16px;border-bottom:1px solid var(--dsw-alias-border-l1,#e1e8f1)}.hse-launch-head span{color:var(--ocean-600);font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.hse-launch-head h2{margin:5px 0 6px;font-size:20px}.hse-launch-head p{margin:0;color:var(--dsw-alias-label-secondary,#748096);font-size:10px;line-height:1.6}.hse-dialog-close{align-self:flex-start;width:30px;height:30px;border:1px solid var(--dsw-alias-border-l1,#d7e2ef);border-radius:9px;color:inherit;background:transparent;cursor:pointer;font-size:20px;line-height:1}.hse-launch-body{overflow:auto;padding:18px 22px}.hse-launch-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:13px}.hse-launch-summary div,.hse-launch-grid div{padding:11px;border-radius:10px;background:var(--dsw-alias-bg-layer-1,#f3f7fb)}.hse-launch-summary span,.hse-launch-grid span{display:block;color:var(--dsw-alias-label-secondary,#748096);font-size:9px}.hse-launch-summary b,.hse-launch-grid b{display:block;margin-top:4px;overflow-wrap:anywhere;font-size:11px}.hse-launch-section{margin-top:12px;padding:14px;border:1px solid var(--dsw-alias-border-l1,#d7e2ef);border-radius:13px}.hse-launch-section h3{margin:0 0 10px;font-size:12px}.hse-session-list{display:grid;gap:7px;max-height:300px;overflow:auto}.hse-session-list article{padding:10px 11px;border-radius:9px;background:var(--dsw-alias-bg-layer-1,#f3f7fb)}.hse-session-list article>div{display:flex;justify-content:space-between;gap:12px}.hse-session-list b{font-size:10px}.hse-session-list span,.hse-session-list p,.hse-session-list code{color:var(--dsw-alias-label-secondary,#748096);font-size:9px}.hse-session-list p{margin:6px 0 3px}.hse-session-list code{overflow-wrap:anywhere}.hse-launch-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.hse-boundary-note{margin:10px 0 0;padding:9px 11px;border-left:3px solid var(--amber-500);border-radius:7px;background:#e4a23b12;font-size:10px}.hse-run-state{display:grid;justify-items:center;gap:9px;padding:42px 18px;text-align:center}.hse-run-state b{font-size:16px}.hse-run-state span,.hse-run-state p{max-width:560px;margin:0;color:var(--dsw-alias-label-secondary,#748096);font-size:10px;line-height:1.6}.hse-launch-error{padding:15px;border-left:4px solid var(--coral-500);border-radius:10px;background:#ee647812}.hse-launch-error b{color:#bd3148;font-size:11px}.hse-launch-error p{margin:7px 0;font-size:11px;overflow-wrap:anywhere}.hse-launch-error span{color:var(--dsw-alias-label-secondary,#748096);font-size:10px;line-height:1.6}.hse-launch-actions{display:flex;justify-content:flex-end;gap:8px;padding:13px 22px;border-top:1px solid var(--dsw-alias-border-l1,#e1e8f1)}.hse-launch-actions button{padding:9px 13px;border:1px solid var(--dsw-alias-border-l1,#c8d6e7);border-radius:9px;color:inherit;background:transparent;cursor:pointer;font:inherit;font-size:10px}.hse-launch-actions .hse-confirm{border-color:var(--whale-500);color:#fff;background:var(--whale-500);font-weight:800}
+.hse-launch-card{margin-top:14px}.hse-launch-button-short{display:none}
 @keyframes hse-spin{to{transform:rotate(360deg)}}@keyframes hse-pulse{50%{opacity:.38}}@keyframes hse-ripple{0%{transform:scale(.75);opacity:.4}70%,100%{transform:scale(1.12);opacity:0}}
-@media(max-width:900px){.hse-page{width:calc(100% - 20px)}.hse-meta-grid,.hse-kpis,.hse-identity-grid{grid-template-columns:repeat(2,1fr)}.hse-trial-layout,.hse-output-layout{grid-template-columns:1fr}.hse-trial-detail{position:static;max-height:none}.hse-components,.hse-governance-id{grid-template-columns:repeat(2,1fr)}.hse-drawer{width:100vw}.hse-workbench{padding:12px}.hse-stage-nav{top:62px}.hse-trial-tools{grid-template-columns:1fr 1fr}.hse-grid,.hse-checks,.hse-version-grid{grid-template-columns:1fr}.hse-hypothesis dl{grid-template-columns:1fr}}
+@media(max-width:900px){.hse-page{width:calc(100% - 20px)}.hse-meta-grid,.hse-kpis,.hse-identity-grid{grid-template-columns:repeat(2,1fr)}.hse-trial-layout,.hse-output-layout{grid-template-columns:1fr}.hse-trial-detail{position:static;max-height:none}.hse-components,.hse-governance-id{grid-template-columns:repeat(2,1fr)}.hse-drawer{width:100vw}.hse-workbench{padding:12px}.hse-stage-nav{top:62px}.hse-trial-tools{grid-template-columns:1fr 1fr}.hse-grid,.hse-checks,.hse-version-grid,.hse-launch-summary,.hse-launch-grid{grid-template-columns:1fr}.hse-hypothesis dl{grid-template-columns:1fr}.hse-launch-card{align-items:flex-start;flex-wrap:wrap}.hse-launch-button{width:100%;margin-left:51px}.hse-launch-dialog{width:calc(100vw - 20px)}.hse-launch-head,.hse-launch-body,.hse-launch-actions{padding-left:15px;padding-right:15px}}
+@media(max-width:520px){.hse-hero{min-height:auto;padding:22px}.hse-hero h1{font-size:30px}.hse-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%}.hse-stat{min-width:0}.hse-launch-card{display:grid;grid-template-columns:38px minmax(0,1fr) 108px;align-items:center;flex-wrap:nowrap}.hse-launch-copy span{display:none}.hse-launch-button{width:100%;margin:0;padding:9px;white-space:normal}.hse-launch-button-full{display:none}.hse-launch-button-short{display:inline}}
 @media(prefers-reduced-motion:reduce){.hse-spin,.hse-status:before,.hse-hero:after{animation:none}.hse-job{transition:none}.hse-job:hover{transform:none}}
 @media(max-width:900px){.hse-report-compare,.hse-meta-flow{grid-template-columns:1fr}.hse-meta-flow div:after{display:none}}
 `
@@ -582,6 +587,154 @@ function Workbench({ job, workspace, jobs, close, t }) {
   </aside></div>
 }
 
+function historicalError(value) {
+  const message = value?.message ?? String(value ?? '')
+  const code = value?.code ?? message.match(/\b([A-Z][A-Z0-9_]{3,})\b/)?.[1] ?? 'HISTORICAL_JOB_FAILED'
+  return { code, message: message.replace(new RegExp(`^${code}:\\s*`), '') }
+}
+
+function historicalErrorHint(code, t) {
+  if (code === 'NO_ELIGIBLE_SESSIONS') return t('noEligibleHint')
+  if (code === 'SESSION_SELECTION_TOO_EXPENSIVE') return t('narrowScanHint')
+  if (/SESSION_(?:SAMPLE|FEEDBACK)_CHANGED|WORKSPACE_MISMATCH|TOKEN_(?:INVALID|EXPIRED)|PREVIEW_(?:INVALID|WORKSPACE_MISMATCH)/.test(code)) return t('changedSessionHint')
+  return t('historicalGenericError')
+}
+
+function HistoricalLauncher({ snapshot, reload, onCompleted, t }) {
+  const [state, setState] = useState({ status: 'idle' })
+  const [open, setOpen] = useState(false)
+  const workspace = snapshot?.workspace?.id
+  const operationId = state.operation?.operationId
+
+  useEffect(() => {
+    let alive = true
+    setState({ status: 'idle' })
+    setOpen(false)
+    if (!workspace) return () => { alive = false }
+    void api('historical-operation', { workspace }).then(operation => {
+      if (alive && ['queued', 'running'].includes(operation?.status)) {
+        setState({ status: 'running', operation })
+      }
+    }).catch(() => {})
+    return () => { alive = false }
+  }, [workspace])
+
+  useEffect(() => {
+    if (!workspace || !operationId || !['queued', 'running'].includes(state.operation?.status)) return undefined
+    let alive = true
+    let timer
+    const poll = async () => {
+      try {
+        const operation = await api('historical-operation', { workspace, operationId })
+        if (!alive) return
+        if (operation.status === 'completed') {
+          setState({ status: 'completed', operation })
+          setOpen(false)
+          await reload(true)
+          if (alive) onCompleted(operation)
+          return
+        }
+        if (operation.status === 'failed') {
+          setState({ status: 'error', error: historicalError(operation.error), operation })
+          setOpen(true)
+          return
+        }
+        setState({ status: 'running', operation })
+      } catch {}
+      if (alive) timer = window.setTimeout(() => void poll(), 2_000)
+    }
+    timer = window.setTimeout(() => void poll(), 1_000)
+    return () => { alive = false; window.clearTimeout(timer) }
+  }, [workspace, operationId, state.operation?.status, reload, onCompleted])
+
+  useEffect(() => {
+    if (!open) return undefined
+    const escape = event => {
+      if (event.key !== 'Escape') return
+      setOpen(false)
+      if (!['running', 'starting'].includes(state.status)) setState({ status: 'idle' })
+    }
+    window.addEventListener('keydown', escape)
+    return () => window.removeEventListener('keydown', escape)
+  }, [open, state.status])
+
+  const preview = async days => {
+    setOpen(true)
+    setState({ status: 'previewing' })
+    try {
+      const value = await mutate('historical-preview', {
+        workspace,
+        limit: 10,
+        includeFeedback: true,
+        ...(days ? { createdAfter: new Date(Date.now() - days * 86_400_000).toISOString() } : {}),
+      })
+      setState({ status: 'ready', preview: value })
+    } catch (error) {
+      setState({ status: 'error', error: historicalError(error) })
+    }
+  }
+
+  const confirm = async () => {
+    if (!state.preview) return
+    setState(current => ({ ...current, status: 'starting' }))
+    try {
+      const operation = await mutate('historical-run', { workspace, previewId: state.preview.previewId })
+      setState({ status: 'running', operation })
+    } catch (error) {
+      const normalized = historicalError(error)
+      if (normalized.code === 'HISTORICAL_JOB_ALREADY_RUNNING') {
+        try {
+          const operation = await api('historical-operation', { workspace })
+          if (['queued', 'running'].includes(operation?.status)) {
+            setState({ status: 'running', operation })
+            return
+          }
+        } catch {}
+      }
+      setState({ status: 'error', error: normalized })
+    }
+  }
+
+  const close = () => {
+    setOpen(false)
+    if (!['running', 'starting'].includes(state.status)) setState({ status: 'idle' })
+  }
+  const previewValue = state.preview
+  const evaluator = previewValue?.evaluation?.evaluator
+  const judge = previewValue?.evaluation?.judge
+  const active = ['running', 'starting'].includes(state.status)
+  const buttonLabel = active ? t('historicalActive') : state.status === 'previewing' ? t('historicalPreparing') : t('historicalLaunch')
+  const buttonShort = active ? t('historicalActiveShort') : state.status === 'previewing' ? t('historicalPreparingShort') : t('historicalLaunchShort')
+
+  return <>
+    <section className="hse-launch-card" aria-live="polite">
+      <div className="hse-launch-mark" aria-hidden="true">✦</div>
+      <div className="hse-launch-copy"><b>{active ? t('historicalRunning') : t('historicalLaunch')}</b><span>{active ? t('historicalRunningHint') : t('historicalLaunchBody')}</span><small>{active ? `${state.operation?.selectedCount ?? '—'} Trials` : t('historicalLaunchHint')}</small></div>
+      <button type="button" className="hse-launch-button" disabled={!workspace || state.status === 'previewing'} onClick={() => active ? setOpen(true) : void preview()}><span className="hse-launch-button-full">{buttonLabel}</span><span className="hse-launch-button-short">{buttonShort}</span></button>
+    </section>
+    {open ? <div className="hse-launch-overlay" role="presentation" onMouseDown={event => event.target === event.currentTarget && close()}><section className="hse-launch-dialog" role="dialog" aria-modal="true" aria-labelledby="hse-historical-title">
+      <header className="hse-launch-head"><div><span>{t('historicalLaunchHint')}</span><h2 id="hse-historical-title">{state.status === 'running' ? t('historicalRunning') : t('historicalPreviewTitle')}</h2><p>{state.status === 'running' ? t('historicalRunningHint') : t('historicalPreviewHint')}</p></div><button type="button" className="hse-dialog-close" aria-label={t('close')} onClick={close}>×</button></header>
+      <div className="hse-launch-body">
+        {state.status === 'previewing' ? <div className="hse-empty"><div className="hse-spin"/>{t('historicalPreparing')}</div> : null}
+        {state.status === 'starting' ? <div className="hse-empty"><div className="hse-spin"/>{t('historicalStarting')}</div> : null}
+        {state.status === 'running' ? <div className="hse-run-state"><div className="hse-spin"/><b>{t('historicalRunning')}</b><span>{state.operation?.selectedCount ?? '—'} Trials · {snapshot.workspace.label}</span><p>{t('historicalRunningHint')}</p></div> : null}
+        {state.status === 'completed' ? <div className="hse-run-state"><b>✓ {t('historicalCompleted')}</b></div> : null}
+        {state.status === 'error' ? <div className="hse-launch-error"><b>{state.error.code}</b><p>{state.error.message}</p><span>{historicalErrorHint(state.error.code, t)}</span></div> : null}
+        {state.status === 'ready' && previewValue ? <>
+          <div className="hse-launch-summary"><div><span>{t('selectedSessions')}</span><b>{previewValue.selected.length}</b></div><div><span>{t('requestEstimate')}</span><b>{previewValue.estimatedJudgeRequests}</b></div><div><span>{t('tokenExpiry')}</span><b>{new Date(previewValue.expiresAt).toLocaleTimeString()}</b></div><div><span>{t('workspace')}</span><b>{snapshot.workspace.label}</b></div></div>
+          <section className="hse-launch-section"><h3>{t('recentSessions')}</h3><div className="hse-session-list">{previewValue.selected.map(session => <article key={session.trialId}><div><b>{session.title}</b><span>{session.lastActivityAt ? new Date(session.lastActivityAt).toLocaleString() : '—'}</span></div><p>{t('turnCounts')} {session.turnCount ?? 0} · {t('toolCounts')} {session.toolCallCount ?? 0} · {t('feedbackCounts')} +{session.feedback?.positive ?? 0} / -{session.feedback?.negative ?? 0}</p><code>{(session.modelRoutes ?? []).map(route => `${route.provider}/${route.model}`).join(' · ') || session.agentPreset || '—'}</code></article>)}</div></section>
+          <section className="hse-launch-section"><h3>{t('historicalBoundaries')}</h3><div className="hse-launch-grid"><div><span>{t('generatorRole')}</span><b>{t('generatorRoleValue')}</b></div><div><span>{t('evaluatorIdentity')}</span><b>{evaluator?.id ?? '—'} · {evaluator?.version ?? '—'}</b></div><div><span>{t('judgeIdentity')}</span><b>{judge?.provider ?? '—'} / {judge?.model ?? '—'}</b></div><div><span>{t('coupling')}</span><b>{previewValue.evaluation?.coupling ?? '—'}</b></div><div><span>{t('evidenceRetention')}</span><b>{previewValue.retention?.privateEvidence} · {previewValue.retention?.jobEvidence}</b></div></div><p className="hse-boundary-note">{t('historicalBoundaryDetail')}</p></section>
+        </> : null}
+      </div>
+      <footer className="hse-launch-actions">
+        {state.status === 'ready' ? <><button type="button" onClick={close}>{t('cancel')}</button><button type="button" className="hse-confirm" onClick={() => void confirm()}>{t('historicalConfirm')}</button></> : null}
+        {state.status === 'error' ? <><button type="button" onClick={close}>{t('close')}</button>{state.error.code === 'SESSION_SELECTION_TOO_EXPENSIVE' ? <button type="button" onClick={() => void preview(30)}>{t('recent30Days')}</button> : <button type="button" onClick={() => void preview()}>{t('previewAgain')}</button>}</> : null}
+        {state.status === 'running' ? <button type="button" onClick={close}>{t('close')}</button> : null}
+      </footer>
+    </section></div> : null}
+  </>
+}
+
 function DashboardView({ t }) {
   const [workspace, setWorkspace] = useState('')
   const [offset, setOffset] = useState(0)
@@ -599,7 +752,11 @@ function DashboardView({ t }) {
     setWorkspace(snapshot.workspace.id)
     setSelected({ job, workspace: snapshot.workspace.id })
   }
-  return <main className="hse-root"><div className="hse-page"><section className="hse-hero" style={{ '--ocean-image': `url(${oceanBackground})` }}><button className="hse-refresh" onClick={() => void state.load()}>{t('refresh')}</button><div className="hse-eyebrow"><span className="hse-whale" aria-hidden="true">🐳</span>{t('eyebrow')}</div><h1>{t('heroTitle')}</h1><p>{t('heroBody')}</p><div className="hse-stats">{stats.map(([label, value]) => <div className="hse-stat" key={label}><span>{label}</span><b>{value}</b></div>)}</div></section><div className="hse-head"><div><h2>{t('jobs')}</h2><p>{t('jobsHint')}</p></div>{snapshot?.workspaces?.length ? <select className="hse-select" aria-label={t('workspaceSelect')} value={snapshot.workspace?.id ?? ''} onChange={switchWorkspace}>{snapshot.workspaces.map(item => <option value={item.id} key={item.id}>{item.label} · {item.root}</option>)}</select> : null}</div>{snapshot?.workspace ? <div className="hse-hook-state"><b>{t('workspace')}: {snapshot.workspace.label}</b><br/>{snapshot.config.projectRoot} · {snapshot.config.jobsDir}</div> : null}{state.status === 'loading' ? <div className="hse-empty"><div className="hse-spin"/>{t('loading')}</div> : state.status === 'error' && !snapshot ? <div className="hse-error">{state.error}<br/><button className="hse-button" onClick={() => void state.load()}>{t('retry')}</button></div> : !snapshot?.jobs?.length ? <div className="hse-empty">{t('empty')}</div> : <><div className="hse-list">{snapshot.jobs.map(job => <JobCard job={job} t={t} open={openJob} key={job.name}/>)}</div><div className="hse-pager"><span>{pagination.total ? `${offset + 1}–${Math.min(offset + (snapshot.jobs?.length ?? 0), pagination.total)} / ${pagination.total}` : '0 / 0'}</span><button disabled={!offset} onClick={() => setOffset(Math.max(0, offset - (pagination.limit ?? 20)))}>{t('previous')}</button><button disabled={!pagination.hasMore} onClick={() => setOffset(offset + (pagination.limit ?? 20))}>{t('next')}</button></div></>}</div>{selected ? <Workbench job={selected.job} workspace={selected.workspace} jobs={snapshot.jobs} close={() => setSelected(undefined)} t={t}/> : null}</main>
+  const completedHistorical = useCallback(operation => {
+    setWorkspace(operation.workspace)
+    setSelected({ job: operation.jobName, workspace: operation.workspace })
+  }, [])
+  return <main className="hse-root"><div className="hse-page"><section className="hse-hero" style={{ '--ocean-image': `url(${oceanBackground})` }}><button className="hse-refresh" onClick={() => void state.load()}>{t('refresh')}</button><div className="hse-eyebrow"><span className="hse-whale" aria-hidden="true">🐳</span>{t('eyebrow')}</div><h1>{t('heroTitle')}</h1><p>{t('heroBody')}</p><div className="hse-stats">{stats.map(([label, value]) => <div className="hse-stat" key={label}><span>{label}</span><b>{value}</b></div>)}</div></section>{snapshot?.workspace ? <HistoricalLauncher snapshot={snapshot} reload={state.load} onCompleted={completedHistorical} t={t}/> : null}<div className="hse-head"><div><h2>{t('jobs')}</h2><p>{t('jobsHint')}</p></div>{snapshot?.workspaces?.length ? <select className="hse-select" aria-label={t('workspaceSelect')} value={snapshot.workspace?.id ?? ''} onChange={switchWorkspace}>{snapshot.workspaces.map(item => <option value={item.id} key={item.id}>{item.label} · {item.root}</option>)}</select> : null}</div>{snapshot?.workspace ? <div className="hse-hook-state"><b>{t('workspace')}: {snapshot.workspace.label}</b><br/>{snapshot.config.projectRoot} · {snapshot.config.jobsDir}</div> : null}{state.status === 'loading' ? <div className="hse-empty"><div className="hse-spin"/>{t('loading')}</div> : state.status === 'error' && !snapshot ? <div className="hse-error">{state.error}<br/><button className="hse-button" onClick={() => void state.load()}>{t('retry')}</button></div> : !snapshot?.jobs?.length ? <div className="hse-empty">{t('empty')}</div> : <><div className="hse-list">{snapshot.jobs.map(job => <JobCard job={job} t={t} open={openJob} key={job.name}/>)}</div><div className="hse-pager"><span>{pagination.total ? `${offset + 1}–${Math.min(offset + (snapshot.jobs?.length ?? 0), pagination.total)} / ${pagination.total}` : '0 / 0'}</span><button disabled={!offset} onClick={() => setOffset(Math.max(0, offset - (pagination.limit ?? 20)))}>{t('previous')}</button><button disabled={!pagination.hasMore} onClick={() => setOffset(offset + (pagination.limit ?? 20))}>{t('next')}</button></div></>}</div>{selected ? <Workbench job={selected.job} workspace={selected.workspace} jobs={snapshot.jobs ?? []} close={() => setSelected(undefined)} t={t}/> : null}</main>
 }
 
 function VersionPanel({ t }) {

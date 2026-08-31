@@ -58,18 +58,19 @@ The Plugin registers:
 In the `web` profile, the same package also registers:
 
 - a localized nine-stage Workbench that directly exposes fixed experiment identities, Agent-visible Dataset queries/instructions, safe business-artifact previews, Ground Truth meta-evaluation, paginated per-Trial evidence and recommendations, Population validity/coverage, controlled optimization hypotheses, and Baseline/Gate deltas; raw JSON remains in the audit drawer;
+- a first-class `Evaluate recent Sessions` action that previews up to ten safe Session records, shows the frozen Evaluator/Judge and diagnostic boundaries, requires explicit confirmation, runs in the background, and opens the completed Job;
 - descriptor-authorized Evaluator/Rubric source editing for `script` and `llm-as-judge` implementations, with optimistic concurrency and mandatory new identities;
 - a `harbor-dsh-evaluator/v1` interface shared by deterministic scripts and LLM-as-Judge implementations;
 - compact result cards for all Harbor Tool calls;
 - a `Harbor Evolution` Settings section that checks the configured project, Evaluation Stack, Jobs directory, and CLI paths, supports process-local `projectRoot` reload, and checks npm for a newer formal release without silently installing it.
 
-The Web UI is intentionally read-only. Starting an evaluation or deciding promotion remains an explicit Agent + Skill workflow, so a page refresh can never launch an expensive Job.
+The Web UI is read-only except for two narrow, explicit workflows: descriptor-authorized Evaluator source updates and the confirmed Historical Session launcher. The launcher follows `Preview → confirm → background run → open Job`; its private selection token never enters browser state. Page refreshes never start Jobs, and Candidate evaluation, comparison, Gate, promotion, deployment, and publishing remain explicit Agent + Skill workflows.
 
 A direct evaluation requires `candidatePath`, `datasetPath`, `stackPath`, and explicit `mode`; `promotion-eligible` additionally requires `policyPath`. Prefer the Skill because it will not run or compare Jobs until the material identities and evaluation contract are resolved.
 
 ## Historical Session cold start
 
-When the user does not provide a Dataset, the Skill first calls `harbor_session_diagnostic_preview` for up to ten recent completed business Sessions from the Agent's exact working directory. Preview returns only safe metadata and a short-lived confirmation token. Its confirmation card identifies the Evaluator and Judge, discloses same-model coupling and estimated requests, and warns that redacted evidence will remain under `.harbor/private` and `jobs`; it never exposes raw Session ids or transcripts.
+When the user does not provide a Dataset, the simplest entry is the `Evaluate recent Sessions` button in the Harbor tab. It previews up to ten recent completed business Sessions, shows only safe metadata plus the Evaluator, Judge, same-model coupling, estimated requests, expiry and local retention boundaries, and starts nothing until the user confirms. The Host keeps the short-lived selection token in memory; the browser receives only an opaque Preview id. The bundled Skill remains the conversational entry and uses the same Preview/Run services from the Agent's exact working directory.
 
 After explicit confirmation, `harbor_session_diagnostic_run` receives only the `selectionToken` and an optional Job name. It revalidates the frozen Session and Feedback digests, materializes an immutable Historical Batch plus matching Dataset and Stack, and evaluates one Session Observation per Harbor Trial. The Job does not rerun a Candidate, cannot enter Promotion Gate, and records Evaluator Meta-Evaluation as `not-run` because evaluator reliability requires a separate independent Ground Truth workflow.
 

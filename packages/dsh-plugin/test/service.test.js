@@ -90,6 +90,10 @@ test('a pinned workspace keeps same-named Job reads isolated when another Agent 
   assert.equal(active.config.projectRoot, second)
   const historical = await service.job({ workspace: firstWorkspace, job: 'same-job' })
   assert.equal(historical.artifacts.context.digest, 'sha256:first')
+  const historicalWorkspace = await service.historicalWorkspace({ workspace: firstWorkspace })
+  assert.equal(historicalWorkspace.workspace, firstWorkspace)
+  assert.equal(historicalWorkspace.projectRoot, first)
+  assert.equal(historicalWorkspace.config.projectRoot, first)
 })
 
 test('version status uses the installed Plugin identity and current Web projectRoot', async () => {
