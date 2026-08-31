@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented in this file.
 
-## Unreleased
+## 0.8.2 - 2026-08-31
 
 - Add a product-first `Evaluate recent Sessions` Workbench launcher with safe Preview, explicit confirmation, background execution, refresh recovery, actionable errors, and automatic Job opening.
 - Keep owner-bound Session selection tokens entirely on the Host; the browser receives only an opaque Preview id, duplicate confirmation is idempotent, and Candidate/Gate/meta-evaluation boundaries remain explicit.
