@@ -467,6 +467,16 @@ export async function runHistoricalEvaluation(config, args, modelRuntime) {
   ])
   const dataset = resolveWithin(projectRoot, materialized.dataset_path ?? output, 'historicalDataset')
   const stack = resolveWithin(projectRoot, materialized.stack_path, 'historicalStack')
+  // Fail fast on Docker runtime blockers (e.g. an unresolvable credential
+  // helper) before Harbor creates a Job whose Trials would all fail during
+  // environment setup and only report missing downstream artifacts.
+  const dockerCheck = await cliJson(config, ['docker-check'], { allowedExitCodes: [0, 2] })
+  const dockerBlockers = dockerCheck.findings.filter(item => item.level === 'error' && item.code.startsWith('DOCKER_'))
+  if (dockerBlockers.length) {
+    throw new Error(
+      `Docker runtime preflight blocked the Historical Job:\n${dockerBlockers.map(item => `${item.code}: ${item.message}`).join('\n')}`,
+    )
+  }
   const batch = JSON.parse(await readFile(batchPath, 'utf8'))
   const jobs = resolveWithin(projectRoot, config.jobsDir, 'jobsDir')
   const jobName = args.jobName ?? makeHistoricalJobName(batch)

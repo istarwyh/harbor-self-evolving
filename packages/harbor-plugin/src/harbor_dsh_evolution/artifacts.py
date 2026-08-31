@@ -196,6 +196,81 @@ def redact(value: Any) -> Any:
     return value
 
 
+DOCKER_CREDENTIAL_ERROR = re.compile(
+    r"(?im)^.*(?:error getting credentials|docker-credential-[A-Za-z0-9_-]+|exec:\s*[\"']docker-credential-[A-Za-z0-9_-]+).*$"
+)
+DOCKER_DAEMON_ERROR = re.compile(
+    r"(?im)^.*(?:cannot connect to the docker daemon|error during connect).*$"
+)
+SECRET_ASSIGNMENT = re.compile(
+    r"(?i)\b(authorization|cookie|token|api[_-]?key|secret|password)\b\s*(?:=|:)\s*[^\s,;\"']+"
+)
+
+
+def _redact_secrets(text: str) -> str:
+    return SECRET_ASSIGNMENT.sub(lambda match: f"{match.group(1)}=[redacted]", text)
+
+
+def _first_causal_error(message: str, traceback_text: str = "") -> str:
+    """Extract the first infrastructure error line from an exception payload.
+
+    Harbor wraps Docker build failures as ``RuntimeError("Failed to build Docker
+    image ..., output: <log>")``, so the human-relevant cause is a line inside
+    the message, not the wrapper. Prefer the known credential/daemon markers,
+    then fall back to the first non-empty line.
+    """
+    combined = "\n".join(part.strip() for part in (message, traceback_text) if part and part.strip())
+    for pattern in (DOCKER_CREDENTIAL_ERROR, DOCKER_DAEMON_ERROR):
+        match = pattern.search(combined)
+        if match:
+            return match.group(0).strip()[:2000]
+    for line in combined.splitlines():
+        stripped = line.strip()
+        if stripped:
+            return stripped[:2000]
+    return ""
+
+
+def infrastructure_fix(detail: str) -> str | None:
+    """Return a concrete repair hint for a recognized infrastructure error."""
+    lowered = detail.casefold()
+    if "docker-credential-" in lowered or "error getting credentials" in lowered:
+        return (
+            "Docker cannot resolve its configured credential helper. On macOS Docker Desktop, "
+            "add the Docker Desktop Resources/bin directory to PATH (or set `credsStore` "
+            "to `osxkeychain`), then rerun Doctor and retry the Job."
+        )
+    if "cannot connect to the docker daemon" in lowered or "error during connect" in lowered:
+        return "Start Docker Desktop and confirm `docker version` reaches the daemon, then retry the Job."
+    return None
+
+
+def exception_summary(value: Any) -> dict[str, str] | None:
+    """Surface the first causal infrastructure error (not a generic wrapper).
+
+    Kept redaction-safe: local paths and ``key=secret`` assignments are masked
+    before the message is recorded, so a Trial can retain the real failure as
+    evidence without leaking authorized-only diagnostics.
+    """
+    if not isinstance(value, dict):
+        return None
+    exception_type = str(value.get("exception_type") or "Exception")
+    detail = _first_causal_error(
+        str(value.get("exception_message") or ""),
+        str(value.get("exception_traceback") or ""),
+    )
+    detail = redact(_redact_secrets(detail)).strip() if detail else ""
+    summary = {
+        "type": exception_type,
+        "classification": "infrastructure",
+        "message": detail or "Execution failed. Inspect the local Harbor Trial log for authorized diagnostics.",
+    }
+    fix = infrastructure_fix(detail)
+    if fix:
+        summary["recommendation"] = fix
+    return summary
+
+
 def _numbers(value: Any) -> dict[str, float]:
     return {
         str(key): float(item)
@@ -544,15 +619,7 @@ def trial_assessment(
             "raw_rewards": rewards,
             "output": output,
             "evidence_provenance": evidence_provenance,
-            "exception": (
-                {
-                    "type": str(exception.get("exception_type") or "Exception"),
-                    "classification": "infrastructure",
-                    "message": "Execution failed. Inspect the local Harbor Trial log for authorized diagnostics.",
-                }
-                if exception
-                else None
-            ),
+            "exception": exception_summary(exception),
             "process": process,
         }
     )

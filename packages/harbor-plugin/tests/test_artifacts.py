@@ -125,7 +125,9 @@ def test_artifact_registry_and_population_include_only_valid_scores(tmp_path: Pa
     assert json.loads((tmp_path / "optimization-report.json").read_text())["hook"]["reward_affecting"] is False
     failed_assessment = json.loads((tmp_path / "trial-assessments" / "failed.json").read_text())
     assert failed_assessment["score"]["value"] is None
-    assert failed_assessment["exception"]["message"].startswith("Execution failed")
+    # The causal error is surfaced (not the generic "Execution failed" wrapper)
+    # and the secret value is redacted.
+    assert failed_assessment["exception"]["message"] == "[local path]=[redacted]"
 
 
 def test_optimizer_proposes_one_guarded_experiment_for_weak_valid_dimension(tmp_path: Path):
