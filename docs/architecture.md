@@ -124,7 +124,7 @@ score.valid: 是否满足输入、Agent、Integration、Renderer、Judge、Schem
 
 Reporter、Diagnoser 和 Optimizer 在 reward 计算后运行，身份与版本写入产物，默认 `reward_affecting: false`。它们不能修改 Evaluation Contract 或历史 Assessment。优化假设必须指向 evidence refs、允许/禁止改动面、护栏、回滚条件和唯一下一实验。
 
-Workbench 的 Compare 只是只读预览。Diagnostic Job、页面刷新、Reporter、Diagnoser、Optimizer 都不会运行 Gate，更不会部署、发布或替换 Champion。
+Workbench 的 Compare 只是只读预览。Historical Session 启动器是一个独立、同源且必须二次确认的窄写路径：浏览器只获得 Preview id，Host 保留 selection token 并在确认后异步启动不可晋级的诊断 Job。页面刷新只恢复正在运行的 operation，不会启动新 Job。Diagnostic Job、Reporter、Diagnoser、Optimizer 都不会运行 Gate，更不会部署、发布或替换 Champion。
 
 ## reward 与诊断证据
 

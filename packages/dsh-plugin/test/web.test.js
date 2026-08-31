@@ -2,7 +2,27 @@ import assert from 'node:assert/strict'
 import { Readable } from 'node:stream'
 import test from 'node:test'
 
-import { COMPARE_ROUTE, createDashboardHandler, createMutationHandler, DASHBOARD_ROUTE, DATASET_ROUTE, EVALUATOR_ROUTE, GOVERNANCE_ROUTE, installDashboardWeb, isSameOriginRequest, JOB_ROUTE, META_ROUTE, PROGRESS_ROUTE, PROJECT_ROOT_ROUTE, TRIALS_ROUTE, TRIAL_ROUTE, VERSION_ROUTE } from '../lib/web.js'
+import {
+  COMPARE_ROUTE,
+  createDashboardHandler,
+  createMutationHandler,
+  DASHBOARD_ROUTE,
+  DATASET_ROUTE,
+  EVALUATOR_ROUTE,
+  GOVERNANCE_ROUTE,
+  HISTORICAL_OPERATION_ROUTE,
+  HISTORICAL_PREVIEW_ROUTE,
+  HISTORICAL_RUN_ROUTE,
+  installDashboardWeb,
+  isSameOriginRequest,
+  JOB_ROUTE,
+  META_ROUTE,
+  PROGRESS_ROUTE,
+  PROJECT_ROOT_ROUTE,
+  TRIALS_ROUTE,
+  TRIAL_ROUTE,
+  VERSION_ROUTE,
+} from '../lib/web.js'
 
 function invoke(handler, request) {
   return new Promise(resolve => {
@@ -53,7 +73,7 @@ test('Evaluator mutation accepts bounded same-origin JSON only', async () => {
   assert.equal((await invoke(handler, crossSite)).status, 403)
 })
 
-test('read-only Workbench routes are optional and scoped through Cordis', () => {
+test('Workbench routes are optional and scoped through Cordis', () => {
   let requested
   const routes = []
   const ctx = {
@@ -65,8 +85,12 @@ test('read-only Workbench routes are optional and scoped through Cordis', () => 
       })
     },
   }
-  installDashboardWeb(ctx, { dashboard: async () => ({}), job: async () => ({}), trials: async () => ({}), trial: async () => ({}), dataset: async () => ({}), progress: async () => ({}), comparison: async () => ({}), governance: async () => ({}), evaluator: async () => ({}), meta: async () => ({}), version: async () => ({}), setProjectRoot: async () => ({}) })
+  installDashboardWeb(
+    ctx,
+    { dashboard: async () => ({}), job: async () => ({}), trials: async () => ({}), trial: async () => ({}), dataset: async () => ({}), progress: async () => ({}), comparison: async () => ({}), governance: async () => ({}), evaluator: async () => ({}), meta: async () => ({}), version: async () => ({}), setProjectRoot: async () => ({}) },
+    { preview: async () => ({}), run: async () => ({}), operation: async () => ({}) },
+  )
   assert.deepEqual(requested, ['webServer'])
-  assert.deepEqual(routes.map(route => route.path), [DASHBOARD_ROUTE, JOB_ROUTE, TRIALS_ROUTE, TRIAL_ROUTE, DATASET_ROUTE, PROGRESS_ROUTE, COMPARE_ROUTE, GOVERNANCE_ROUTE, EVALUATOR_ROUTE, META_ROUTE, VERSION_ROUTE, PROJECT_ROOT_ROUTE])
+  assert.deepEqual(routes.map(route => route.path), [DASHBOARD_ROUTE, JOB_ROUTE, TRIALS_ROUTE, TRIAL_ROUTE, DATASET_ROUTE, PROGRESS_ROUTE, COMPARE_ROUTE, GOVERNANCE_ROUTE, EVALUATOR_ROUTE, META_ROUTE, HISTORICAL_PREVIEW_ROUTE, HISTORICAL_RUN_ROUTE, HISTORICAL_OPERATION_ROUTE, VERSION_ROUTE, PROJECT_ROOT_ROUTE])
   assert.ok(routes.every(route => route.kind === 'exact' && typeof route.handler === 'function'))
 })

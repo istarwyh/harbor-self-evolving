@@ -8,6 +8,7 @@ import { loadBundledSkill } from './lib/official-skill.js'
 import { CandidateModelRuntime } from './lib/model-runtime.js'
 import { RUNTIME_POLICY } from './lib/runtime-identity.js'
 import { SessionDiagnosticService } from './lib/session-diagnostic.js'
+import { HistoricalWebController } from './lib/historical-web.js'
 import { EvolutionService } from './lib/service.js'
 import { runHistoricalEvaluation } from './lib/evolution.js'
 import { installDashboardWeb } from './lib/web.js'
@@ -95,13 +96,14 @@ export function apply(ctx, config) {
     modelRuntime,
     runHistoricalEvaluation,
   })
+  const historicalWeb = new HistoricalWebController({ service, sessionDiagnostic })
   const serviceForTool = exec => {
     const projectRoot = synchronizeWorkbenchProjectRoot(service, exec)
     return new EvolutionService({ ...resolved, projectRoot }, metadata, modelRuntime)
   }
 
   ctx.skills.register(loadBundledSkill())
-  installDashboardWeb(ctx, service)
+  installDashboardWeb(ctx, service, historicalWeb)
 
   ctx.tools.register(jsonTool({
     name: 'harbor_candidate_snapshot',

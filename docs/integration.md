@@ -59,7 +59,19 @@ harbor_candidate_snapshot
 
 ## 5. 用最近 DSH 会话冷启动
 
-没有显式 Dataset 时，官方 Skill 默认走已有生成结果的诊断分支：
+没有显式 Dataset 时，普通用户可以在 Harbor Tab 直接点击 `评测最近会话`。Web 路径与官方 Skill 复用相同的选择、冻结和运行服务，但把复杂参数收在 Host 内：
+
+```text
+评测最近会话
+→ 安全预览最多 10 条会话与 Evaluator/Judge/成本/保留边界
+→ 用户明确确认
+→ 后台运行 historical-generation-evaluation
+→ 完成后自动打开 Job
+```
+
+浏览器从不接收 selection token，只持有 opaque Preview id；Host 将 Preview 绑定工作空间并单次消费。重复确认幂等复用同一个后台 operation，刷新页面只恢复运行状态，不会新建 Job。
+
+Agent/Skill 路径仍适合需要对话澄清或高级控制的场景：
 
 ```text
 harbor_session_diagnostic_preview(limit=10)

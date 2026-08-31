@@ -1,6 +1,6 @@
 # 本地 DSH Web 快速开始
 
-版本组合：DSH `latest`、Plugin + Skill `0.8.1`、Harbor Adapter `0.8.1`、Harbor `0.21.x`。
+版本组合：DSH `latest`、Plugin + Skill `0.8.2`、Harbor Adapter `0.8.2`、Harbor `0.21.x`。
 
 ## 安装与重启
 
@@ -8,7 +8,7 @@
 
 ```bash
 cd /absolute/path/to/agent-workspace
-npx --yes dsh-harbor-evolution@0.8.1 setup --project-root "$PWD"
+npx --yes dsh-harbor-evolution@0.8.2 setup --project-root "$PWD"
 ```
 
 GitHub URL 是文档/源码入口，正式用户仍使用 npm 安装；不要直接 link 新 checkout。安装器会建立独立 Harbor venv、安装同版本 Python Adapter、把 Plugin + Skill 写入 `web` profile、保存 CLI 路径，并验证 `dsh-evolution` 与 `dsh-historical-evaluation` 两个 Harbor entry point。
@@ -24,7 +24,7 @@ DSH_HOME="$HOME/.dsh" pnpm dlx @deepseek-ai/dsh@latest web
 
 Web 中应出现：
 
-1. `Harbor` Tab：轻量 Job 总览；点击 Job 打开 Evaluation Workbench。
+1. `Harbor` Tab：轻量 Job 总览；`评测最近会话` 按钮；点击 Job 打开 Evaluation Workbench。
 2. “设置 → Harbor 自进化”：项目、Stack、Jobs、Harbor CLI 检查。
 3. Harbor Tool 调用卡片。
 
@@ -52,6 +52,17 @@ harbor_candidate_compare
 输入 `/evolve` 应看到 `evolve-agent-with-harbor` Skill。
 
 ## 第一次诊断：默认复用最近会话
+
+最简单的入口不需要输入命令：
+
+1. 打开对话页的 `Harbor` Tab，确认当前工作空间正确。
+2. 点击 `评测最近会话`。页面只读预览最多 10 条合格会话的安全元数据。
+3. 核对会话数量、Evaluator/Judge、模型耦合、预计请求、有效期和本地证据目录。
+4. 点击 `确认并开始评测`。Job 在后台运行；窗口可以关闭，完成后 Workbench 会自动打开对应 Job。
+
+浏览器只持有 opaque Preview id，selection token 始终保留在 Host 内存。重复点击确认不会启动第二个 Job；刷新页面会恢复当前工作空间仍在运行的操作。页面刷新本身不会启动任何评测。
+
+如果希望先通过对话澄清 Dataset、Evaluator 或其他业务语义，继续使用 Skill：
 
 ```text
 /evolve-agent-with-harbor
@@ -118,9 +129,9 @@ Workbench 会跟随 DSH 语言设置展示九个阶段。「候选版本」先�
 | 现象 | 处理 |
 | --- | --- |
 | 插件没有 Harbor Tab | 确认装入 `web` profile，停止旧进程并重启 |
-| 工具存在但 Skill 不出现 | 确认 `harbor-evolution` 版本为 `0.8.1` 并重启 |
+| 工具存在但 Skill 不出现 | 确认 `harbor-evolution` 版本为 `0.8.2` 并重启 |
 | `spawn harbor ENOENT` | 重新运行 setup 保存绝对 CLI 路径 |
-| Harbor 找不到 `dsh-evolution` 或 `dsh-historical-evaluation` | Adapter 与 Harbor 不在同一 venv，或仍是旧版；重新运行 0.8.1 setup |
+| Harbor 找不到 `dsh-evolution` 或 `dsh-historical-evaluation` | Adapter 与 Harbor 不在同一 venv，或仍是旧版；重新运行 0.8.2 setup |
 | Preview 报 `NO_ELIGIBLE_SESSIONS` | 当前 exact-cwd 没有合格已完成业务会话；先完成真实任务或提供显式 Query/Dataset |
 | Historical Job 显示 `completed-unscored` | 正常证据弃权；查看缺失 Criterion 和 coverage，不要当成质量 0 分 |
 | Apple Silicon 安装时编译 `cryptography` 失败 | 检查是否误选 x86_64 Python；按 troubleshooting 使用 `uv` managed Python |

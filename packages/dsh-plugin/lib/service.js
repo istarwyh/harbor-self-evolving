@@ -181,6 +181,15 @@ export class EvolutionService {
     }, args)
   }
 
+  async historicalWorkspace(args = {}) {
+    const { config } = await this._webContext(args)
+    return {
+      workspace: config.workspaceId,
+      projectRoot: path.resolve(config.projectRoot),
+      config: { ...config },
+    }
+  }
+
   async version(args = {}) {
     let config = this.config
     if (args.workspace) ({ config } = await this._webContext(args))

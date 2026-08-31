@@ -10,6 +10,9 @@ export const EVALUATOR_ROUTE = '/_dsh/harbor-evolution/evaluator'
 export const META_ROUTE = '/_dsh/harbor-evolution/meta'
 export const PROJECT_ROOT_ROUTE = '/_dsh/harbor-evolution/project-root'
 export const VERSION_ROUTE = '/_dsh/harbor-evolution/version'
+export const HISTORICAL_PREVIEW_ROUTE = '/_dsh/harbor-evolution/historical-preview'
+export const HISTORICAL_RUN_ROUTE = '/_dsh/harbor-evolution/historical-run'
+export const HISTORICAL_OPERATION_ROUTE = '/_dsh/harbor-evolution/historical-operation'
 const MAX_MUTATION_BYTES = 256 * 1024
 
 function sendJson(response, status, body) {
@@ -104,7 +107,7 @@ export function createMutationHandler(update, code = 'update-failed') {
   }
 }
 
-export function installDashboardWeb(ctx, service) {
+export function installDashboardWeb(ctx, service, historicalController) {
   if (typeof ctx.inject !== 'function') return
   ctx.inject(['webServer'], (webCtx) => {
     const routes = [
@@ -118,6 +121,11 @@ export function installDashboardWeb(ctx, service) {
       [GOVERNANCE_ROUTE, createApiHandler(args => service.governance(args), 'governance-unavailable')],
       [EVALUATOR_ROUTE, createMutationHandler(args => service.evaluator(args), 'evaluator-update-failed')],
       [META_ROUTE, createApiHandler(args => service.meta(args), 'meta-evaluation-unavailable')],
+      ...(historicalController ? [
+        [HISTORICAL_PREVIEW_ROUTE, createMutationHandler(args => historicalController.preview(args), 'historical-preview-failed')],
+        [HISTORICAL_RUN_ROUTE, createMutationHandler(args => historicalController.run(args), 'historical-run-failed')],
+        [HISTORICAL_OPERATION_ROUTE, createApiHandler(args => historicalController.operation(args), 'historical-operation-unavailable')],
+      ] : []),
       [VERSION_ROUTE, createApiHandler(args => service.version(args), 'version-check-unavailable')],
       [PROJECT_ROOT_ROUTE, createMutationHandler(args => service.setProjectRoot(args), 'project-root-update-failed')],
     ]

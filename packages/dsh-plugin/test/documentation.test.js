@@ -60,6 +60,10 @@ test('public documentation matches the released Historical Session surface', asy
   assert.match(pluginReadme, /sixteen strict Harbor tools/);
   assert.match(pluginReadme, /Historical Session cold start/);
   assert.match(pluginReadme, /completed-unscored/);
+  assert.match(rootReadme, /评测最近会话/);
+  assert.match(pluginReadme, /Evaluate recent Sessions/);
+  assert.match(quickstart, /预览 → 用户确认|确认并开始评测/);
+  assert.match(integration, /浏览器从不接收 selection token/);
 
   const publicTools = [
     'harbor_candidate_snapshot',

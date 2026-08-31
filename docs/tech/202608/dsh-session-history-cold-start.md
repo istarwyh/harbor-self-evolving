@@ -1232,6 +1232,24 @@ job_kind = evaluator-meta-evaluation  # future dedicated Job; 当前独立工具
 
 ## 19. Workbench 改造
 
+### 19.0 面向普通用户的启动入口
+
+Harbor Tab 提供一个默认主动作 `评测最近会话`，不要求用户先理解 Tool 名称、selection token 或 Harbor CLI。交互固定为：
+
+```text
+当前工作空间
+→ 评测最近会话
+→ 只读预览最多 10 条安全会话元数据
+→ 展示 Generator、Evaluator、Judge、coupling、预计请求、有效期和保留边界
+→ 用户明确确认
+→ Host 后台运行
+→ 完成后自动打开 Job
+```
+
+浏览器只接收随机 Preview id；owner-bound selection token、owner identity、Session 原始 id 和正文都停留在 Host。Preview 与工作空间绑定并单次消费；重复确认幂等返回同一 operation，刷新页面只恢复当前工作空间的 active operation。后台运行失败时，UI 按稳定原因码给出“先完成真实任务”“缩到最近 30 天”“重新预览”等恢复动作。
+
+这个入口只覆盖不可晋级的 Historical Generation Evaluation。Candidate 评测、比较、Evaluator Meta-Evaluation、Gate、部署和发布仍走 Agent + Skill 的显式授权路径。
+
 ### 19.1 Job 总览
 
 新增 Job badge：
@@ -1288,7 +1306,7 @@ job_kind = evaluator-meta-evaluation  # future dedicated Job; 当前独立工具
 - 预览是只读；
 - 落盘和 Judge 调用必须二次确认；
 - 不支持跨 Profile、跨用户和跨 cwd；
-- 第一版没有后台自动任务。
+- 只有用户确认后的 Web Historical operation 可以后台继续运行；页面刷新只恢复状态，不自动创建新任务，也没有定时或无确认触发器。
 
 ### 20.2 Credential Boundary
 
