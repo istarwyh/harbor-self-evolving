@@ -2,8 +2,8 @@ import assert from 'node:assert/strict'
 import path from 'node:path'
 import test from 'node:test'
 
-import { assertHistoricalCompletion, classifyHarborFailure, explainHarborFailure, makeHistoricalJobName, makeJobName, redactDiagnostic, resolveWithin } from '../lib/evolution.js'
-import { runProcess } from '../lib/process.js'
+import { assertHistoricalCompletion, classifyHarborFailure, explainHarborFailure, historicalDockerBlockers, makeHistoricalJobName, makeJobName, redactDiagnostic, resolveWithin } from '../lib/evolution.js'
+import { dockerDesktopAwareEnv, runProcess } from '../lib/process.js'
 
 test('paths are constrained to the configured project root', () => {
   const root = path.resolve('/tmp/project')
@@ -117,6 +117,26 @@ test('process input is delivered over stdin without shell interpolation', async 
     timeoutMs: 1000,
   })
   assert.equal(result.stdout, input)
+})
+
+test('macOS child processes inherit the Docker Desktop credential-helper directory once', () => {
+  const dockerBin = '/Applications/Docker.app/Contents/Resources/bin'
+  const source = { PATH: '/usr/local/bin:/usr/bin', KEEP: 'value' }
+  const augmented = dockerDesktopAwareEnv(source, { platform: 'darwin', pathExists: () => true })
+  assert.deepEqual(augmented, { ...source, PATH: `${dockerBin}:${source.PATH}` })
+  assert.equal(dockerDesktopAwareEnv(augmented, { platform: 'darwin', pathExists: () => true }), augmented)
+  assert.equal(dockerDesktopAwareEnv(source, { platform: 'linux', pathExists: () => true }), source)
+  assert.equal(dockerDesktopAwareEnv(source, { platform: 'darwin', pathExists: () => false }), source)
+})
+
+test('Historical Docker preflight blocks only stable Docker error findings', () => {
+  const blocking = { level: 'error', code: 'DOCKER_CREDENTIAL_HELPER_MISSING', message: 'repair helper' }
+  assert.deepEqual(historicalDockerBlockers({ findings: [
+    blocking,
+    { level: 'warning', code: 'DOCKER_BASE_IMAGE_NOT_LOCAL' },
+    { level: 'error', code: 'OTHER_FAILURE' },
+  ] }), [blocking])
+  assert.deepEqual(historicalDockerBlockers({}), [])
 })
 
 test('Harbor failures expose a redacted diagnostic tail and actionable next step', async () => {

@@ -154,6 +154,15 @@ async function cliJson(config, args, { allowedExitCodes = [0], input } = {}) {
   }
 }
 
+export function historicalDockerBlockers(value) {
+  const findings = Array.isArray(value?.findings) ? value.findings : []
+  return findings.filter(item => (
+    item?.level === 'error'
+    && typeof item.code === 'string'
+    && item.code.startsWith('DOCKER_')
+  ))
+}
+
 export async function inspectEvaluator(config, args = {}) {
   const stack = resolveWithin(config.projectRoot, args.stackPath ?? '.harbor/evaluation-stack.yml', 'stackPath')
   return cliJson(config, [
@@ -471,10 +480,10 @@ export async function runHistoricalEvaluation(config, args, modelRuntime) {
   // helper) before Harbor creates a Job whose Trials would all fail during
   // environment setup and only report missing downstream artifacts.
   const dockerCheck = await cliJson(config, ['docker-check'], { allowedExitCodes: [0, 2] })
-  const dockerBlockers = dockerCheck.findings.filter(item => item.level === 'error' && item.code.startsWith('DOCKER_'))
+  const dockerBlockers = historicalDockerBlockers(dockerCheck)
   if (dockerBlockers.length) {
     throw new Error(
-      `Docker runtime preflight blocked the Historical Job:\n${dockerBlockers.map(item => `${item.code}: ${item.message}`).join('\n')}`,
+      `HISTORICAL_DOCKER_PREFLIGHT_FAILED: Docker runtime preflight blocked the Historical Job:\n${dockerBlockers.map(item => `${item.code}: ${item.message}`).join('\n')}`,
     )
   }
   const batch = JSON.parse(await readFile(batchPath, 'utf8'))
