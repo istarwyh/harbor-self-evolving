@@ -172,6 +172,59 @@ def test_historical_artifacts_preserve_abstention_as_completed_unscored(tmp_path
     assert "candidate" not in summary
 
 
+def test_infrastructure_error_surfaces_docker_credential_cause(tmp_path: Path):
+    batch_path, _, _ = make_historical_batch(tmp_path)
+    materialized = materialize_historical_dataset(
+        project_root=tmp_path,
+        batch_path=batch_path,
+        output_path=tmp_path / "dataset",
+        **HISTORICAL_JUDGE_BINDING,
+    )
+    dataset = materialized["dataset_manifest"]
+    stack = snapshot_stack(
+        Path(materialized["stack_path"]),
+        project_root=tmp_path,
+        job_kind="historical-generation-evaluation",
+    )
+    job_dir = tmp_path / "job"
+    job_dir.mkdir()
+    task = dataset["tasks"][0]
+    # Simulate a Trial whose Docker environment never started: the credential
+    # helper could not be resolved, so no observation/evaluator artifacts exist.
+    payload = {
+        "id": "execution-infra",
+        "task_name": task["metadata"]["task_name"],
+        "trial_name": "execution-infra",
+        "agent_result": None,
+        "verifier_result": None,
+        "exception_info": {
+            "exception_type": "RuntimeError",
+            "exception_message": (
+                "Failed to build Docker image ... exit code 1, output: "
+                "error getting credentials - err: exec: "
+                '"docker-credential-desktop": executable file not found in $PATH'
+            ),
+        },
+    }
+    validation = write_historical_job_artifacts(
+        job_dir,
+        [payload],
+        dataset_manifest=dataset,
+        stack_manifest=stack,
+    )
+    assert validation["valid"] is True
+    assessment = load_historical_assessments(job_dir)[0]
+    assert assessment["status"] == "infrastructure-error"
+    # The infrastructure failure is the primary diagnostic; the downstream
+    # missing observation/evaluator files are not reported as separate reasons.
+    assert assessment["score"]["invalid_reasons"] == ["infrastructure-error"]
+    assert assessment["score"]["value"] is None
+    assert assessment["requirements"]["observation_integrity"] is False
+    assert assessment["exception"]["classification"] == "infrastructure"
+    assert "docker-credential-desktop" in assessment["exception"]["message"]
+    assert assessment["exception"]["recommendation"]
+
+
 def test_missing_harbor_trial_fails_dataset_cardinality_validation(tmp_path: Path):
     batch_path, _, observations = make_historical_batch(tmp_path, count=2)
     materialized = materialize_historical_dataset(

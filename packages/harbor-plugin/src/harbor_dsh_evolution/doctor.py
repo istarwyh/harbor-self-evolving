@@ -5,6 +5,7 @@ import hashlib
 import re
 import shutil
 import subprocess
+import sys
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -53,10 +54,24 @@ def _evaluator_artifact_findings(
     return findings
 
 
-def _docker_runtime_findings(
-    dataset_root: Path,
-    dataset_manifest: dict[str, Any] | None,
-) -> list[dict[str, str]]:
+DOCKER_DESKTOP_BIN = Path("/Applications/Docker.app/Contents/Resources/bin")
+
+
+def _credential_helper_path(executable: str) -> str | None:
+    """Resolve a Docker credential helper, including Docker Desktop's macOS
+    bundle location that GUI-launched processes do not inherit on PATH."""
+    located = shutil.which(executable)
+    if located:
+        return located
+    if sys.platform == "darwin":
+        bundled = DOCKER_DESKTOP_BIN / executable
+        if bundled.is_file():
+            return str(bundled)
+    return None
+
+
+def _docker_cli_and_helper_findings() -> list[dict[str, str]]:
+    """Docker CLI, daemon, and credential-helper preflight (no Dataset needed)."""
     findings: list[dict[str, str]] = []
     docker = shutil.which("docker")
     if not docker:
@@ -97,15 +112,42 @@ def _docker_runtime_findings(
         helpers.update(str(value) for value in credential_helpers.values())
     for helper in sorted(value for value in helpers if value):
         executable = f"docker-credential-{helper}"
-        if shutil.which(executable) is None:
+        if _credential_helper_path(executable) is None:
+            fix = (
+                f"Add {DOCKER_DESKTOP_BIN} to PATH (or set `credsStore` to `osxkeychain`), "
+                "then rerun Doctor and retry the Job."
+                if sys.platform == "darwin"
+                else "Install the helper on PATH (or set `credsStore` to a helper you have), then rerun Doctor and retry the Job."
+            )
             findings.append({
-                "level": "warning",
+                "level": "error",
                 "code": "DOCKER_CREDENTIAL_HELPER_MISSING",
                 "message": (
-                    f"Docker config references {executable}, but it is not on PATH. "
-                    "Public image pulls may fail; repair the helper or use a verified local image."
+                    f"Docker config references {executable}, but it is not resolvable; "
+                    f"any `docker build`/`pull` will fail. {fix}"
                 ),
             })
+    return findings
+
+
+def docker_runtime_check() -> dict[str, Any]:
+    """Standalone Docker preflight for Run-time gating (no Dataset required)."""
+    findings = _docker_cli_and_helper_findings()
+    return {
+        "schema_version": 1,
+        "valid": not any(item["level"] == "error" for item in findings),
+        "findings": findings,
+    }
+
+
+def _docker_runtime_findings(
+    dataset_root: Path,
+    dataset_manifest: dict[str, Any] | None,
+) -> list[dict[str, str]]:
+    findings = _docker_cli_and_helper_findings()
+    docker = shutil.which("docker")
+    if not docker:
+        return findings
 
     images: set[str] = set()
     for task in (dataset_manifest or {}).get("tasks") or []:
