@@ -20,7 +20,7 @@ function selectedFixture() {
       data: {
         id: 'message-user', role: 'user', source: { kind: 'user' },
         content: [
-          { type: 'text', text: `Fix /Users/private/project for ${RAW_SESSION_ID} using api_key=${API_SECRET}` },
+          { type: 'text', text: `Fix /Users/private/My Secret Project for ${RAW_SESSION_ID} using api_key=${API_SECRET}\nOPENAI_API_KEY=\`correct horse battery staple\`` },
           { type: 'image', attachment: { digest: API_SECRET, bytes: 'raw' } },
         ],
       },
@@ -96,7 +96,26 @@ test('Session Observation allowlists visible text and removes secret-bearing pay
   assert.match(serialized, /REDACTED_PATH/)
   assert.doesNotMatch(serialized, new RegExp(API_SECRET))
   assert.doesNotMatch(serialized, new RegExp(BEARER_SECRET))
-  assert.doesNotMatch(serialized, /raw-session-id-must-never-leak|replayState|tool-call|request\/header|system/)
+  assert.doesNotMatch(serialized, /raw-session-id-must-never-leak|correct horse|battery staple|My Secret Project|replayState|tool-call|request\/header|system/)
+})
+
+test('Session Observation redacts opaque tokens, credential URLs, and a private key without a footer', () => {
+  const selected = selectedFixture()
+  selected.events[1].data.content[0].text += [
+    '\npostgres://user:dbpassword@localhost',
+    'https://alice:supersecret@example.com',
+    'github_pat_abcdefghijklmnopqrstuvwxyz123456',
+    'SLACK_TOKEN_PLACEHOLDER',
+    'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJzZWNyZXQifQ.signaturepart',
+    'ASIA1234567890ABCDEF',
+    '-----BEGIN PRIVATE KEY-----',
+    'opaque-private-material-without-footer',
+  ].join('\n')
+
+  const serialized = JSON.stringify(buildSessionObservation(selected))
+
+  assert.match(serialized, /REDACTED_SECRET/)
+  assert.doesNotMatch(serialized, /dbpassword|supersecret|github_pat_|SLACK_TOKEN_PLACEHOLDER|eyJhbGci|ASIA1234|opaque-private-material/)
 })
 
 test('Historical Batch is immutable, private, and contains no raw Session id', async () => {

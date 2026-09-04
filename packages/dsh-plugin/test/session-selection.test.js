@@ -84,6 +84,30 @@ test('selection enforces lineage boundaries and sorts by last activity, not crea
   assert.doesNotMatch(JSON.stringify(result.publicSelected), /older-created|newer-created/)
 })
 
+test('public Historical Preview identities redact every shared credential family', async () => {
+  const values = [
+    ['preset-url', 'https://alice:supersecret@example.com'],
+    ['model-github', 'github_pat_abcdefghijklmnopqrstuvwxyz123456'],
+    ['model-slack', 'SLACK_TOKEN_PLACEHOLDER'],
+    ['model-jwt', 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJzZWNyZXQifQ.signaturepart'],
+    ['model-aws', 'ASIA1234567890ABCDEF'],
+    ['model-pem', '-----BEGIN PRIVATE KEY-----\nopaque-private-material-without-footer'],
+  ].map(([id, identity], index) => {
+    const value = snapshot(id, { createdAt: 1_000 + index, lastAt: 3_000 + index, header: { agentPreset: identity } })
+    value.events.find(event => event.type === 'assistant/message').data.message.source.model = identity
+    return value
+  })
+
+  const result = await selectRecentSessions({
+    sessionQuery: queryFor(values), projectRoot: ROOT, currentSessionId: 'current', limit: 10,
+  })
+  const serialized = JSON.stringify(result.publicSelected)
+
+  assert.ok(result.publicSelected.every(item => item.agentPreset === '[redacted-identity]'))
+  assert.ok(result.publicSelected.every(item => item.modelRoutes[0].model === '[redacted-identity]'))
+  assert.doesNotMatch(serialized, /supersecret|github_pat_|SLACK_TOKEN_PLACEHOLDER|eyJ|ASIA1234|opaque-private-material/)
+})
+
 test('selection is bounded before exact Session reads', async () => {
   const values = Array.from({ length: 3 }, (_, index) => snapshot(`s-${index}`))
   await assert.rejects(

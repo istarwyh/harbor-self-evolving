@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from harbor_dsh_evolution.artifacts import trial_assessment, write_job_artifacts
+from harbor_dsh_evolution.artifacts import exception_summary, trial_assessment, write_job_artifacts
 
 
 CONTRACT = {
@@ -109,6 +109,87 @@ def test_trial_assessment_preserves_evaluator_reasons_and_recommendations(tmp_pa
     assert assessment["recommendations"][0]["criterion_id"] == "quality"
 
 
+def test_exception_summary_redacts_credential_families_and_local_paths():
+    cases = [
+        ("Bearer bearer-secret-material", "bearer-secret-material"),
+        ("Basic dXNlcjpwYXNzd29yZA==", "dXNlcjpwYXNzd29yZA=="),
+        ("https://alice:supersecret@example.com", "supersecret"),
+        ("eyJheader.payloadsegment.signaturepart", "eyJheader"),
+        ("ghp_abcdefghijklmnopqrstuvwxyz123456", "ghp_abcdefghijklmnopqrstuvwxyz123456"),
+        ("github_pat_abcdefghijklmnopqrstuvwxyz123456", "github_pat_abcdefghijklmnopqrstuvwxyz123456"),
+        ("xoxb-123456789012-abcdefghijkl", "xoxb-123456789012-abcdefghijkl"),
+        ("sk-proj-abcdefghijklmnopqrstuv", "sk-proj-abcdefghijklmnopqrstuv"),
+        ("AKIAABCDEFGHIJKLMNOP", "AKIAABCDEFGHIJKLMNOP"),
+        ("ASIAABCDEFGHIJKLMNOP", "ASIAABCDEFGHIJKLMNOP"),
+        (
+            "-----BEGIN PRIVATE KEY-----\nopaque-private-material\n-----END PRIVATE KEY-----",
+            "opaque-private-material",
+        ),
+        ("-----BEGIN PRIVATE KEY-----\ntruncated-private-material", "truncated-private-material"),
+        ("failure at /Users/alice/private/report.json", "/Users/alice/private/report.json"),
+        (r"failure at C:\Users\Alice\private\report.txt", r"C:\Users\Alice\private\report.txt"),
+    ]
+    for diagnostic, forbidden in cases:
+        result = exception_summary(
+            {"exception_type": "RuntimeError", "exception_message": diagnostic}
+        )
+        serialized = json.dumps(result)
+        assert forbidden not in serialized
+        assert "REDACTED" in serialized or "local path" in serialized
+
+    result = exception_summary(
+        {
+            "exception_type": "Bearer exception-type-secret",
+            "exception_message": "execution failed",
+        }
+    )
+    assert "exception-type-secret" not in json.dumps(result)
+
+
+def test_trial_assessment_redacts_output_reason_and_recommendation_strings():
+    current = payload("redacted-evidence", rendered=True)
+    current["verifier_result"]["rendered_output"] = {
+        "answer": "Bearer rendered-output-secret",
+        "headers": {"opaque": "header-container-secret"},
+        "environmentVariables": {"OPAQUE": "environment-container-secret"},
+        "credentialsMap": {"opaque": "credential-container-secret"},
+    }
+    current["verifier_result"]["rewards"]["quality"] = 0.5
+    current["evaluator_result"] = {
+        "criteria": [
+            {
+                "id": "quality",
+                "reason": "eyJreason.segmentvalue.signaturevalue",
+                "recommendation": "retry https://alice:recommendation-secret@example.com",
+            }
+        ],
+        "recommendations": [
+            {"message": "rotate ghp_abcdefghijklmnopqrstuvwxyz123456"}
+        ],
+    }
+    contract = {
+        **CONTRACT,
+        "metrics": [
+            {"id": "reward", "direction": "maximize"},
+            {"id": "quality", "direction": "maximize"},
+        ],
+    }
+
+    assessment = trial_assessment(current, evaluation_contract=contract)
+    serialized = json.dumps(assessment)
+    for forbidden in (
+        "rendered-output-secret",
+        "eyJreason",
+        "recommendation-secret",
+        "ghp_abcdefghijklmnopqrstuvwxyz123456",
+        "header-container-secret",
+        "environment-container-secret",
+        "credential-container-secret",
+    ):
+        assert forbidden not in serialized
+    assert serialized.count("REDACTED") >= 4
+
+
 def test_artifact_registry_and_population_include_only_valid_scores(tmp_path: Path):
     valid = payload("valid", rendered=True)
     failed = payload("failed", exception=True, rendered=True)
@@ -127,7 +208,7 @@ def test_artifact_registry_and_population_include_only_valid_scores(tmp_path: Pa
     assert failed_assessment["score"]["value"] is None
     # The causal error is surfaced (not the generic "Execution failed" wrapper)
     # and the secret value is redacted.
-    assert failed_assessment["exception"]["message"] == "[local path]=[redacted]"
+    assert failed_assessment["exception"]["message"] == "[local path]"
 
 
 def test_optimizer_proposes_one_guarded_experiment_for_weak_valid_dimension(tmp_path: Path):

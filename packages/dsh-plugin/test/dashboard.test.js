@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, mkdir, readFile, symlink, unlink, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, rename, symlink, unlink, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { performance } from 'node:perf_hooks'
@@ -18,7 +18,16 @@ async function makeJob(projectRoot, name = 'candidate-v2', nTrials = 4) {
   await writeFile(path.join(job, 'evaluation-summary.json'), JSON.stringify({ schema_version: 2, job: name, mode: 'promotion-eligible', candidate: { candidate_id: 'research-agent', version: '2.0.0', digest: 'sha256:candidate-v2' }, evaluation_context: { schema_version: 2, digest: 'sha256:context-stable' }, n_trials: nTrials, n_exceptions: 1, metrics: { reward: 0.82, citation_accuracy: 0.91 }, trials, artifact_validation: { valid: true } }))
   await writeFile(path.join(job, 'evaluation-context.json'), JSON.stringify({ schema_version: 2, digest: 'sha256:context-stable', full_digest: 'sha256:full', candidate: {}, dataset: {}, evaluation_stack: {}, runtime: {} }))
   await writeFile(path.join(job, 'evaluation-contract.json'), JSON.stringify({ schema_version: 1, contract_id: 'search', version: '1', primary_metric: 'reward', metrics: [{ id: 'reward', direction: 'maximize' }] }))
-  await writeFile(path.join(job, 'trial-assessments', 'trial-0.json'), JSON.stringify({ schema_version: 1, trial_id: 'trial-0', output: { token: 'should-redact', text: 'x'.repeat(9000) }, process: [] }))
+  await writeFile(path.join(job, 'trial-assessments', 'trial-0.json'), JSON.stringify({
+    schema_version: 1,
+    trial_id: 'trial-0',
+    output: {
+      token: 'should-redact',
+      text: 'x'.repeat(9000),
+      note: 'authorization="Bearer quoted-dashboard-secret with residue"',
+    },
+    process: [],
+  }))
   return job
 }
 
@@ -194,7 +203,52 @@ test('job and trial APIs redact evidence, reject traversal, and report invalid s
   const trial = await readTrialDetail(config(projectRoot), { job: 'candidate-v2', trial: 'trial-0' })
   assert.equal(trial.assessment.output.token, '[REDACTED]')
   assert.match(trial.assessment.output.text, /\[TRUNCATED/)
+  assert.equal(trial.assessment.output.note, 'authorization=[REDACTED]')
+  assert.doesNotMatch(JSON.stringify(trial), /quoted-dashboard-secret|with residue/)
   await assert.rejects(() => readJobDetail(config(projectRoot), { job: '../outside' }), /invalid/)
+})
+
+test('Trial readers reject symlinked intermediate assessment and artifact directories', async () => {
+  const assessmentRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-assessment-link-'))
+  const assessmentJob = await makeJob(assessmentRoot, 'assessment-link', 1)
+  const outsideAssessments = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-outside-assessment-'))
+  await writeFile(path.join(outsideAssessments, 'trial-0.json'), JSON.stringify({
+    schema_version: 1,
+    trial_id: 'trial-0',
+    output: { text: 'outside assessment must not be read' },
+  }))
+  await rename(path.join(assessmentJob, 'trial-assessments'), path.join(assessmentJob, 'real-trial-assessments'))
+  await symlink(outsideAssessments, path.join(assessmentJob, 'trial-assessments'))
+
+  await assert.rejects(
+    readTrialDetail(config(assessmentRoot), { job: 'assessment-link', trial: 'trial-0' }),
+    /Trial assessment is invalid/,
+  )
+
+  const artifactRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-artifact-link-'))
+  const artifactJob = await makeJob(artifactRoot, 'artifact-link', 1)
+  await writeFile(path.join(artifactJob, 'evaluation-summary.json'), JSON.stringify({
+    schema_version: 2,
+    job: 'artifact-link',
+    evaluation_context: { schema_version: 2, digest: 'sha256:context-stable' },
+    n_trials: 1,
+    metrics: {},
+    trials: [{ id: 'trial-0', name: 'run-0', status: 'completed', score: { value: 1, valid: true } }],
+  }))
+  await writeFile(path.join(artifactJob, 'trial-assessments', 'trial-0.json'), JSON.stringify({
+    schema_version: 1,
+    trial_id: 'trial-0',
+    output: { metadata: { status: 'complete' } },
+  }))
+  const outsideArtifacts = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-outside-artifact-'))
+  await writeFile(path.join(outsideArtifacts, 'manifest.json'), JSON.stringify([{ status: 'ok', destination: 'artifacts/result.txt' }]))
+  await writeFile(path.join(outsideArtifacts, 'result.txt'), 'outside artifact must not be read')
+  await mkdir(path.join(artifactJob, 'run-0'), { recursive: true })
+  await symlink(outsideArtifacts, path.join(artifactJob, 'run-0', 'artifacts'))
+
+  const artifactTrial = await readTrialDetail(config(artifactRoot), { job: 'artifact-link', trial: 'trial-0' })
+  assert.equal(artifactTrial.preview, undefined)
+  assert.doesNotMatch(JSON.stringify(artifactTrial), /outside artifact must not be read/)
 })
 
 test('job detail opens Context v1 artifacts as capability-gated read-only history', async () => {
@@ -206,6 +260,32 @@ test('job detail opens Context v1 artifacts as capability-gated read-only histor
   const detail = await readJobDetail(config(projectRoot), { job: 'legacy' })
   assert.equal(detail.capabilities.readOnlyLegacy, true)
   assert.equal(detail.capabilities.compare, false)
+})
+
+test('Workbench job and Trial readers redact header, environment, and credential containers before HTTP exposure', async () => {
+  const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-sensitive-containers-'))
+  const job = await makeJob(projectRoot, 'sensitive-containers', 1)
+  const summaryPath = path.join(job, 'evaluation-summary.json')
+  const contextPath = path.join(job, 'evaluation-context.json')
+  const assessmentPath = path.join(job, 'trial-assessments', 'trial-0.json')
+  const summary = JSON.parse(await readFile(summaryPath, 'utf8'))
+  const context = JSON.parse(await readFile(contextPath, 'utf8'))
+  const assessment = JSON.parse(await readFile(assessmentPath, 'utf8'))
+  summary.headers = { opaque: 'header-secret-value' }
+  context.environmentVariables = { OPAQUE: 'environment-secret-value' }
+  assessment.output.credentialsMap = { opaque: 'credential-secret-value' }
+  await writeFile(summaryPath, JSON.stringify(summary))
+  await writeFile(contextPath, JSON.stringify(context))
+  await writeFile(assessmentPath, JSON.stringify(assessment))
+
+  const detail = await readJobDetail(config(projectRoot), { job: 'sensitive-containers' })
+  const trial = await readTrialDetail(config(projectRoot), { job: 'sensitive-containers', trial: 'trial-0' })
+  const serialized = JSON.stringify({ detail, trial })
+
+  assert.equal(detail.artifacts.summary.headers, '[REDACTED]')
+  assert.equal(detail.artifacts.context.environmentVariables, '[REDACTED]')
+  assert.equal(trial.assessment.output.credentialsMap, '[REDACTED]')
+  assert.doesNotMatch(serialized, /header-secret-value|environment-secret-value|credential-secret-value/)
 })
 
 test('1000-trial first page stays paginated and within the local latency budget', async () => {
@@ -380,6 +460,79 @@ test('read-only compare reports comparability and never claims an automatic Gate
   assert.match(comparison.note, /never runs Gate/)
 })
 
+test('read-only comparison never treats invalid or infrastructure-error scores as quality deltas', async () => {
+  const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-invalid-compare-'))
+  await makeJob(projectRoot, 'baseline', 3)
+  await makeJob(projectRoot, 'candidate', 3)
+  const baselinePath = path.join(projectRoot, 'jobs', 'baseline', 'evaluation-summary.json')
+  const candidatePath = path.join(projectRoot, 'jobs', 'candidate', 'evaluation-summary.json')
+  const baseline = JSON.parse(await readFile(baselinePath, 'utf8'))
+  const candidate = JSON.parse(await readFile(candidatePath, 'utf8'))
+
+  baseline.trials[0].score = { value: 0, valid: true, invalid_reasons: [] }
+  candidate.trials[0].score = { value: 0.5, valid: true, invalid_reasons: [] }
+  baseline.trials[1].rewards.reward = 0.1
+  candidate.trials[1].rewards.reward = 0.9
+  baseline.trials[2].score = { value: 0.8, valid: true, invalid_reasons: [] }
+  candidate.trials[2].score = { value: 0.1, valid: true, invalid_reasons: [] }
+
+  await writeFile(baselinePath, JSON.stringify(baseline))
+  await writeFile(candidatePath, JSON.stringify(candidate))
+  const now = new Date().toISOString()
+  const lifecycle = (job, trials) => ({
+    schema_version: 1,
+    job,
+    updated_at: now,
+    dataset_total: trials.length,
+    counts: {},
+    trials: trials.map((trial, dataset_order) => ({
+      dataset_order,
+      dataset_trial: `query ${dataset_order}`,
+      execution_id: `trial-${dataset_order}`,
+      trial_name: `query ${dataset_order}`,
+      terminal: true,
+      attempt: 1,
+      updated_at: now,
+      ...trial,
+    })),
+  })
+  await writeFile(path.join(projectRoot, 'jobs', 'baseline', 'trial-lifecycle.json'), JSON.stringify(lifecycle('baseline', [
+    { phase: 'completed', score: { value: 0, valid: true, invalid_reasons: [] } },
+    { phase: 'completed', score: { value: 0.1, valid: true, invalid_reasons: [] } },
+    { phase: 'completed', score: { value: 0.8, valid: true, invalid_reasons: [] } },
+  ])))
+  await writeFile(path.join(projectRoot, 'jobs', 'candidate', 'trial-lifecycle.json'), JSON.stringify(lifecycle('candidate', [
+    { phase: 'completed', score: { value: 0.5, valid: true, invalid_reasons: [] } },
+    { phase: 'infrastructure-error', score: { value: null, valid: false, invalid_reasons: ['infrastructure-error'] } },
+    { phase: 'evaluation-error', score: { value: 0.1, valid: false, invalid_reasons: ['evaluation-error'] } },
+  ])))
+
+  const comparison = await readComparison(config(projectRoot), { baseline: 'baseline', candidate: 'candidate' })
+  assert.deepEqual(comparison.improvedTrials.map(item => item.trial), ['query 0'])
+  assert.deepEqual(comparison.regressedTrials, [])
+  assert.equal(comparison.improvedTrials.some(item => item.trial === 'query 1'), false)
+  assert.equal(comparison.regressedTrials.some(item => item.trial === 'query 2'), false)
+  assert.deepEqual(comparison.invalidTrials, [{
+    trial: 'query 1',
+    status: 'infrastructure-error',
+    invalidReasons: ['infrastructure-error'],
+    baselineValid: true,
+    candidateValid: false,
+  }, {
+    trial: 'query 2',
+    status: 'evaluation-error',
+    invalidReasons: ['evaluation-error'],
+    baselineValid: true,
+    candidateValid: false,
+  }])
+  assert.deepEqual(comparison.newInfrastructureExceptions, [{
+    trial: 'query 1',
+    baselineStatus: 'completed',
+    candidateStatus: 'infrastructure-error',
+    exception: { type: 'Timeout', classification: 'infrastructure' },
+  }])
+})
+
 test('read-only comparison rejects Historical Generation Jobs with a stable promotion reason', async () => {
   const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-historical-compare-'))
   await makeJob(projectRoot, 'candidate', 2)
@@ -398,13 +551,19 @@ test('Evaluator governance is read-only, source-contained, and redacts credentia
   const job = path.join(projectRoot, 'jobs', 'governed')
   await mkdir(path.join(projectRoot, 'stack'), { recursive: true })
   await mkdir(job, { recursive: true })
-  await writeFile(path.join(projectRoot, 'stack', 'rubric.md'), 'score evidence\napi_key=do-not-show\n')
+  await writeFile(path.join(projectRoot, 'stack', 'rubric.md'), [
+    'score evidence',
+    'api_key=do-not-show',
+    'authorization: "Bearer quoted-assignment-secret with residue"',
+    "secret='quoted-secret with spaces'",
+    '"Basic quoted-basic-secret with spaces"',
+  ].join('\n'))
   await writeFile(path.join(job, 'evaluation-stack-manifest.json'), JSON.stringify({ schema_version: 1, stack_id: 'search', version: '2', digest: 'sha256:stack', components: { rubric: { id: 'rubric', version: '2', entry: 'stack/rubric.md', digest: 'sha256:rubric', reward_affecting: true } }, judge: { provider: 'local', model: 'judge', version: '1' } }))
   await writeFile(path.join(job, 'evaluation-contract.json'), JSON.stringify({ schema_version: 1, contract_id: 'search', version: '2', primary_metric: 'reward', metrics: [{ id: 'reward' }] }))
   await writeFile(path.join(job, 'evaluation-context.json'), JSON.stringify({ schema_version: 2, digest: 'sha256:context' }))
   const governance = await readEvaluatorGovernance(config(projectRoot), { job: 'governed' })
   assert.match(governance.components.rubric.source.text, /api_key=\[REDACTED\]/)
-  assert.doesNotMatch(governance.components.rubric.source.text, /do-not-show/)
+  assert.doesNotMatch(governance.components.rubric.source.text, /do-not-show|quoted-assignment-secret|quoted-secret|quoted-basic-secret|with residue|with spaces/)
   assert.equal(governance.editingPolicy.browserWriteEnabled, false)
   assert.equal(governance.editingPolicy.automaticGate, false)
   assert.equal(governance.upgradeWorkflow.steps.length, 5)
