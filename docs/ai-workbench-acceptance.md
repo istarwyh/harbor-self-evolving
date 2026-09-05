@@ -2,6 +2,8 @@
 
 Status: implemented interaction slice under review, 2026-09-05. **Not full PRD completion; Phase 1 is partial.**
 
+Release scope for **0.9.2**: the user requested publication of the reviewed incremental interaction/usability changes. This does not waive the Candidate/AC-04, Docker cancellation, mobile/keyboard or full lifecycle acceptance gaps recorded below, and is not a complete-PRD release. Historical iteration counts and statements that no package was published describe those iterations, not current registry availability. The release preflight found 0.9.1 absent from npm, PyPI and GitHub Releases; its code baseline remains in Git history.
+
 ## Selection, persistent tasks and saved-version recovery — 2026-09-05
 
 This iteration addresses the subsequent usability review. It does **not** remove the upstream ACP blocker or establish a passing Candidate baseline.

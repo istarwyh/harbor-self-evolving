@@ -4,9 +4,21 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+## 0.9.2 - 2026-09-05
+
+- Carry forward the 0.9.0/0.9.1 Workbench changes with evidence-bound AI answers, explicit object follow-ups, typed navigation, and reviewed action drafts.
+- Preserve source-edit buffers across navigation and refresh, keep human edits during AI suggestion review, and reject changed source identities before saving.
+- Keep all-filtered Trial selection, row checkboxes, exclusions, counts and quoted AI context consistent without silently changing a prepared Composer reference.
+- Add Session-scoped persistent background tasks, actual progress and partial-result navigation independent of the current discussion, and explicit cancellation.
+- Add read-only resource inspection and separately confirmed recovery with pinned local Docker endpoints and Host/daemon identity checks. Recovery does not delete Docker resources or retry work.
+- Persist saved Evaluator/Stack continuation metadata, reverify identities on reload, and disable stale planning/source display after drift or a failed history recheck without hiding the successful save.
+- Add bounded diagnostic execution with explicit preview/confirmation, request ceilings and truthful separation of infrastructure completion from valid evaluation results.
+- Validation: 418 Node tests and 151 Python tests, generated client and Python builds, shell checks and npm pack dry-run. Real-browser acceptance and remaining boundaries are recorded in `docs/ai-workbench-acceptance.md`.
+- Scope: this is an incremental interaction/usability release, not full PRD completion. The known upstream ACP dependency failure, successful 12-Trial AC-04, a new live Docker cancellation/recovery journey, the full mobile/keyboard matrix, and the complete meta-evaluation/fresh-baseline loop remain unresolved or unverified.
+
 ## 0.9.1 - 2026-09-05
 
-- Complete the AI-native Workbench release across npm, PyPI, and GitHub, superseding the partially published 0.9.0 release.
+- Prepare cross-package fixes following the partially published 0.9.0 release. Publication of 0.9.1 was not completed: the 2026-09-05 release audit found no npm/PyPI 0.9.1 package or GitHub Release. These fixes are carried forward into 0.9.2.
 - Preserve file-reference chips when normalizing Harbor references, including file labels that contain Harbor-looking text.
 - Return stable, bounded, redacted errors when a bound Job or Trial disappears before context resolution or evidence reading.
 - Align Node and Python redaction for credential containers, URL userinfo, and single-segment absolute local paths; keep synthetic credential regression fixtures effective without embedding token-shaped literals in source.

@@ -1,6 +1,6 @@
 # 本地 DSH Web 快速开始
 
-版本组合：DSH `latest`、Plugin + Skill `0.9.1`、Harbor Adapter `0.9.1`、Harbor `0.21.x`。
+版本组合：DSH `latest`、Plugin + Skill `0.9.2`、Harbor Adapter `0.9.2`、Harbor `0.21.x`。
 
 ## 安装与重启
 
@@ -8,7 +8,7 @@
 
 ```bash
 cd /absolute/path/to/agent-workspace
-npx --yes dsh-harbor-evolution@0.9.1 setup --project-root "$PWD"
+npx --yes dsh-harbor-evolution@0.9.2 setup --project-root "$PWD"
 ```
 
 GitHub URL 是文档/源码入口，正式用户仍使用 npm 安装；不要直接 link 新 checkout。安装器会建立独立 Harbor venv、安装同版本 Python Adapter、把 Plugin + Skill 写入 `web` profile、保存 CLI 路径，并验证 `dsh-evolution` 与 `dsh-historical-evaluation` 两个 Harbor entry point。
@@ -129,9 +129,9 @@ Workbench 会跟随 DSH 语言设置展示九个阶段。「候选版本」先�
 | 现象 | 处理 |
 | --- | --- |
 | 插件没有 Harbor Tab | 确认装入 `web` profile，停止旧进程并重启 |
-| 工具存在但 Skill 不出现 | 确认 `harbor-evolution` 版本为 `0.9.1` 并重启 |
+| 工具存在但 Skill 不出现 | 确认 `harbor-evolution` 版本为 `0.9.2` 并重启 |
 | `spawn harbor ENOENT` | 重新运行 setup 保存绝对 CLI 路径 |
-| Harbor 找不到 `dsh-evolution` 或 `dsh-historical-evaluation` | Adapter 与 Harbor 不在同一 venv，或仍是旧版；重新运行 0.9.1 setup |
+| Harbor 找不到 `dsh-evolution` 或 `dsh-historical-evaluation` | Adapter 与 Harbor 不在同一 venv，或仍是旧版；重新运行 0.9.2 setup |
 | Preview 报 `NO_ELIGIBLE_SESSIONS` | 当前 exact-cwd 没有合格已完成业务会话；先完成真实任务或提供显式 Query/Dataset |
 | Historical Job 显示 `completed-unscored` | 正常证据弃权；查看缺失 Criterion 和 coverage，不要当成质量 0 分 |
 | Apple Silicon 安装时编译 `cryptography` 失败 | 检查是否误选 x86_64 Python；按 troubleshooting 使用 `uv` managed Python |
