@@ -4,9 +4,10 @@ import test from 'node:test'
 
 import React from 'react'
 
-test('built Web client registers the AI-native Workbench, Context Dock, Doctor, and eighteen Tool views', async () => {
+test('built Web client registers the AI-native Workbench, Context Dock, Doctor, and nineteen Tool views', async () => {
   const bundle = await readFile(new URL('../lib/client.js', import.meta.url), 'utf8')
   const source = await readFile(new URL('../src/client/index.jsx', import.meta.url), 'utf8')
+  const editor = await readFile(new URL('../src/client/evaluator-editor.jsx', import.meta.url), 'utf8')
   let descriptor
   const window = { __ModuleLoader__: { load(value) { descriptor = value } } }
   new Function('window', bundle)(window)
@@ -43,7 +44,7 @@ test('built Web client registers the AI-native Workbench, Context Dock, Doctor, 
   }
   plugin.apply(ctx)
   assert.deepEqual(registrations.slice(0, 3).map(entry => entry.options.name), ['conversation.view', 'conversation.input.dock', 'settings.section'])
-  assert.equal(registrations.slice(3).length, 18)
+  assert.equal(registrations.slice(3).length, 19)
   assert.ok(registrations.slice(3).every(entry => entry.options.name === 'tool.call.toolview'))
   assert.equal(registrations[0].options.id, 'harbor-evolution')
   assert.equal(registrations[1].options.id, 'harbor-evolution-context')
@@ -67,6 +68,7 @@ test('built Web client registers the AI-native Workbench, Context Dock, Doctor, 
     'harbor_candidate_compare',
     'harbor_resolve_page_context',
     'harbor_get_evidence',
+    'harbor_propose_action',
   ])
   assert.equal(referenceSources.length, 1)
   assert.equal(referenceSources[0].trigger, '@')
@@ -86,7 +88,8 @@ test('built Web client registers the AI-native Workbench, Context Dock, Doctor, 
   assert.match(source, /function EvaluatorEditor/, 'Judge stage must open descriptor-authorized Evaluator source for controlled editing')
   assert.match(source, /openFile: '打开'.*editingFile: '正在修改'/s, 'Evaluator files must be presented as directly openable and editable')
   assert.match(source, /trial\.displayName \?\? trial\.datasetTrial/, 'Trial lists must lead with the user instruction instead of Harbor random IDs')
-  assert.match(source, /stage === 'judge'\) content = <><GovernancePanel/, 'Judge stage must start with actionable evaluator governance')
+  assert.match(source, /section === 'evaluator'\) content = <GovernancePanel/, 'Evaluator governance must be an explicit object-first destination')
+  assert.match(source, /section === 'summary'\) content = <JobSummaryPanel/, 'Jobs must start with health, metrics, and actionable object navigation')
   assert.match(source, /function judgeIdentityDetails[\s\S]*judge\?\.coupling[\s\S]*judge\?\.reasoning_effort[\s\S]*judge\?\.transport/, 'Judge governance must surface coupling and configured runtime identity details')
   assert.match(source, /<code>\{judgeIdentityDetails\(value\.judge\)\}<\/code>/, 'Judge identity details must be rendered in the main governance card')
   assert.match(bundle, /judgeIdentityDetails/, 'the portable Web bundle must include Judge coupling visibility')
@@ -106,7 +109,7 @@ test('built Web client registers the AI-native Workbench, Context Dock, Doctor, 
   assert.match(source, /projectRootAgent/, 'Doctor settings must explain when the Workbench root follows the latest Agent session')
   assert.match(source, /workspaceSelect/, 'Workbench must expose an explicit workspace selector')
   assert.match(source, /request\('job', \{ workspace, job \}\)/, 'an open Job drawer must remain pinned to its workspace and Session')
-  assert.match(source, /childContext\.current = false[\s\S]*\[bridge, job, sessionId, stage, workspace\]/, 'same-name Job navigation across workspaces must reset any stale child context')
+  assert.match(source, /childContext\.current = false[\s\S]*\[bridge, job, section, sessionId, stage, workspace\]/, 'Job, workspace and section changes reset child context, including within the same pipeline stage')
   assert.match(source, /function HistoricalLauncher/, 'Workbench must provide a first-class Historical Session launcher')
   assert.match(source, /historicalLaunch: '评测最近会话'/, 'the default Historical action must be direct and user-facing')
   assert.match(source, /update\('historical-preview',[\s\S]*limit: 10[\s\S]*update\('historical-run'/, 'Historical launch must Preview up to ten Sessions before explicit confirmation')
@@ -119,28 +122,30 @@ test('built Web client registers the AI-native Workbench, Context Dock, Doctor, 
   assert.match(source, /class HarborUiBridge/, 'Workbench context must be isolated by Session in an explicit bridge')
   assert.match(source, /function ContextDock/, 'Composer must expose current-page and explicit one-shot context')
   assert.match(source, /function CopilotDock/, 'Harbor must project the same Session run into a local Copilot Dock')
-  assert.match(source, /harborTurnProjection\(nodes, ui\.lastSent\?\.contextSnapshotId\)/, 'Copilot must anchor projection to the exact submitted Harbor context token')
+  assert.match(source, /const projection = harborConversationProjection\(nodes, ui\.lastSent\?\.contextSnapshotId, selectedSeq\)/, 'Copilot must display continuous follow-ups anchored to the exact submitted Harbor reference')
   assert.match(source, /trustedHarborUiAction\(node\?\.call\?\.name, value\)/, 'Copilot navigation must trust only schema-bound Harbor reader results')
   assert.match(source, /const resolved = trustedHarborResolvedContext\(recent\)/, 'Copilot freshness must trust only successful exact resolver results')
   assert.match(source, /const references = trustedHarborReferences\(recent\)/, 'Copilot must collect every trusted typed object and Evidence result from the owning turn')
-  assert.match(source, /const basis = harborAnswerBasis\(resolved \?\? currentLatest\?\.value, references, ui\.lastSent\?\.context\)/, 'Copilot must render answer basis from trusted typed results and the frozen submitted context')
-  assert.match(source, /<pre className="hse-copilot-answer">\{answer\}<\/pre>/, 'Copilot must render assistant prose as text instead of parsing model Markdown for navigation')
+  assert.match(source, /const basis = harborDisplayedAnswerBasis\(resolved, references, projection\.continuation, currentLatest\?\.value, discussionContext\)/, 'Copilot must keep the current answer basis distinct from historical discussion context')
+  assert.match(source, /<AnswerText text=\{answer\}\/>/, 'Copilot must render assistant prose as text instead of parsing model Markdown for navigation')
   assert.match(source, /node\.seq > anchorSeq/, 'Copilot must bound projected nodes by the submitted message sequence')
   assert.doesNotMatch(source, /sentAt/, 'Copilot attribution must not depend on wall-clock timing')
   assert.match(source, /bridge\.navigate\(sessionId, action, \{ force: true \}\)/, 'only an explicit Copilot action may force Harbor navigation')
   assert.match(source, /this\.activationEpochs\.get\(sessionKey\) === activationEpoch/, 'stale context binding responses must not replace newer explicit state')
   assert.match(source, /harborSubmissionTransition\(submitted\.current, explicit, phase, effectiveHasReference\)/, 'one-shot completion must distinguish successful consumption from failed submission')
   assert.match(source, /effectiveHarborSubmissionReference\(wasObserved, phase, hasReference\)/, 'an observed reference cleared atomically by submit must still freeze the sent snapshot')
-  assert.match(source, /contextLabel\(explicit\.context\)/, 'the explicit Capsule must describe its own frozen object')
-  assert.match(source, /disabled=\{expired\}/, 'an expired Capsule must not remain actionable as valid context')
+  assert.match(source, /capsuleContext = explicit\?\.context/, 'the explicit Capsule must describe its own frozen object')
+  assert.match(source, /disabled=\{expired \|\| isHarborInputBusy\(phase\)/, 'an expired Capsule must not remain actionable as valid context')
   assert.match(source, /evidenceCriterionOwners\(criteria, ref\)/, 'provenance Evidence Ask must resolve one owning Criterion')
   assert.match(source, /trialNavigationView\(target/, 'typed navigation must restore allowlisted Trial view state')
   assert.match(source, /navigationHistory\.current\.push\(navigationHistoryEntry\(selected/, 'typed navigation must save the previous Workbench state before changing objects')
-  assert.match(source, /if \(rootNode\.current\) rootNode\.current\.scrollTop = 0/, 'typed navigation must position a newly targeted object from the top of its Harbor view')
+  assert.match(source, /if \(scrollNode\.current\) scrollNode\.current\.scrollTop = 0/, 'typed navigation must position a newly targeted object from the top of its Harbor scrollport')
   assert.match(source, /restoreNavigationSelection\(previous, restoreId/, 'Back must restore the previous Job, stage, Trial view, and selection')
-  assert.match(source, /setSelected\(current => clearConsumedNavigation\(current, navigation\)\)/, 'a typed navigation action must be removed after its one rendered transition so later remounts cannot replay it')
+  assert.match(source, /setSelected\(current => clearConsumedNavigation\(current, navigation\)\)/, 'a typed target must be retired without clearing a newer navigation')
+  assert.match(source, /onClickCapture=\{\(\) => consumeNavigation\?\.\(navigation\)\}/, 'a target survives slow resource loading, but a new user choice prevents remount replay')
+  assert.doesNotMatch(source, /queueMicrotask\(\(\) => \{ if \(handledNavigation/, 'polling must not re-arm a consumed Trial target')
   assert.match(source, /ownsNavigationHistoryEntry\(previous, sessionId\)/, 'Back must reject any history entry not owned by the active Session')
-  assert.match(source, /rootNode\.current\.scrollTop = Math\.max\(0, pending\.scrollTop\)/, 'Back to the Job list must restore its prior scroll position')
+  assert.match(source, /scrollNode\.current\.scrollTop = Math\.max\(0, pending\.scrollTop\)/, 'Back to the Job list must restore its prior scroll position')
   assert.match(source, /restoreView=\{restoreView\} onViewStateChange=/, 'Trial Back restoration must carry allowlisted filters, sort, selection, and focus')
   assert.match(source, /hasHistory \? t\('back'\) : t\('backToJobs'\)/, 'answer navigation must expose Back instead of discarding its history')
   assert.match(source, /historyDepth \? <button[^>]*hse-dashboard-back/, 'typed navigation to Harbor home must retain a visible Back control')
@@ -159,7 +164,7 @@ test('built Web client registers the AI-native Workbench, Context Dock, Doctor, 
   assert.match(source, /onRestoreCancel=\{stopRestoredScroll\}/, 'manual Trial interaction must cancel any pending Back scroll restoration')
   assert.match(source, /alive\.current = false; detailSequence\.current \+= 1/, 'unmount must revoke every in-flight Trial detail response')
   assert.match(source, /activeGovernanceKey\.current = requestKey[\s\S]*ownsGovernanceRequest\(activeGovernanceKey\.current, requestKey, requestSequence\.current, sequence\)/, 'Governance responses must be owned by the current workspace, Job, and request epoch')
-  assert.match(source, /bindingIsCurrent\(bindingKey\)[\s\S]*update\('evaluator'/, 'Evaluator mutation must recheck the loaded Governance binding immediately before saving')
+  assert.match(editor, /bindingIsCurrent\(bindingKey\)[\s\S]*update\('evaluator'/, 'Evaluator mutation must recheck the loaded Governance binding immediately before saving')
   assert.match(source, /commitIssuedDraft\(bridge, sessionId, issued, replaceHarborReference/, 'Ask AI must prepare Draft only for the currently owned explicit snapshot')
   assert.match(source, /const update = async context => \{[\s\S]*?const issued = await bind\(context\)[\s\S]*?commitIssuedDraft\(bridge, sessionId, issued, replaceHarborReference/, 'the first Context Dock bind and every later update must write the issued reference into the Draft')
   assert.match(source, /needsStructuredHarborNormalization\(draft, occurrences, explicit, observedTokens\.current\.has\(token\)\)[\s\S]*replaceHarborReference\?\.\(explicit, ''\)/, 'manual @harbor replacement must keep exactly the newly activated structured reference without resurrecting an observed deletion')

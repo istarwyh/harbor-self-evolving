@@ -3,6 +3,11 @@ import { createHash } from 'node:crypto'
 import path from 'node:path'
 
 import { loadModelBinding } from './candidate.js'
+import { LOCAL_OBJECT_KINDS, interactionObjectCatalog, resolveCatalogSelection } from './interaction-objects.js'
+import { TrialSelectionRegistry, MAX_SELECTED_TRIALS } from './trial-selection.js'
+import { ActionDraftController } from './action-drafts.js'
+import { DiagnosticRunner } from './diagnostic-runner.js'
+import { prepareEvaluatorSaveHistory, readEvaluatorSave, recordEvaluatorSave } from './evaluator-saves.js'
 import {
   containsCredentialText,
   containsLocalPath,
@@ -62,6 +67,15 @@ const SAFE_EVIDENCE_REF = /^[\p{L}\p{N}][\p{L}\p{N}._:@+#/+-]{0,319}$/u
 
 function compact(value) {
   return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined))
+}
+
+function selectedObjectEvidence(entries = []) {
+  const budget = { remaining: 32 * 1024 }
+  return entries.slice(0, 10).map(item => {
+    const value = sanitizeAgentRead(item.value, budget)
+    const complete = !JSON.stringify(value).includes('[TRUNCATED') && !JSON.stringify(value).includes('"__truncated"')
+    return { ref: item.ref, artifactTrust: 'untrusted-evidence', available: complete, ...(complete ? { value } : { reason: 'Selected evidence exceeded the bounded reader; narrow the selection.' }) }
+  })
 }
 
 function sensitiveEvidenceKey(value) {
@@ -262,6 +276,7 @@ function interactionRevision(jobState, trialState, objectState) {
       previewDigest: trialState.preview === undefined ? undefined : digest(trialState.preview),
     } : undefined,
     object: compact({
+      selected: objectState?.selected?.map(item => item.ref),
       comparison: objectState?.comparison ? {
         baseline: objectState.comparison.baselineJob,
         candidate: objectState.comparison.candidateJob,
@@ -313,10 +328,14 @@ async function interactionComparisonSnapshot(config, baseline, candidate) {
   }
 }
 
-async function interactionObjectState(config, context, job, jobState) {
+async function interactionObjectState(config, context, job, jobState, trialState, selectionEntries = []) {
   const refs = [context.object, ...(context.selection ?? [])]
   const compareRef = refs.find(ref => ref?.kind === 'compare')
+  const governance = refs.some(ref => ref?.kind === 'evaluator-source') ? await readEvaluatorGovernance(config, { job }) : undefined
+  const catalog = [...interactionObjectCatalog(job, jobState, trialState, governance), ...selectionEntries]
   return {
+    catalog,
+    selected: refs.filter(ref => LOCAL_OBJECT_KINDS.has(ref?.kind) && ref.sourceDigest).map(ref => resolveCatalogSelection(ref, catalog)),
     comparison: compareRef ? await interactionComparisonSnapshot(config, compareRef.baseline, compareRef.candidate) : undefined,
     gate: interactionGateIdentity(job, jobState),
   }
@@ -331,6 +350,10 @@ function interactionObjectRef(ref, workspace, job, jobState, trialState, objectS
   }
   if (!jobState || ref.job !== job) {
     throw new Error('HARBOR_CONTEXT_STALE_SELECTION: selected object does not belong to the current Job')
+  }
+  if (LOCAL_OBJECT_KINDS.has(kind) && ref.sourceDigest) {
+    const selected = resolveCatalogSelection(ref, objectState?.catalog ?? [])
+    return { ...selected.ref, kind: `harbor.${kind}/v1`, workspace }
   }
   if (kind === 'compare') {
     const comparison = objectState?.comparison
@@ -448,6 +471,7 @@ function interactionTypedRefs(context, job, jobState, trialState, objectState, o
     workspace: { kind: 'harbor.workspace/v1', workspace },
     job: job ? { kind: 'harbor.job/v1', workspace, job } : undefined,
     object: interactionObjectRef(context.object, workspace, job, jobState, trialState, objectState, options),
+    selection: (context.selection ?? []).map(ref => interactionObjectRef(ref, workspace, job, jobState, trialState, objectState, options)),
     trial: trial ? { kind: 'harbor.trial/v1', workspace, job, trial } : undefined,
     criteria: criterionRefs.length ? criterionRefs : undefined,
     evidence: evidenceRefs.length ? evidenceRefs : undefined,
@@ -472,6 +496,7 @@ function interactionFocus(context, job, trialState) {
     ? requestedEvidence
     : undefined
   return compact({
+    localObject: selected?.sourceDigest ? selected : context.object?.sourceDigest ? context.object : undefined,
     job,
     stage: context.route.params.stage ?? context.object?.stage,
     trial: safeMetadataText(trialState?.lifecycle?.id, 200) ?? trialState?.trial,
@@ -520,6 +545,7 @@ function interactionContextSummary(context, job, jobState, trialState, objectSta
     pageSessionId: context.pageSessionId,
     generation: context.generation,
     workspace: context.workspace,
+    identities: authoritativeUiIdentities(jobState),
     object: interactionObjectRef(context.object, context.workspace, job, jobState, trialState, objectState, options),
     route: {
       name: context.route.name,
@@ -548,10 +574,27 @@ function interactionContextSummary(context, job, jobState, trialState, objectSta
   })
 }
 
+function authoritativeUiIdentities(jobState) {
+  const artifacts = jobState?.artifacts ?? {}
+  const context = artifacts.context ?? {}
+  const sources = { candidate: artifacts.candidate ?? context.candidate, dataset: artifacts.dataset ?? context.dataset, context, stack: artifacts.stack ?? context.evaluation_stack, evaluator: artifacts.stack?.components?.evaluator ?? context.evaluation_stack?.components?.evaluator }
+  const result = {}
+  for (const [role, source] of Object.entries(sources)) {
+    if (!source || source.__readError) continue
+    const id = source[`${role}_id`] ?? source.id ?? (role === 'context' ? source.digest : undefined)
+    const version = source.version
+    const identityDigest = role === 'dataset' ? source.source_digest : source.digest
+    if (typeof id !== 'string' || id.length > 180 || !/^(?:@?[\p{L}\p{N}][\p{L}\p{N}._:@+-]*|@[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+)$/u.test(id) || safeMetadataText(id, 180) !== id) continue
+    result[role] = compact({ id, version: typeof version === 'string' && /^[A-Za-z0-9][A-Za-z0-9._:+-]{0,119}$/.test(version) ? version : undefined, digest: /^sha256:[a-f0-9]{64}$/.test(identityDigest ?? '') ? identityDigest : undefined })
+  }
+  return Object.keys(result).length ? result : undefined
+}
+
 function interactionNavigationTarget(context, job, trialState) {
   const focus = interactionFocus(context, job, trialState)
   return compact({
     route: context.route.name,
+    localObject: focus.localObject,
     workspace: context.workspace,
     job: focus.job,
     stage: focus.stage,
@@ -857,6 +900,34 @@ export class EvolutionService {
     this.modelRuntime = modelRuntime
     this.versionChecker = metadata.versionChecker ?? createVersionChecker()
     this.uiContexts = metadata.uiContexts ?? new HarborUiContextRegistry(metadata.uiContextOptions)
+    this.trialSelections = metadata.trialSelections ?? new TrialSelectionRegistry(metadata.uiContextOptions)
+    this.actionDrafts = new ActionDraftController({
+      resolve: (token, owner) => this.resolveUiContext({ contextSnapshotId: token }, owner),
+      prepare: (draft, basis, owner) => this._prepareDiagnostic(draft, owner),
+      observe: async (operation, owner) => {
+        const { config } = await this._webContext({ workspace: operation.target?.workspace, sessionId: owner.sessionId })
+        if (path.resolve(config.projectRoot) !== owner.projectRoot) throw new Error('HARBOR_ACTION_DENIED: Session project changed.')
+        return new DiagnosticRunner(config, this.modelRuntime).observe(operation, { owner })
+      },
+      inspect: async (operation, owner) => {
+        const { config } = await this._webContext({ workspace: operation.target?.workspace, sessionId: owner.sessionId })
+        if (path.resolve(config.projectRoot) !== owner.projectRoot) throw new Error('HARBOR_ACTION_DENIED: Session project changed.')
+        return new DiagnosticRunner(config, this.modelRuntime).inspect(operation, { owner })
+      },
+      execute: async (draft, basis, owner, execution) => {
+        if (execution) {
+          const { config } = await this._webContext({ workspace: draft.target.workspace, sessionId: owner.sessionId })
+          if (path.resolve(config.projectRoot) !== owner.projectRoot) throw new Error('HARBOR_ACTION_DENIED: Session project changed.')
+          const result = await new DiagnosticRunner(config, this.modelRuntime).execute(execution.plan, { ...execution, owner })
+          return { ...result, workspace: config.workspaceId, diagnosticOnly: true }
+        }
+        if (draft.kind === 'compare') {
+          const { config } = await this._webContext({ workspace: draft.target.workspace, sessionId: owner.sessionId })
+          return { schema: 'harbor-readonly-comparison/v1', artifactTrust: 'untrusted-evidence', data: sanitizeAgentRead(await readComparison(config, { baseline: draft.target.baseline, candidate: draft.target.candidate }), { remaining: 48 * 1024 }), productionImpact: 'none' }
+        }
+        return { schema: 'harbor-change-draft/v1', applied: false, kind: draft.kind, proposal: draft.proposal, target: draft.target, source: draft.selection, freshBaselineRequired: draft.freshBaselineRequired, note: 'Saved draft only. No Candidate source, Evaluator identity, Job, Gate or deployment was changed.' }
+      },
+    })
     this.uiContextObservedAt = metadata.uiContextObservedAt ?? new Map()
     this.projectRoots = new Map()
     this.workspaceConfigs = new Map()
@@ -1131,13 +1202,15 @@ export class EvolutionService {
       if (!job) throw new Error('HARBOR_CONTEXT_INVALID: a Trial context requires a Job')
       trialState = await readTrialDetail(config, { job, trial })
     }
-    const objectState = await interactionObjectState(config, normalized, job, jobState)
+    const objectState = await interactionObjectState(config, normalized, job, jobState, trialState, await this._selectionEntries(normalized, config))
     validateInteractionFocus(normalized, trialState)
     validateInteractionObjects(normalized, job, jobState, trialState, objectState)
     // artifactRevision is Host-owned. A browser-supplied value is only an
     // observation hint and must never become the freshness authority.
     const context = {
       ...normalized,
+      identities: authoritativeUiIdentities(jobState),
+      flags: interactionContextSummary(normalized, job, jobState, trialState, objectState).flags,
       artifactRevision: interactionRevision(jobState, trialState, objectState),
     }
     return this.uiContexts.issue({
@@ -1175,7 +1248,7 @@ export class EvolutionService {
       if (!job) throw new Error('HARBOR_CONTEXT_INVALID: a Trial context requires a Job')
       trialState = await readTrialDetail(config, { job, trial })
     }
-    const objectState = await interactionObjectState(config, context, job, jobState)
+    const objectState = await interactionObjectState(config, context, job, jobState, trialState, await this._selectionEntries(context, config))
     validateInteractionFocus(context, trialState)
     validateInteractionObjects(context, job, jobState, trialState, objectState, { allowDigestDrift: true })
     const currentRevision = interactionRevision(jobState, trialState, objectState)
@@ -1213,6 +1286,7 @@ export class EvolutionService {
         }) : undefined,
       }),
       refs: interactionTypedRefs(context, job, jobState, trialState, objectState, { allowDigestDrift: true }),
+      selectedEvidence: selectedObjectEvidence(objectState.selected),
       answerContract: {
         sections: ['结论', '证据', '根因分类', '不确定性', '建议下一步'],
         evidenceRequired: true,
@@ -1223,7 +1297,10 @@ export class EvolutionService {
       ...(job ? { uiAction: {
         kind: 'harbor.navigate',
         actionId: `harbor-nav-${entry.digest.slice(-16)}-${context.generation}`,
-        label: trial ? `查看 Trial ${trial} 的证据` : `查看 Job ${job}`,
+        label: target.localObject?.kind === 'evaluator-source'
+          ? `查看 ${target.localObject.sourceRole} L${target.localObject.startLine ?? 1}–${target.localObject.endLine ?? 1}`
+          : target.localObject ? `查看 ${target.localObject.kind}${trial ? ` · ${trial}` : ''}`
+            : trial ? `查看 Trial ${trial} 的证据` : `查看 Job ${job}`,
         target,
         artifactRevision: currentRevision,
         expectedPageSessionId: context.pageSessionId,
@@ -1429,6 +1506,7 @@ export class EvolutionService {
     return {
       ...value,
       interactionIdentities: compact({ gate: interactionGateIdentity(value.job, value) }),
+      interactionObjects: interactionObjectCatalog(value.job, value).map(item => item.ref),
     }
   }
 
@@ -1437,9 +1515,117 @@ export class EvolutionService {
     return readTrialsPage(config, args)
   }
 
+  async _allSelectionTrials(config, args) {
+    const result = []
+    for (let offset = 0; ; offset += 100) {
+      const page = await readTrialsPage(config, { ...args, offset, limit: 100 })
+      if (page.total > MAX_SELECTED_TRIALS) throw new Error('HARBOR_SELECTION_TOO_LARGE: Narrow the Trial filter to at most 1000 results.')
+      result.push(...page.items)
+      if (!page.hasMore) return result
+    }
+  }
+
+  async createTrialSelection(args) {
+    const { config } = await this._webContext(args)
+    const sessionId = String(args.sessionId ?? '')
+    if (!sessionId || this._sessionProjectRoot(sessionId) !== path.resolve(config.projectRoot)) throw new Error('HARBOR_SELECTION_DENIED: An authoritative Session project is required.')
+    const filters = args.filters ?? {}
+    if (Object.keys(filters).some(key => !['status', 'validity', 'query', 'sort'].includes(key))) throw new Error('HARBOR_SELECTION_INVALID: Unsupported filter.')
+    if (args.mode === 'explicit' && (!Array.isArray(args.trialIds) || !args.trialIds.length || args.trialIds.length > MAX_SELECTED_TRIALS || args.trialIds.some(id => typeof id !== 'string'))) throw new Error('HARBOR_SELECTION_INVALID: Select 1–1000 fixed Trial IDs.')
+    const trials = await this._allSelectionTrials(config, { job: args.job, ...filters, ...(args.mode === 'explicit' ? { trialIds: args.trialIds } : {}) })
+    const ids = args.mode === 'explicit' ? args.trialIds : trials.map(trial => trial.id)
+    if (!Array.isArray(ids) || new Set(ids).size !== ids.length || ids.some(id => typeof id !== 'string')) throw new Error('HARBOR_SELECTION_INVALID: Fixed Trial IDs are required.')
+    const selected = trials.filter(trial => ids.includes(trial.id))
+    if (selected.length !== ids.length) throw new Error('HARBOR_SELECTION_DENIED: A selected Trial is missing or outside this Job/filter.')
+    return this.trialSelections.issue({ sessionId, projectRoot: path.resolve(config.projectRoot), workspace: config.workspaceId, job: args.job, mode: args.mode, filters, trials: selected })
+  }
+
+  async _selectionEntries(context, config) {
+    const refs = [context.object, ...(context.selection ?? [])].filter(ref => ref?.kind === 'trial-set')
+    if (!refs.length) return []
+    const owner = { sessionId: context.sessionId, projectRoot: path.resolve(config.projectRoot), workspace: context.workspace }
+    return Promise.all(refs.map(async ref => {
+      const trialIds = this.trialSelections.memberIds(ref, owner)
+      const trials = await this._allSelectionTrials(config, { job: context.route.params.job, trialIds })
+      return this.trialSelections.resolve(ref, owner, trials)
+    }))
+  }
+
+  async trialSelection(args) {
+    const { config } = await this._webContext(args)
+    const owner = this._actionOwner(args.sessionId)
+    if (owner.projectRoot !== path.resolve(config.projectRoot)) throw new Error('HARBOR_SELECTION_DENIED: Session project changed.')
+    const ref = { kind: 'trial-set', id: args.id, job: args.job, stage: 'judge', sourceDigest: args.sourceDigest, selectionCount: Number(args.selectionCount) }
+    const selectionOwner = { ...owner, workspace: config.workspaceId }
+    const trialIds = this.trialSelections.memberIds(ref, selectionOwner)
+    const value = this.trialSelections.resolve(ref, selectionOwner, await this._allSelectionTrials(config, { job: args.job, trialIds }))
+    return { ref: value.ref, count: value.value.count, mode: value.value.mode, members: value.value.members }
+  }
+
   async trial(args) {
     const { config } = await this._webContext(args)
-    return readTrialDetail(config, args)
+    const value = await readTrialDetail(config, args)
+    return { ...value, interactionObjects: interactionObjectCatalog(value.job, undefined, value).map(item => item.ref) }
+  }
+
+  _actionOwner(sessionId) {
+    const projectRoot = this._sessionProjectRoot(sessionId)
+    if (!projectRoot) throw new Error('HARBOR_ACTION_DENIED: An authoritative Session project is required.')
+    return { sessionId: String(sessionId), projectRoot }
+  }
+
+  async proposeAction(args, owner = this._actionOwner(args.sessionId)) {
+    if (owner.projectRoot !== this._sessionProjectRoot(owner.sessionId)) throw new Error('HARBOR_ACTION_DENIED: Session project changed.')
+    const basis = await this.resolveUiContext({ contextSnapshotId: args.contextSnapshotId }, owner)
+    const proposal = {}
+    for (const field of ['summary', 'rationale', 'replacement']) {
+      const text = args[field]
+      if (text === undefined) continue
+      if (typeof text !== 'string' || text.length > (field === 'replacement' ? 16000 : 2000) || containsCredentialText(text) || containsOpaqueSecretText(text) || containsLocalPath(text)) throw new Error('HARBOR_ACTION_INVALID: Proposal must be bounded text without credentials or local paths.')
+      proposal[field] = text
+    }
+    if (!proposal.summary?.trim()) throw new Error('HARBOR_ACTION_INVALID: A proposal summary is required.')
+    if (args.kind === 'evaluator-draft') {
+      const selected = basis.selectedEvidence?.find(item => item.available && item.ref.kind === 'evaluator-source')
+      if (!selected || typeof proposal.replacement !== 'string') throw new Error('HARBOR_ACTION_INVALID: Select saved source and supply a replacement fragment, not a file path.')
+      proposal.before = selected.value.text
+      proposal.sourceRef = selected.ref
+    } else if (proposal.replacement !== undefined) throw new Error('HARBOR_ACTION_INVALID: Source replacement is only allowed in an Evaluator/Rubric draft.')
+    return this.actionDrafts.propose({ kind: args.kind, contextSnapshotId: args.contextSnapshotId, proposal }, owner)
+  }
+
+  previewAction(args) { return this.actionDrafts.preview(args, this._actionOwner(args.sessionId)) }
+  confirmAction(args) { return this.actionDrafts.confirm(args, this._actionOwner(args.sessionId)) }
+  actionOperation(args) { return this.actionDrafts.operation(args, this._actionOwner(args.sessionId)) }
+  listActionOperations(args) { return this.actionDrafts.list(args, this._actionOwner(args.sessionId)) }
+  inspectActionOperation(args) { return this.actionDrafts.inspect(args, this._actionOwner(args.sessionId)) }
+  recoverActionOperation(args) { return this.actionDrafts.recover(args, this._actionOwner(args.sessionId)) }
+  cancelAction(args) { return this.actionDrafts.cancel(args, this._actionOwner(args.sessionId)) }
+
+  async _prepareDiagnostic(draft, owner) {
+    try {
+      // The bounded model-facing evidence reader is NOT execution authority.
+      // Resolve the Host-owned token and every frozen member independently.
+      const { context } = this.uiContexts.resolve({ contextSnapshotId: draft.contextSnapshotId, ...owner })
+      const { config } = await this._webContext({ workspace: context.workspace, sessionId: owner.sessionId })
+      if (path.resolve(config.projectRoot) !== owner.projectRoot) throw new Error('HARBOR_ACTION_DENIED: Session project changed.')
+      const job = context.route.params.job ?? context.object?.job
+      if (!job) throw new Error('HARBOR_DIAGNOSTIC_SELECTION_REQUIRED: Select completed Trials from a Candidate Job first.')
+      const sets = await this._selectionEntries(context, config)
+      const directIds = [context.object, ...(context.selection ?? [])].filter(ref => ref?.kind === 'trial').map(ref => ref.trial ?? ref.id)
+      const trialIds = sets.length ? sets.flatMap(entry => entry.value.members.map(member => member.id)) : [...new Set(directIds)]
+      if (!trialIds.length || trialIds.length > 12 || new Set(trialIds).size !== trialIds.length || (sets.length && directIds.length)) throw new Error('HARBOR_DIAGNOSTIC_SELECTION_REQUIRED: Select one frozen set of 1–12 completed Trials; mixed or duplicate selections cannot run.')
+      const trials = await this._allSelectionTrials(config, { job, trialIds })
+      if (trials.length !== trialIds.length || trials.some(trial => !trial.terminal)) throw new Error('HARBOR_DIAGNOSTIC_SELECTION_INVALID: Select completed Trials only.')
+      if (draft.kind === 'retry-infrastructure' && trials.some(trial => trial.status !== 'infrastructure-error' || !trial.exception)) throw new Error('HARBOR_DIAGNOSTIC_RETRY_SCOPE: Infrastructure retry requires terminal infrastructure exceptions, not quality failures or invalid scores.')
+      const sourceJobDir = resolveWithin(config.projectRoot, path.join(config.jobsDir, job), 'sourceJobDir')
+      const plan = await new DiagnosticRunner(config, this.modelRuntime).prepare({ owner, sourceJobDir, trialIds })
+      return { plan, blocking: [], public: { execution: 'bounded-diagnostic', diagnosticOnly: true, trialCount: trialIds.length, limits: plan.effectiveLimits ?? plan.limits, identities: plan.identities ?? draft.identities, estimatedExternalRequests: null, estimatedHostModelRequests: (plan.effectiveLimits ?? plan.limits).maxModelRequests, costEstimate: 'Candidate Host model gateway requests and returned bytes are bounded, with a Job wall timeout. Dataset verifier or business-script external APIs are outside that gateway quota; their request counts and costs are unknown. No token or total currency guarantee. Diagnostic subset results cannot replace a full baseline.', cancellation: 'Stops the owned process tree and closes its model lease. Docker cleanup must be checked if interrupted; already incurred costs cannot be undone.' } }
+    } catch (cause) {
+      const message = redactLocalPaths(redactOpaqueSecretText(redactCredentialText(String(cause?.message ?? 'Diagnostic prerequisites unavailable.')))).slice(0, 1000)
+      const code = message.match(/^(HARBOR_[A-Z0-9_]+):/)?.[1] ?? 'HARBOR_DIAGNOSTIC_UNAVAILABLE'
+      return { blocking: [{ code, message }], public: { execution: 'bounded-diagnostic', diagnosticOnly: true } }
+    }
   }
 
   async dataset(args) {
@@ -1460,9 +1646,11 @@ export class EvolutionService {
   async governance(args) {
     const { config } = await this._webContext(args)
     const governance = await readEvaluatorGovernance(config, args)
+    governance.interactionObjects = interactionObjectCatalog(args.job, undefined, undefined, governance).map(item => item.ref)
+    let current
     try {
       const stackPath = await resolveEvaluatorStackPath(config, governance, args.stackPath)
-      const current = await inspectEvaluator(config, { ...args, stackPath })
+      current = await inspectEvaluator(config, { ...args, stackPath })
       const historicalEvaluator = governance.components?.evaluator
       const identityMatches = current.stack?.id === governance.stackIdentity.id
         && current.stack?.version === governance.stackIdentity.version
@@ -1485,12 +1673,32 @@ export class EvolutionService {
       governance.evaluatorInterface = { error: error instanceof Error ? error.message : String(error) }
       governance.editingPolicy.identityMatch = false
     }
+    if (args.sessionId) {
+      try {
+        governance.savedEvaluatorVersion = await readEvaluatorSave(config, { ...args, workspace: config.workspaceId }, governance, current, stackPath => inspectEvaluator(config, { stackPath }))
+      } catch {
+        governance.savedEvaluatorRecovery = { status: 'UNAVAILABLE', code: 'HARBOR_EVALUATOR_SAVE_HISTORY_UNAVAILABLE' }
+      }
+    }
     return governance
   }
 
-  async evaluator(args) {
-    const config = args.workspace ? (await this._webContext(args)).config : this.config
-    return updateEvaluator(config, args)
+  async evaluator(args, { browser = false } = {}) {
+    // Non-browser callers retain the existing CLI behavior. Browser writes are
+    // bound to the actual Session, workspace, and historical source Job; the
+    // submitted stack path alone is never sufficient authorization to associate
+    // a save with that Job's continuation history.
+    if (browser && (!args.sessionId || !args.workspace || !args.job)) throw new Error('HARBOR_EVALUATOR_SOURCE_REQUIRED: Save from an active Session, workspace, and historical source Job.')
+    if (!args.workspace && !args.sessionId) return updateEvaluator(this.config, args)
+    const { config } = await this._webContext(args)
+    if (!args.sessionId || !args.job) throw new Error('HARBOR_EVALUATOR_SOURCE_REQUIRED: Save from an active Session and its historical source Job.')
+    const governance = await this.governance(args)
+    if (!governance.editingPolicy?.identityMatch || !governance.evaluatorInterface?.stack?.path) throw new Error('HARBOR_EVALUATOR_BINDING_STALE: The current Evaluator no longer matches this historical Job; reload before saving.')
+    const scope = { ...args, workspace: config.workspaceId }
+    await prepareEvaluatorSaveHistory(config, scope)
+    const receipt = await updateEvaluator(config, { ...args, stackPath: governance.evaluatorInterface.stack.path })
+    try { return await recordEvaluatorSave(config, scope, governance, receipt) }
+    catch { return { ...receipt, continuation: { verification: 'VERIFIED', durable: false, code: 'HARBOR_EVALUATOR_SAVE_HISTORY_UNAVAILABLE' } } }
   }
 
   async evaluatorInspect(args) {

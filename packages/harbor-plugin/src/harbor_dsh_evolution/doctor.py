@@ -11,6 +11,9 @@ from pathlib import Path
 from typing import Any
 
 from harbor_dsh_evolution.candidate import verify_candidate
+from harbor_dsh_evolution.candidate_runtime import load_candidate_runtime
+from harbor_dsh_evolution.artifacts import redact
+from harbor_dsh_evolution.runtime_binding import render_runtime_config
 from harbor_dsh_evolution.dataset import validate_dataset
 from harbor_dsh_evolution.identity import resolve_inside
 from harbor_dsh_evolution.promotion import load_policy
@@ -256,10 +259,32 @@ def architecture_doctor(
 
     if candidate_path is not None:
         try:
-            candidate = verify_candidate(resolve_inside(project_root, candidate_path, label="candidate"))
+            candidate_root = resolve_inside(project_root, candidate_path, label="candidate")
+            candidate = verify_candidate(candidate_root)
+            # A missing runtime remains readable as historical evidence, but is
+            # never executable, even when live Docker checks were not requested.
+            runtime = load_candidate_runtime(candidate_root, required=True)
+            try:
+                render_runtime_config(candidate_root, gateway_provider="readiness-placeholder", model="readiness-placeholder", config_path=runtime["config_path"], agent_entry_id=runtime["agent_entry_id"])
+            except (ValueError, OSError) as error:
+                raise ValueError(f"CANDIDATE_RUNTIME_INVALID: {error}") from error
             findings.append({"level": "info", "code": "CANDIDATE_VERIFIED", "message": f"Candidate {candidate.candidate_id}@{candidate.version} is immutable"})
+            findings.append({"level": "info", "code": "CANDIDATE_RUNTIME_VERIFIED", "message": "Candidate-owned ACP entrypoint, locked dependencies and Host model overlay passed static checks; install and handshake still run inside the approved Task."})
         except (FileNotFoundError, ValueError, json.JSONDecodeError) as error:
-            findings.append({"level": "error", "code": "CANDIDATE_INVALID", "message": str(error)})
+            if "CANDIDATE_RUNTIME_" in str(error):
+                code = "CANDIDATE_RUNTIME_UNBOUND" if "CANDIDATE_RUNTIME_UNBOUND" in str(error) else "CANDIDATE_RUNTIME_INVALID"
+                findings.append({
+                    "level": "error",
+                    "code": code,
+                    "message": (
+                        "Candidate execution requires a valid, locked local ACP runtime descriptor. "
+                        "Create a new Candidate with an explicit entrypoint and npm lockfile, then run "
+                        "a fresh baseline. Historical Candidate evidence has not been changed."
+                        f" Detail: {redact(str(error))}"
+                    ),
+                })
+            else:
+                findings.append({"level": "error", "code": "CANDIDATE_INVALID", "message": str(error)})
     if policy_path is not None:
         try:
             load_policy(resolve_inside(project_root, policy_path, label="policy"))

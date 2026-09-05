@@ -75,7 +75,7 @@ export function createApiHandler(load, code = 'request-failed') {
     }
     const url = new URL(request.url ?? '/', 'http://localhost')
     const args = Object.fromEntries(url.searchParams)
-    Promise.resolve(load(args)).then(
+    Promise.resolve().then(() => load(args)).then(
       value => sendJson(response, 200, { ok: true, value }),
       error => sendJson(response, 500, { ok: false, error: safeErrorPayload(error, code) }),
     )
@@ -133,7 +133,7 @@ export function installDashboardWeb(ctx, service, historicalController) {
       [PROGRESS_ROUTE, createApiHandler(args => service.progress(args), 'progress-unavailable')],
       [COMPARE_ROUTE, createApiHandler(args => service.comparison(args), 'comparison-unavailable')],
       [GOVERNANCE_ROUTE, createApiHandler(args => service.governance(args), 'governance-unavailable')],
-      [EVALUATOR_ROUTE, createMutationHandler(args => service.evaluator(args), 'evaluator-update-failed')],
+      [EVALUATOR_ROUTE, createMutationHandler(args => service.evaluator(args, { browser: true }), 'evaluator-update-failed')],
       [META_ROUTE, createApiHandler(args => service.meta(args), 'meta-evaluation-unavailable')],
       ...(historicalController ? [
         [HISTORICAL_PREVIEW_ROUTE, createMutationHandler(args => historicalController.preview(args), 'historical-preview-failed')],
@@ -141,6 +141,16 @@ export function installDashboardWeb(ctx, service, historicalController) {
         [HISTORICAL_OPERATION_ROUTE, createApiHandler(args => historicalController.operation(args), 'historical-operation-unavailable')],
       ] : []),
       [SESSION_CONTEXT_ROUTE, createMutationHandler(args => service.bindUiContext(args), 'session-context-bind-failed')],
+      ['/_dsh/harbor-evolution/trial-selection', createMutationHandler(args => service.createTrialSelection(args), 'trial-selection-failed')],
+      ['/_dsh/harbor-evolution/selection-detail', createApiHandler(args => service.trialSelection(args), 'trial-selection-failed')],
+      ['/_dsh/harbor-evolution/action-draft', createMutationHandler(args => service.proposeAction(args), 'action-draft-failed')],
+      ['/_dsh/harbor-evolution/action-preview', createMutationHandler(args => service.previewAction(args), 'action-preview-failed')],
+      ['/_dsh/harbor-evolution/action-confirm', createMutationHandler(args => service.confirmAction(args), 'action-confirm-failed')],
+      ['/_dsh/harbor-evolution/action-operation', createApiHandler(args => service.actionOperation(args), 'action-operation-failed')],
+      ['/_dsh/harbor-evolution/action-operations', createApiHandler(args => service.listActionOperations(args), 'action-operations-failed')],
+      ['/_dsh/harbor-evolution/action-inspect', createApiHandler(args => service.inspectActionOperation(args), 'action-inspect-failed')],
+      ['/_dsh/harbor-evolution/action-recover', createMutationHandler(args => service.recoverActionOperation(args), 'action-recover-failed')],
+      ['/_dsh/harbor-evolution/action-cancel', createMutationHandler(args => service.cancelAction(args), 'action-cancel-failed')],
       [SESSION_CONTEXT_RESOLVE_ROUTE, createMutationHandler(args => service.resolveBrowserUiContext(args), 'session-context-resolve-failed')],
       [VERSION_ROUTE, createApiHandler(args => service.version(args), 'version-check-unavailable')],
       [PROJECT_ROOT_ROUTE, createMutationHandler(args => service.setProjectRoot(args), 'project-root-update-failed')],

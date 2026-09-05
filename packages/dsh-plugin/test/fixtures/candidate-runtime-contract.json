@@ -1,0 +1,64 @@
+{
+  "descriptor": {
+    "schema_version": 1,
+    "transport": "acp",
+    "entrypoint": "run-acp.mjs",
+    "config_path": "config/agent.yml",
+    "agent_entry_id": "business-agent",
+    "node_version": "22.22.2"
+  },
+  "package": {
+    "name": "contract-agent",
+    "version": "1.0.0",
+    "dependencies": { "runtime": "1.2.3-rc.2" }
+  },
+  "lock": {
+    "lockfileVersion": 3,
+    "packages": {
+      "": {
+        "name": "contract-agent",
+        "version": "1.0.0",
+        "dependencies": { "runtime": "1.2.3-rc.2" }
+      },
+      "node_modules/runtime": {
+        "version": "1.2.3-rc.2",
+        "resolved": "https://registry.example.org/runtime/-/runtime-1.2.3-rc.2.tgz",
+        "integrity": "sha512-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
+      }
+    }
+  },
+  "source_files": {
+    "run-acp.mjs": "export const ownedRuntime = true\n",
+    "config/agent.yml": "- id: business-agent\n"
+  },
+  "cases": [
+    { "name": "locked-prerelease", "target": "descriptor", "patch": {}, "valid": true },
+    { "name": "alternate-agent-id", "target": "descriptor", "patch": { "agent_entry_id": "other_agent.v2" }, "valid": true },
+    { "name": "boolean-schema", "target": "descriptor", "patch": { "schema_version": true }, "valid": false },
+    { "name": "unknown-descriptor-field", "target": "descriptor", "patch": { "package": "demo@latest" }, "valid": false },
+    { "name": "latest-node", "target": "descriptor", "patch": { "node_version": "latest" }, "valid": false },
+    { "name": "prerelease-node", "target": "descriptor", "patch": { "node_version": "22.22.2-rc.1" }, "valid": false },
+    { "name": "traversal-entrypoint", "target": "descriptor", "patch": { "entrypoint": "../run-acp.mjs" }, "valid": false },
+    { "name": "reserved-entrypoint", "target": "descriptor", "patch": { "entrypoint": "node_modules/runtime/index.mjs" }, "valid": false },
+    { "name": "colon-config", "target": "descriptor", "patch": { "config_path": "config:agent.yml" }, "valid": false },
+    { "name": "null-dependencies", "target": "package", "patch": { "dependencies": null }, "valid": false },
+    { "name": "root-version-drift", "target": "root", "patch": { "version": "2.0.0" }, "valid": false },
+    { "name": "old-lock-version", "target": "lock", "patch": { "lockfileVersion": 2 }, "valid": false },
+    { "name": "missing-root-dependency", "target": "lock", "patch": { "packages": { "": { "name": "contract-agent", "version": "1.0.0", "dependencies": { "runtime": "1.2.3-rc.2" } } } }, "valid": false },
+    { "name": "extra-locked-dev-package", "target": "extra", "patch": { "dev": true }, "valid": true },
+    { "name": "prerelease-leading-zero", "target": "extra", "patch": { "version": "1.2.3-01" }, "valid": false },
+    { "name": "registry-tag", "target": "extra", "patch": { "version": "latest" }, "valid": false },
+    { "name": "local-link", "target": "extra", "patch": { "link": true }, "valid": false },
+    { "name": "bundled-package", "target": "extra", "patch": { "inBundle": true }, "valid": false },
+    { "name": "non-https", "target": "extra", "patch": { "resolved": "http://example.org/a.tgz" }, "valid": false },
+    { "name": "url-credentials", "target": "extra", "patch": { "resolved": "https://user:password@example.org/a.tgz" }, "valid": false },
+    { "name": "empty-url-query", "target": "extra", "patch": { "resolved": "https://example.org/a.tgz?" }, "valid": false },
+    { "name": "empty-url-fragment", "target": "extra", "patch": { "resolved": "https://example.org/a.tgz#" }, "valid": false },
+    { "name": "url-backslash", "target": "extra", "patch": { "resolved": "https://example.org/dir\\a.tgz" }, "valid": false },
+    { "name": "url-control", "target": "extra", "patch": { "resolved": "https://example.org/a\n.tgz" }, "valid": false },
+    { "name": "invalid-url-port", "target": "extra", "patch": { "resolved": "https://example.org:invalid/a.tgz" }, "valid": false },
+    { "name": "wrong-integrity-algorithm", "target": "extra", "patch": { "integrity": "sha1-YWJj" }, "valid": false },
+    { "name": "short-integrity", "target": "extra", "patch": { "integrity": "sha512-YWJj" }, "valid": false },
+    { "name": "noncanonical-integrity", "target": "extra", "patch": { "integrity": "sha512-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB==" }, "valid": false }
+  ]
+}

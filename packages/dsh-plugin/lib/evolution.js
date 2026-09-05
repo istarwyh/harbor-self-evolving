@@ -2,6 +2,7 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
 import { MANIFEST_NAME, snapshotCandidate } from './candidate.js'
+import { loadCandidateRuntime } from './candidate-runtime.js'
 import { redactCredentialText, redactLocalPaths, redactOpaqueSecretText } from './credential-redaction.js'
 import { runProcess } from './process.js'
 
@@ -442,8 +443,11 @@ export async function previewContext(config, args) {
 }
 
 export async function runEvaluation(config, args, modelRuntime) {
-  const manifest = await snapshot(config, args)
   const inputs = strictInputs(config, args)
+  // Do not rely on a possibly older Python Doctor to enforce a contract that
+  // its agent may not understand. Legacy snapshots remain readable, not runnable.
+  await loadCandidateRuntime(inputs.candidate, { required: true })
+  const manifest = await snapshot(config, args)
   const datasetValidation = await validateDataset(config, args)
   if (!datasetValidation.valid) {
     throw new Error(
@@ -452,9 +456,12 @@ export async function runEvaluation(config, args, modelRuntime) {
     )
   }
   const doctor = await runDoctor(config, args)
-  const runtimeBlockers = doctor.findings.filter(item => item.level === 'error' && item.code.startsWith('DOCKER_'))
+  const runtimeBlockers = doctor.findings.filter(item => item.level === 'error' && (item.code.startsWith('DOCKER_') || item.code.startsWith('CANDIDATE_RUNTIME_')))
   if (runtimeBlockers.length) {
     throw new Error(`Runtime Doctor blocked Harbor Job:\n${runtimeBlockers.map(item => `${item.code}: ${item.message}`).join('\n')}`)
+  }
+  if (!doctor.findings.some(item => item.level === 'info' && item.code === 'CANDIDATE_RUNTIME_VERIFIED')) {
+    throw new Error('CANDIDATE_RUNTIME_ADAPTER_UNSUPPORTED: update the Python Adapter; it has not verified the Candidate-owned local ACP runtime. No model lease or Harbor Job was started.')
   }
   if (inputs.mode === 'promotion-eligible' && !doctor.promotion_ready) {
     throw new Error(`Architecture Doctor blocked promotion-eligible Job: ${doctor.findings.filter(item => item.level === 'error').map(item => item.code).join(', ')}`)

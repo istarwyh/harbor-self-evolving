@@ -43,6 +43,7 @@ export const Config = Schema.object({
   modelBrokerBindHost: Schema.string().default('127.0.0.1'),
   modelBrokerAdvertisedHost: Schema.string().default('host.docker.internal'),
   modelBrokerMaxRequests: Schema.number().min(1).default(1000),
+  modelBrokerMaxResponseBytes: Schema.number().min(1).default(4194304),
   modelBrokerMaxRequestBytes: Schema.number().min(1024).default(33554432),
   sessionMaxReads: Schema.number().min(1).default(100),
   sessionReadConcurrency: Schema.number().min(1).default(4),
@@ -117,6 +118,9 @@ export function apply(ctx, config) {
     },
   }
   const service = new EvolutionService(resolved, metadata, modelRuntime)
+  // Cordis hot reload/unload must not orphan accepted background diagnostics.
+  // Hard process termination still leaves the durable claim for manual recovery.
+  if (typeof ctx.effect === 'function') ctx.effect(() => () => service.actionDrafts.dispose())
   const approvalChannelAvailable = typeof ctx.on === 'function'
   if (!approvalChannelAvailable) {
     const error = new Error('HARBOR_APPROVAL_HOOK_UNAVAILABLE: Harbor requires the DSH tools/pre-execute approval seam before registering Agent tools.')
@@ -332,6 +336,21 @@ export function apply(ctx, config) {
       evidenceRef: { type: 'string', required: true, description: 'Exact Evidence id from the typed harbor.evidence/v1 ref. Never guess a path or id.' },
     },
   }, (args, exec) => serviceForTool(exec).getEvidence(args)))
+
+  ctx.tools.register(objectTool({
+    name: 'harbor_propose_action',
+    description: 'Propose a structured, expiring Workbench action draft for an explicit user request, using a fresh Harbor context. This never writes files, starts a Job, changes an Evaluator, runs Gate, or deploys. The user must separately inspect deterministic Preflight and confirm in Harbor. Production actions are unregistered and denied.',
+    parameters: {
+      contextSnapshotId: { type: 'string', required: true, description: 'Exact fresh hctx token from the user reference.' },
+      kind: { type: 'string', required: true, description: 'candidate-draft, evaluator-draft, compare, diagnostic-evaluation, retry-infrastructure, gate-request, or deployment-handoff. Offline execution may be blocked by missing registered runner capabilities.' },
+      summary: { type: 'string', required: true, description: 'One bounded proposed change. No credentials or local paths.' },
+      rationale: { type: 'string', description: 'Evidence-supported reason and uncertainty, not authorization.' },
+      replacement: { type: 'string', description: 'Only evaluator-draft: replacement text for the exact saved source fragment. No file paths. The Host supplies the before text and digest.' },
+    },
+  }, (args, exec) => {
+    const projectRoot = synchronizeWorkbenchProjectRoot(service, exec)
+    return service.proposeAction(args, { sessionId: toolSessionId(exec), projectRoot })
+  }))
 
   ctx.tools.register(jsonTool({
     name: 'harbor_evaluator_inspect',

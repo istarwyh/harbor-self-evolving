@@ -659,6 +659,17 @@ test('historical Evaluator governance reads the Job source snapshot after live f
   assert.equal(governance.stackIdentity.comparisonDigest, 'sha256:comparison')
 })
 
+test('Evaluator selection prefers the authorized historical prompt to its descriptor', async () => {
+  const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-source-selection-'))
+  const job = path.join(projectRoot, 'jobs', 'prompt-review')
+  await mkdir(job, { recursive: true })
+  await writeFile(path.join(job, 'evaluation-stack-manifest.json'), JSON.stringify({ digest: 'sha256:stack', components: { evaluator: { entry: 'bundle/evaluator.json', interface: { editable_files: [{ path: 'bundle/prompt.md', role: 'prompt' }] } } } }))
+  await writeFile(path.join(job, 'evaluation-stack-sources.json'), JSON.stringify({ schema_version: 1, stack_digest: 'sha256:stack', components: { evaluator: { files: [{ path: 'bundle/evaluator.json', text: '{"descriptor":true}' }, { path: 'bundle/prompt.md', text: 'Saved grading instructions' }] } } }))
+  const governance = await readEvaluatorGovernance(config(projectRoot), { job: 'prompt-review' })
+  assert.equal(governance.components.evaluator.source.text, 'Saved grading instructions')
+  assert.equal(governance.components.evaluator.source.source, 'job-snapshot')
+})
+
 test('meta-evaluation follows registered artifact paths and paginates disagreements', async () => {
   const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-meta-index-'))
   const evaluationRoot = path.join(projectRoot, 'evaluation')

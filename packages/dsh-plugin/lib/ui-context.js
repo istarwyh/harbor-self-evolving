@@ -9,7 +9,7 @@ export const DEFAULT_UI_CONTEXT_MAX_ENTRIES = 2_048
 export const DEFAULT_UI_CONTEXT_MAX_ENTRIES_PER_SESSION = 128
 
 const ROUTES = new Set(['harbor.home', 'harbor.job', 'harbor.trial.detail', 'harbor.evaluator', 'harbor.compare', 'harbor.gate'])
-const OBJECT_KINDS = new Set(['workspace', 'job', 'trial', 'criterion', 'evidence', 'candidate', 'dataset', 'evaluator', 'hypothesis', 'compare', 'gate'])
+const OBJECT_KINDS = new Set(['workspace', 'job', 'trial', 'criterion', 'evidence', 'candidate', 'dataset', 'evaluator', 'hypothesis', 'compare', 'gate', 'gate-reason', 'metric', 'finding', 'attempt', 'exception', 'evaluator-source', 'trial-set'])
 const STAGES = new Set(['candidate', 'dataset', 'integration', 'renderer', 'judge', 'meta', 'reporter', 'optimizer', 'gate'])
 const DETAIL_TABS = new Set(['summary', 'output', 'scores', 'evidence', 'attempts', 'audit'])
 const FILTER_KEYS = new Set(['status', 'validity', 'segment'])
@@ -35,9 +35,9 @@ const LOCATION_KEY_PARTS = ['absoluteurl', 'filepath', 'pathname', 'projectpath'
 
 const ROUTE_RULES = Object.freeze({
   'harbor.home': { required: [], allowed: [], objectKinds: new Set(['workspace']) },
-  'harbor.job': { required: ['job'], allowed: ['job', 'stage'], objectKinds: new Set(['job', 'candidate', 'dataset', 'hypothesis']) },
-  'harbor.trial.detail': { required: ['job', 'trial'], allowed: ['job', 'stage', 'trial', 'detailTab', 'criterion', 'evidenceRef'], objectKinds: new Set(['trial', 'criterion', 'evidence']) },
-  'harbor.evaluator': { required: ['job'], allowed: ['job', 'stage'], objectKinds: new Set(['job', 'evaluator']) },
+  'harbor.job': { required: ['job'], allowed: ['job', 'stage'], objectKinds: new Set(['job', 'candidate', 'dataset', 'hypothesis', 'gate-reason', 'metric', 'trial-set']) },
+  'harbor.trial.detail': { required: ['job', 'trial'], allowed: ['job', 'stage', 'trial', 'detailTab', 'criterion', 'evidenceRef'], objectKinds: new Set(['trial', 'criterion', 'evidence', 'finding', 'attempt', 'exception']) },
+  'harbor.evaluator': { required: ['job'], allowed: ['job', 'stage'], objectKinds: new Set(['job', 'evaluator', 'evaluator-source']) },
   'harbor.compare': { required: ['job', 'baseline', 'candidate'], allowed: ['job', 'stage', 'baseline', 'candidate'], objectKinds: new Set(['compare']) },
   'harbor.gate': { required: ['job', 'baseline', 'candidate', 'policy', 'policyVersion', 'policyDigest', 'reportDigest'], allowed: ['job', 'stage', 'baseline', 'candidate', 'policy', 'policyVersion', 'policyDigest', 'reportDigest'], objectKinds: new Set(['gate']) },
 })
@@ -203,13 +203,29 @@ function normalizeObjectRef(value, name) {
     policyVersion,
     policyDigest: digest(source.policyDigest, `${name}.policyDigest`),
     reportDigest: digest(source.reportDigest, `${name}.reportDigest`),
+    sourceDigest: digest(source.sourceDigest, `${name}.sourceDigest`),
+    sourceRole: enumValue(source.sourceRole, `${name}.sourceRole`, new Set(['evaluator', 'rubric'])),
+    startLine: source.startLine,
+    endLine: source.endLine,
+    selectionCount: source.selectionCount,
   })
+  if (kind === 'trial-set' ? !Number.isInteger(source.selectionCount) || source.selectionCount < 1 || source.selectionCount > 1000 : source.selectionCount !== undefined) fail('HARBOR_CONTEXT_INVALID', `${name}.selectionCount must be a bounded Trial set count`)
+  const local = ['hypothesis', 'gate-reason', 'metric', 'finding', 'attempt', 'exception', 'evaluator-source', 'trial-set'].includes(kind)
+  if (!local && normalized.sourceDigest) fail('HARBOR_CONTEXT_INVALID', `${name}.sourceDigest is not valid for ${kind}`)
+  if (local && kind !== 'hypothesis' && !normalized.sourceDigest) fail('HARBOR_CONTEXT_INVALID', `${name}.sourceDigest is required`)
+  for (const field of ['sourceRole', 'startLine', 'endLine']) {
+    if (normalized[field] !== undefined && kind !== 'evaluator-source') fail('HARBOR_CONTEXT_INVALID', `${name}.${field} is only valid for evaluator-source`)
+  }
+  for (const field of ['startLine', 'endLine']) {
+    if (normalized[field] !== undefined && (!Number.isSafeInteger(normalized[field]) || normalized[field] < 1 || normalized[field] > 10000)) fail('HARBOR_CONTEXT_INVALID', `${name}.${field} must be a positive bounded line number`)
+  }
+  if (kind === 'evaluator-source' && (!normalized.sourceRole || (normalized.startLine === undefined) !== (normalized.endLine === undefined))) fail('HARBOR_CONTEXT_INVALID', `${name} requires a source role and a complete optional line range`)
   const require = field => { if (!normalized[field]) fail('HARBOR_CONTEXT_INVALID', `${name}.${field} is required for ${kind}`) }
   if (kind === 'workspace') {
     for (const field of ['job', 'stage', 'trial', 'criterion', 'evidenceRef']) if (normalized[field] !== undefined) fail('HARBOR_CONTEXT_INVALID', `${name}.${field} is not valid for workspace`)
   }
   if (kind !== 'workspace') require('job')
-  if (['trial', 'criterion', 'evidence'].includes(kind)) require('trial')
+  if (['trial', 'criterion', 'evidence', 'finding', 'attempt', 'exception'].includes(kind)) require('trial')
   if (kind === 'criterion') require('criterion')
   if (kind === 'evidence') require('evidenceRef')
   if (kind === 'compare') {
@@ -427,6 +443,7 @@ function publication(entry) {
   return {
     schema: HARBOR_UI_CONTEXT_SCHEMA,
     contextSnapshotId: entry.token,
+    context: entry.context,
     generation: entry.context.generation,
     digest: entry.digest,
     expiresAt: new Date(entry.expiresAtMs).toISOString(),

@@ -210,6 +210,6 @@ test('Workbench routes are optional and scoped through Cordis', () => {
     { preview: async () => ({}), run: async () => ({}), operation: async () => ({}) },
   )
   assert.deepEqual(requested, ['webServer'])
-  assert.deepEqual(routes.map(route => route.path), [DASHBOARD_ROUTE, JOB_ROUTE, TRIALS_ROUTE, TRIAL_ROUTE, DATASET_ROUTE, PROGRESS_ROUTE, COMPARE_ROUTE, GOVERNANCE_ROUTE, EVALUATOR_ROUTE, META_ROUTE, HISTORICAL_PREVIEW_ROUTE, HISTORICAL_RUN_ROUTE, HISTORICAL_OPERATION_ROUTE, SESSION_CONTEXT_ROUTE, SESSION_CONTEXT_RESOLVE_ROUTE, VERSION_ROUTE, PROJECT_ROOT_ROUTE])
+  assert.deepEqual(routes.map(route => route.path), [DASHBOARD_ROUTE, JOB_ROUTE, TRIALS_ROUTE, TRIAL_ROUTE, DATASET_ROUTE, PROGRESS_ROUTE, COMPARE_ROUTE, GOVERNANCE_ROUTE, EVALUATOR_ROUTE, META_ROUTE, HISTORICAL_PREVIEW_ROUTE, HISTORICAL_RUN_ROUTE, HISTORICAL_OPERATION_ROUTE, SESSION_CONTEXT_ROUTE, '/_dsh/harbor-evolution/trial-selection', '/_dsh/harbor-evolution/selection-detail', '/_dsh/harbor-evolution/action-draft', '/_dsh/harbor-evolution/action-preview', '/_dsh/harbor-evolution/action-confirm', '/_dsh/harbor-evolution/action-operation', '/_dsh/harbor-evolution/action-operations', '/_dsh/harbor-evolution/action-inspect', '/_dsh/harbor-evolution/action-recover', '/_dsh/harbor-evolution/action-cancel', SESSION_CONTEXT_RESOLVE_ROUTE, VERSION_ROUTE, PROJECT_ROOT_ROUTE])
   assert.ok(routes.every(route => route.kind === 'exact' && typeof route.handler === 'function'))
 })

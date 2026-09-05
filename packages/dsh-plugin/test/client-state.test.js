@@ -32,6 +32,131 @@ function success(value) {
   return { ok: true, status: 200, async json() { return { ok: true, value } } }
 }
 
+test('100 consecutive Trial selections update only local context and keep every target under 4KB', async t => {
+  const { HarborUiBridge, buildUiContext } = await loadClient()
+  const bridge = new HarborUiBridge()
+  const previousFetch = globalThis.fetch
+  let requests = 0
+  globalThis.fetch = () => { requests += 1; throw new Error('Page selection must not request an Agent or Host snapshot') }
+  t.after(() => { globalThis.fetch = previousFetch })
+  const latencies = []
+  const sizes = []
+  let notifications = 0
+  bridge.subscribe('session-a', () => { notifications += 1 })
+  for (let index = 0; index < 100; index += 1) {
+    const context = buildUiContext({ sessionId: 'session-a', pageSessionId: 'page-a', workspace: 'workspace-a', job: 'job-a', stage: 'judge', trial: `trial-${index}`, criterion: 'quality' })
+    const start = performance.now()
+    const current = bridge.setCurrent('session-a', context)
+    latencies.push(performance.now() - start)
+    sizes.push(Buffer.byteLength(JSON.stringify(current)))
+    assert.equal(bridge.getSnapshot('session-a').current.object.trial, `trial-${index}`)
+    assert.equal(bridge.setCurrent('session-a', context), current)
+    assert.equal(bridge.getSnapshot('session-b').current, undefined)
+    assert.equal(bridge.getSnapshot('session-a').explicit, undefined)
+  }
+  assert.equal(notifications, 100)
+  assert.equal(requests, 0)
+  assert.ok(Math.max(...sizes) < 4096)
+  const p95 = latencies.sort((a, b) => a - b)[94]
+  assert.ok(p95 < 100)
+  t.diagnostic(`Local store P95 ${p95.toFixed(3)} ms; max context ${Math.max(...sizes)} bytes. Not a browser navigation benchmark.`)
+})
+
+test('independent Capsule removal preserves immutable parent IDs and clears invalid child focus', async () => {
+  const { removeContextPart, buildUiContext } = await loadClient()
+  const original = buildUiContext({ sessionId: 'session-a', pageSessionId: 'page-a', workspace: 'workspace-a', job: 'job-a', stage: 'judge', trial: 'trial-a', criterion: 'D2_1' })
+  assert.equal(removeContextPart(original, 'selection-0').object.trial, 'trial-a')
+  assert.equal(removeContextPart(original, 'selection-0').route.params.criterion, undefined)
+  assert.equal(removeContextPart(original, 'trial').object.kind, 'job')
+  assert.equal(removeContextPart(original, 'trial').selection.length, 0)
+  assert.equal(original.selection[0].criterion, 'D2_1')
+  assert.equal(removeContextPart(original, 'job'), undefined)
+})
+
+test('local focus replaces incompatible evidence and source line selection is bounded', async () => {
+  const { mergeHarborFocus, selectedSourceLines, sectionForNavigation } = await loadClient()
+  assert.deepEqual(mergeHarborFocus({ criterion: 'old', evidenceRef: 'old-evidence' }, { criterion: 'new' }), { criterion: 'new' })
+  assert.deepEqual(selectedSourceLines('one\ntwo\nthree', 4, 8), { startLine: 2, endLine: 2 })
+  assert.equal(selectedSourceLines('line\n'.repeat(400), 0, 2000).endLine, 200)
+  assert.equal(sectionForNavigation({ stage: 'judge', trial: 'trial-1' }), 'trials')
+  assert.equal(sectionForNavigation({ stage: 'judge', route: 'harbor.evaluator' }), 'evaluator')
+})
+
+test('reviewed source proposal patches only its exact saved fragment and rejects changed source', async () => {
+  const { applySourceProposal } = await loadClient()
+  const ref = { id: 'source-1', job: 'job-a', sourceDigest: 'digest-a', sourceRole: 'rubric' }
+  const proposal = { sourceRef: { ...ref, startLine: 2, endLine: 2 }, before: 'two', replacement: 'TWO' }
+  assert.equal(applySourceProposal('one\ntwo\nthree', ref, proposal), 'one\nTWO\nthree')
+  assert.throws(() => applySourceProposal('one\nchanged\nthree', ref, proposal), /CONFLICT/)
+  assert.throws(() => applySourceProposal('one\ntwo\nthree', { ...ref, job: 'other' }, proposal), /CONFLICT/)
+  assert.throws(() => applySourceProposal('one\ntwo\nthree', { ...ref, sourceDigest: 'new' }, proposal), /CONFLICT/)
+})
+
+test('real Context v2 digest-only identity remains bindable from a saved source selection', async () => {
+  const { buildUiContext } = await loadClient()
+  const digest = `sha256:${'a'.repeat(64)}`
+  const context = buildUiContext({ sessionId: 'session-a', pageSessionId: 'page-a', workspace: 'workspace-a', job: 'job-a', stage: 'judge', detail: { artifacts: { context: { schema_version: 2, digest }, stack: { stack_id: 'stack-a', version: '1', digest, components: { evaluator: { id: 'evaluator-a', version: '1', digest } } } } }, localObject: { kind: 'evaluator-source', id: 'source-a', job: 'job-a', sourceRole: 'rubric', sourceDigest: digest, startLine: 3, endLine: 3 } })
+  const normalized = normalizeHarborUiContext({ ...context, generation: 1, observedAt: new Date().toISOString() })
+  assert.equal(normalized.identities.context.id, digest)
+  assert.equal(normalized.selection[0].startLine, 3)
+})
+
+test('source and draft conflicts request reload instead of suggesting a network retry', async () => {
+  const { normalizeHarborUiError } = await loadClient()
+  assert.equal(normalizeHarborUiError({ message: 'Evaluator source changed after it was opened; reload before saving', code: 'evaluator-update-failed' }).category, 'conflict')
+  assert.equal(normalizeHarborUiError({ message: 'Rebind first', code: 'HARBOR_ACTION_REVISION_CONFLICT' }).category, 'conflict')
+  assert.equal(normalizeHarborUiError({ code: 'HARBOR_ACTION_EXPIRED' }).category, 'expired')
+  assert.equal(normalizeHarborUiError({ code: 'HARBOR_DRAFT_SOURCE_CONFLICT' }).category, 'conflict')
+})
+
+test('repreparing an expired proposal preserves its original typed selection, not the current page', async () => {
+  const { actionDraftContext } = await loadClient()
+  const digest = `sha256:${'a'.repeat(64)}`
+  const normalize = draft => normalizeHarborUiContext(actionDraftContext(draft, 'session-a', 'page-a'))
+  const home = normalize({ target: { kind: 'harbor.workspace/v1', workspace: 'workspace-a' } })
+  assert.equal(home.object.kind, 'workspace')
+  assert.equal(home.object.id, 'workspace-a')
+  const target = { kind: 'harbor.trial/v1', workspace: 'workspace-a', job: 'job-a', trial: 'trial-a' }
+  const selected = normalize({ target, selection: [{ kind: 'harbor.evidence/v1', workspace: 'workspace-a', job: 'job-a', trial: 'trial-a', criterion: 'quality', evidenceRef: 'artifact-a' }] })
+  assert.equal(selected.object.trial, 'trial-a')
+  assert.equal(selected.selection[0].kind, 'evidence')
+  assert.equal(selected.selection[0].evidenceRef, 'artifact-a')
+  const compare = normalize({ target: { kind: 'harbor.compare/v1', workspace: 'workspace-a', job: 'candidate-a', baseline: 'baseline-a', candidate: 'candidate-a', comparisonDigest: digest } })
+  assert.equal(compare.object.id, digest)
+  assert.equal(compare.route.params.baseline, 'baseline-a')
+  const source = { kind: 'evaluator-source', id: 'source-a', sourceRole: 'rubric', job: 'job-a', sourceDigest: digest, startLine: 3, endLine: 3 }
+  const editor = normalize({ target: { ...target, kind: 'harbor.job/v1', trial: undefined }, proposal: { sourceRef: source } })
+  assert.equal(editor.selection[0].sourceDigest, digest)
+  assert.equal(editor.selection[0].startLine, 3)
+  const gate = normalize({ target: { kind: 'harbor.gate/v1', workspace: 'workspace-a', job: 'candidate-a', baseline: 'baseline-a', candidate: 'candidate-a', policy: { id: 'policy-a', version: '1', digest }, reportDigest: digest } })
+  assert.equal(gate.object.kind, 'gate')
+  assert.equal(gate.route.params.policy, 'policy-a')
+})
+
+test('ordinary follow-up cannot inherit the prior objects freshness or evidence basis', async () => {
+  const { harborDisplayedAnswerBasis } = await loadClient()
+  const old = { schema: 'harbor-resolved-context/v1', contextSnapshotId: 'hctx_old', freshness: 'FRESH', refs: { object: { job: 'job-a' } }, basedOn: { artifactRevision: 'old', currentRevision: 'new' } }
+  const fallback = { object: { job: 'job-a' }, artifactRevision: 'old' }
+  assert.equal(harborDisplayedAnswerBasis(undefined, [], true, old, fallback), undefined)
+  assert.deepEqual(harborDisplayedAnswerBasis(undefined, [{ action: { target: { job: 'job-b' } }, artifactRevision: 'b' }], true, old, fallback), { job: 'job-b', artifactRevision: 'b' })
+  assert.deepEqual(harborDisplayedAnswerBasis(old, [], true, { ...old, contextSnapshotId: 'hctx_other', basedOn: { currentRevision: 'not-own' } }, fallback), { job: 'job-a', artifactRevision: 'old', currentRevision: 'new' })
+})
+
+test('Copilot recovers a sent turn from trusted current-session transcript without reviving one-shot draft', async () => {
+  const { recoverHarborTurn } = await loadClient()
+  const token = 'hctx_abcdefghijklmnopqrstuvwxyz'
+  const nodes = [
+    { kind: 'user', seq: 1, turn: 1, content: [{ type: 'text', text: `@harbor(${token}) Why?` }] },
+    { kind: 'tool-result', seq: 2, turn: 1, call: { name: 'harbor_resolve_page_context' }, value: { schema: 'harbor-resolved-context/v1', contextSnapshotId: token, context: { workspace: 'w', pageSessionId: 'page-a', focus: { job: 'job-a', stage: 'judge', trial: 'trial-a', criterion: 'D2_1' } }, basedOn: { artifactRevision: 'rev-a' } } },
+  ]
+  const recovered = recoverHarborTurn(nodes, 'session-current')
+  assert.equal(recovered.context.sessionId, 'session-current')
+  assert.equal(recovered.context.object.trial, 'trial-a')
+  assert.equal(recovered.explicit, undefined)
+  assert.equal(recoverHarborTurn(nodes.slice(1), 'other'), undefined)
+  assert.equal(recoverHarborTurn([{ ...nodes[1], call: { name: 'untrusted_tool' } }], 'session-current'), undefined)
+})
+
 function structuredInput(initial = {}) {
   let submissions = 0
   let snapshot = {

@@ -31,6 +31,9 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="harbor-dsh")
     commands = parser.add_subparsers(dest="command", required=True)
 
+    diagnostic_subset = commands.add_parser("diagnostic-subset", help="Plan or materialize a frozen, bounded diagnostic Dataset; never starts a Job")
+    diagnostic_subset.add_argument("subset_command", choices=("plan", "materialize"))
+
     snapshot = commands.add_parser("snapshot", help="Freeze a Candidate directory")
     snapshot.add_argument("candidate_dir", type=Path)
     snapshot.add_argument("--id", dest="candidate_id")
@@ -190,6 +193,9 @@ def _parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     args = _parser().parse_args()
+    if args.command == "diagnostic-subset":
+        from harbor_dsh_evolution.bounded_diagnostic import run_command
+        return run_command(args.subset_command)
     exit_code = 0
     if args.command == "snapshot":
         result = snapshot_candidate(

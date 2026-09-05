@@ -297,6 +297,51 @@ async function fixture() {
   return { projectRoot, service, workspace: dashboard.workspace.id }
 }
 
+test('Host-issued batch selectors resolve only frozen members in their Session', async () => {
+  const { projectRoot, service, workspace } = await fixture()
+  const selection = await service.createTrialSelection({ workspace, job: 'job-42', sessionId: 'session-1', mode: 'query-snapshot', filters: { validity: 'true' } })
+  assert.equal(selection.count, 1)
+  const input = { ...context(workspace), route: { name: 'harbor.job', params: { job: 'job-42', stage: 'judge' } }, object: { kind: 'job', id: 'job-42', job: 'job-42', stage: 'judge' }, selection: [selection.ref] }
+  const bound = await service.bindUiContext({ sessionId: 'session-1', context: input })
+  const resolved = await service.resolveUiContext({ contextSnapshotId: bound.contextSnapshotId }, { sessionId: 'session-1', projectRoot })
+  assert.equal(resolved.selectedEvidence[0].available, true)
+  assert.equal(resolved.selectedEvidence[0].value.members[0].id, 'exec-a')
+  assert.ok(Buffer.byteLength(JSON.stringify(input)) < 4096)
+  await assert.rejects(service.createTrialSelection({ workspace, job: 'job-42', sessionId: 'session-1', mode: 'explicit', trialIds: ['cross-job'] }), /DENIED/)
+})
+
+test('fixed and filtered selections resolve inside a Job larger than the selection limit', async () => {
+  const { projectRoot, service, workspace } = await fixture()
+  const file = path.join(projectRoot, 'jobs', 'job-42', 'trial-lifecycle.json')
+  const lifecycle = JSON.parse(await readFile(file, 'utf8'))
+  lifecycle.trials.push(...Array.from({ length: 1001 }, (_, index) => ({ ...lifecycle.trials[0], dataset_order: index + 1, execution_id: `extra-${index}`, dataset_trial: `extra-${index}`, trial_name: `extra-${index}` })))
+  lifecycle.dataset_total = lifecycle.trials.length
+  await writeFile(file, JSON.stringify(lifecycle))
+  for (const mode of ['explicit', 'query-snapshot']) {
+    const selection = await service.createTrialSelection({ workspace, job: 'job-42', sessionId: 'session-1', mode, trialIds: ['exec-a'], filters: mode === 'explicit' ? {} : { query: 'exec-a' } })
+    assert.equal(selection.count, 1)
+    const value = await service.trialSelection({ workspace, sessionId: 'session-1', ...selection.ref })
+    assert.deepEqual(value.members.map(item => item.id), ['exec-a'])
+  }
+  await assert.rejects(service.createTrialSelection({ workspace, job: 'job-42', sessionId: 'session-1', mode: 'query-snapshot', filters: {} }), /TOO_LARGE/)
+})
+
+test('local metric and attempt contexts roundtrip with exact content and redacted evidence', async () => {
+  const { projectRoot, service, workspace } = await fixture()
+  const job = await service.job({ workspace, job: 'job-42', sessionId: 'session-1' })
+  const metric = job.interactionObjects.find(ref => ref.kind === 'metric')
+  const input = { ...context(workspace), route: { name: 'harbor.job', params: { job: 'job-42', stage: 'reporter' } }, object: { kind: 'job', id: 'job-42', job: 'job-42', stage: 'reporter' }, selection: [metric] }
+  const bound = await service.bindUiContext({ sessionId: 'session-1', context: input })
+  const resolved = await service.resolveUiContext({ contextSnapshotId: bound.contextSnapshotId }, { sessionId: 'session-1', projectRoot })
+  assert.equal(resolved.selectedEvidence[0].value.metric, 'reward')
+  assert.equal(resolved.uiAction.target.localObject.id, metric.id)
+  assert.ok(Buffer.byteLength(JSON.stringify(resolved)) < 128 * 1024)
+  const trial = await service.trial({ workspace, job: 'job-42', trial: 'exec-a', sessionId: 'session-1' })
+  const attempt = trial.interactionObjects.find(ref => ref.kind === 'attempt')
+  assert.equal(attempt.trial, 'exec-a')
+  await assert.rejects(service.bindUiContext({ sessionId: 'session-1', context: { ...input, selection: [{ ...metric, sourceDigest: SHA_B }] } }), /STALE_SELECTION/)
+})
+
 test('page-context revision is Host-owned, drift-aware, narrow, and carries typed refs', async () => {
   const { projectRoot, service, workspace } = await fixture()
   const beforeBind = Date.now()

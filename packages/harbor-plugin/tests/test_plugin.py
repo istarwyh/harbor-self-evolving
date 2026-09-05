@@ -7,6 +7,7 @@ import pytest
 from harbor_dsh_evolution.plugin import EvolutionPlugin
 
 from helpers import MODEL_BINDING, make_candidate, make_dataset, make_stack
+from test_lifecycle import event
 
 
 def fake_job(tmp_path: Path, dataset: Path):
@@ -61,6 +62,15 @@ async def test_plugin_persists_strict_identity_artifacts(tmp_path: Path):
     lifecycle = json.loads((job / "trial-lifecycle.json").read_text())
     assert lifecycle["dataset_total"] == 1
     assert lifecycle["trials"][0]["phase"] == "queued"
+    registered_before = (dataset / "dataset-manifest.json").read_bytes()
+    # Real Harbor callbacks use TOML [task].name, not the directory search-task.
+    await plugin._on_trial_started(event("examples/vertical-search", "runtime-execution", "search-task__random"))
+    lifecycle = json.loads((job / "trial-lifecycle.json").read_text())
+    assert lifecycle["dataset_total"] == 1
+    assert lifecycle["attempt_count"] == 1
+    assert lifecycle["trials"][0]["dataset_trial"] == "search-task"
+    assert lifecycle["trials"][0]["execution_id"] == "runtime-execution"
+    assert (dataset / "dataset-manifest.json").read_bytes() == registered_before
 
 
 @pytest.mark.asyncio

@@ -34,11 +34,16 @@ HISTORICAL_JUDGE_BINDING = {
 def make_candidate(root: Path, *, version: str = "1.0.0", content: str = "v1") -> Path:
     candidate = root / f"candidate-{version}"
     candidate.mkdir()
-    (candidate / "cordis.yml").write_text("- name: example\n")
+    (candidate / "cordis.yml").write_text("- id: acp-agent\n  name: ./plugin.mjs\n")
     (candidate / "package.json").write_text(f'{{"name":"business-agent","version":"{version}"}}\n')
     (candidate / "package-lock.json").write_text(
-        f'{{"name":"business-agent","version":"{version}","lockfileVersion":3}}\n'
+        json.dumps({"name": "business-agent", "version": version, "lockfileVersion": 3, "packages": {"": {"name": "business-agent", "version": version}}}) + "\n"
     )
+    (candidate / "run-acp.mjs").write_text("// Static unit-test fixture: not an executed Agent.\n")
+    (candidate / "candidate-runtime.json").write_text(json.dumps({
+        "schema_version": 1, "transport": "acp", "entrypoint": "run-acp.mjs",
+        "config_path": "cordis.yml", "agent_entry_id": "acp-agent", "node_version": "22.22.2",
+    }) + "\n")
     (candidate / "plugin.mjs").write_text(f"export default {content!r}\n")
     snapshot_candidate(candidate)
     return candidate
