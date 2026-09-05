@@ -36,6 +36,7 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 var index_exports = {};
 __export(index_exports, {
   HarborUiBridge: () => HarborUiBridge,
+  actionDraftContext: () => actionDraftContext,
   apply: () => apply,
   applySourceProposal: () => applySourceProposal,
   buildUiContext: () => buildUiContext,
@@ -52,6 +53,7 @@ __export(index_exports, {
   harborAnswerBasis: () => harborAnswerBasis,
   harborApiError: () => harborApiError,
   harborContextFilters: () => harborContextFilters,
+  harborDisplayedAnswerBasis: () => harborDisplayedAnswerBasis,
   harborSubmissionTransition: () => harborSubmissionTransition,
   harborTurnProjection: () => harborTurnProjection,
   hasTrialFilters: () => hasTrialFilters,
@@ -71,6 +73,7 @@ __export(index_exports, {
   recoverHarborTurn: () => recoverHarborTurn,
   removeContextPart: () => removeContextPart,
   replaceStructuredHarborReference: () => replaceStructuredHarborReference,
+  resolvedUiContext: () => resolvedUiContext,
   restoreNavigationSelection: () => restoreNavigationSelection,
   sectionForNavigation: () => sectionForNavigation,
   selectedSourceLines: () => selectedSourceLines,
@@ -89,7 +92,7 @@ __export(index_exports, {
   workbenchSuccessState: () => workbenchSuccessState
 });
 module.exports = __toCommonJS(index_exports);
-var import_react = __toESM(require("react"), 1);
+var import_react3 = __toESM(require("react"), 1);
 
 // lib/composer-context.js
 var TOKEN_PATTERN = "hctx_[A-Za-z0-9_-]{20,80}";
@@ -126,6 +129,892 @@ function jobAttention(job) {
   if (reasons.some((reason) => /fresh.?baseline|context.*mismatch|not.comparable/i.test(typeof reason === "string" ? reason : reason?.code ?? ""))) return { kind: "fresh-baseline", rank: 6, count: 1 };
   if (job.promotion && job.promotion.decision !== "PROMOTE") return { kind: "gate", rank: 5, count: reasons.length || 1 };
   return { kind: job.progress?.active ? "running" : "healthy", rank: 9, count: 0 };
+}
+
+// src/client/workbench-journey.js
+function harborQuestionKeys(context) {
+  const focus = context?.selection?.at(-1);
+  if (focus?.kind === "evaluator-source") return ["askSource", "askSourceChange"];
+  if (focus?.kind === "trial-set") return ["askSelectedTrials", "suggestedQuestion3"];
+  if (focus?.kind === "metric") return ["askMetric", "suggestedQuestion3"];
+  if (focus?.kind === "hypothesis") return ["askHypothesis", "suggestedQuestion3"];
+  if (focus?.kind === "gate-reason") return ["askGateReason", "suggestedQuestion3"];
+  if (context?.object?.trial || focus?.trial) return ["suggestedQuestion1", "suggestedQuestion3", "askCandidateChange"];
+  if (context?.object?.job) return ["askHealth", "suggestedQuestion4"];
+  return ["askGettingStarted"];
+}
+function harborQuestionLabelKey(key) {
+  return ["askSource", "askSourceChange", "askSelectedTrials", "askMetric", "askHypothesis", "askGateReason", "askCandidateChange", "askHealth", "askGettingStarted"].includes(key) ? `${key}Label` : key;
+}
+var JOURNEY_MESSAGES = {
+  zh: {
+    replyReady: "AI \u5DF2\u56DE\u590D \xB7 \u70B9 + \u67E5\u770B",
+    historyOnly: "\u5EF6\u7EED\u4F1A\u8BDD\u5386\u53F2\uFF0C\u672A\u91CD\u65B0\u8BFB\u53D6\u9875\u9762",
+    draftRecoveryReselect: "\u5DF2\u8FD4\u56DE\u539F\u5BF9\u8C61\u9875\u9762\u3002\u5176\u5185\u5BB9\u6216\u9009\u4E2D\u96C6\u5408\u5DF2\u53D8\u5316\uFF0C\u8BF7\u91CD\u65B0\u9009\u62E9\u5177\u4F53\u5185\u5BB9\u540E\u63D0\u95EE\uFF1B\u65E7\u5EFA\u8BAE\u548C\u7F16\u8F91\u5DF2\u4FDD\u7559\uFF0C\u4E0D\u4F1A\u81EA\u52A8\u6269\u5927\u8303\u56F4\u3002",
+    askSourceLabel: "\u89E3\u91CA\u8FD9\u6BB5\u89C4\u5219",
+    askSourceChangeLabel: "\u8BA9 AI \u63D0\u8BAE\u4FEE\u6539",
+    askSelectedTrialsLabel: "\u5206\u6790\u6240\u9009\u4EFB\u52A1",
+    askMetricLabel: "\u89E3\u91CA\u8FD9\u4E2A\u6307\u6807",
+    askHypothesisLabel: "\u5BA1\u67E5\u8FD9\u6761\u5047\u8BBE",
+    askGateReasonLabel: "\u89E3\u91CA\u963B\u65AD\u539F\u56E0",
+    askCandidateChangeLabel: "\u63D0\u8BAE\u6700\u5C0F\u6539\u8FDB",
+    askHealthLabel: "\u5148\u770B\u54EA\u4E9B\u95EE\u9898\uFF1F",
+    askGettingStartedLabel: "\u5E2E\u6211\u5F00\u59CB\u4F7F\u7528",
+    askAi: "\u95EE AI",
+    askAboutThis: "\u9488\u5BF9\u6240\u9009\u5185\u5BB9\u63D0\u95EE",
+    turnContext: "\u5F85\u53D1\u9001\u5F15\u7528",
+    noTurnContext: "\u53EF\u7EE7\u7EED\u5BF9\u8BDD\uFF1B\u8BE2\u95EE\u65B0\u5BF9\u8C61\u65F6\u8BF7\u5148\u5F15\u7528\u3002",
+    oneShot: "\u5DF2\u653E\u5165\u4E0B\u65B9\u8F93\u5165\u6846\uFF1B\u8865\u5145\u95EE\u9898\u540E\u53D1\u9001\uFF0C\u4E0D\u4F1A\u81EA\u52A8\u6267\u884C\u3002",
+    jobSection_trials: "\u4EFB\u52A1\u4E0E\u8BC4\u5206",
+    jobSection_pipeline: "\u6267\u884C\u6D41\u7A0B",
+    jobSection_evaluator: "\u8BC4\u5206\u89C4\u5219\u4E0E\u6E90\u7801",
+    jobSection_compare: "\u7248\u672C\u5BF9\u6BD4\u4E0E\u95E8\u7981",
+    journeyTitle: "\u4ECE\u4E00\u4E2A\u95EE\u9898\u5F00\u59CB",
+    journeyIntro: "\u4E0D\u5FC5\u5148\u4E86\u89E3 Harbor \u7684\u672F\u8BED\u3002\u5148\u770B\u7ED3\u679C\uFF0C\u518D\u9009\u4E2D\u4F60\u60F3\u7406\u89E3\u6216\u6539\u8FDB\u7684\u5185\u5BB9\u3002",
+    journeyStep1: "\u2460 \u6253\u5F00\u8BC4\u6D4B\u7ED3\u679C\uFF0C\u9009\u62E9\u4EFB\u52A1\u3001\u8BC4\u5206\u6216\u6E90\u7801\u7247\u6BB5",
+    journeyStep2: "\u2461 \u70B9\u300C\u95EE AI\u300D\uFF0C\u5728\u4E0B\u65B9\u8865\u5145\u95EE\u9898\u5E76\u53D1\u9001",
+    journeyStep3: "\u2462 \u67E5\u770B\u8BC1\u636E\uFF0C\u6216\u5BA1\u9605 AI \u4FEE\u6539\u540E\u4FDD\u5B58\u65B0\u7248\u672C",
+    journeyOpen: "\u67E5\u770B\u6700\u8FD1\u4E00\u6B21\u7ED3\u679C",
+    journeyEmpty: "\u8FD8\u6CA1\u6709\u8BC4\u6D4B\u7ED3\u679C\uFF1F\u4ECE\u4E0B\u65B9\u300C\u8BC4\u6D4B\u6700\u8FD1\u4F1A\u8BDD\u300D\u5F00\u59CB\uFF0C\u5148\u9884\u89C8\u8303\u56F4\u518D\u786E\u8BA4\u8FD0\u884C\u3002",
+    journeyHelp: "\u4F7F\u7528\u65B9\u6CD5",
+    askGettingStarted: "\u8BF7\u5148\u53EA\u8BFB\u68C0\u67E5\u5F53\u524D\u5DE5\u4F5C\u7A7A\u95F4\uFF0C\u7528\u6613\u61C2\u7684\u8BED\u8A00\u89E3\u91CA\u5982\u4F55\u5F00\u59CB\u4F7F\u7528 Harbor\u3002\u5217\u51FA\u7F3A\u5C11\u7684\u524D\u7F6E\u6761\u4EF6\u548C\u4E00\u4E2A\u6700\u5C0F\u4E0B\u4E00\u6B65\uFF1B\u4E0D\u8981\u521B\u5EFA\u6216\u8FD0\u884C\u8BC4\u6D4B\u3002",
+    askSourceChange: "\u8BF7\u53EA\u9488\u5BF9\u9009\u4E2D\u7684\u5DF2\u4FDD\u5B58\u6E90\u7801\u7247\u6BB5\u63D0\u51FA\u6700\u5C0F\u4FEE\u6539\uFF1A\u5148\u89E3\u91CA\u95EE\u9898\u4E0E\u8BC4\u5206\u8BED\u4E49\u5F71\u54CD\uFF0C\u518D\u751F\u6210 evaluator-draft \u4F9B\u6211\u5BA1\u9605\u3002\u4E0D\u8981\u76F4\u63A5\u5199\u6587\u4EF6\u3001\u8FD0\u884C\u8BC4\u6D4B\u6216 Gate\u3002",
+    askCandidateChange: "\u8BF7\u57FA\u4E8E\u8FD9\u4E2A\u4EFB\u52A1\u7684\u8BC1\u636E\u63D0\u51FA Candidate \u6700\u5C0F\u4FEE\u6539\u5EFA\u8BAE\uFF0C\u751F\u6210 candidate-draft \u5E76\u8BF4\u660E\u9A8C\u8BC1\u65B9\u6CD5\uFF1B\u4E0D\u8981\u4FEE\u6539\u8BC4\u6D4B\u5668\u3001\u5199\u5165\u6587\u4EF6\u6216\u8FD0\u884C\u8BC4\u6D4B\u3002",
+    askSelectedTrials: "\u8BF7\u53EA\u5206\u6790\u9009\u4E2D\u7684\u4EFB\u52A1\u96C6\u5408\uFF0C\u627E\u51FA\u5171\u540C\u5931\u5206\u539F\u56E0\u548C\u5BF9\u5E94\u8BC1\u636E\uFF0C\u5E76\u7ED9\u51FA\u6700\u5C0F\u6539\u8FDB\u5EFA\u8BAE\uFF1B\u4E0D\u8981\u6269\u5927\u8303\u56F4\u6216\u8FD0\u884C\u8BC4\u6D4B\u3002",
+    askHypothesis: "\u8BF7\u7528\u73B0\u6709\u8BC1\u636E\u5BA1\u67E5\u8FD9\u6761\u4F18\u5316\u5047\u8BBE\uFF0C\u8BF4\u660E\u652F\u6301\u4E0E\u53CD\u5BF9\u8BC1\u636E\u3001\u5F85\u9A8C\u8BC1\u95EE\u9898\u548C\u6700\u5C0F\u4E0B\u4E00\u6B65\u3002\u4E0D\u8981\u8FD0\u884C\u5B9E\u9A8C\u3002",
+    askGateReason: "\u8BF7\u89E3\u91CA\u8FD9\u6761\u95E8\u7981\u539F\u56E0\u3001\u652F\u6301\u5B83\u7684\u8BC1\u636E\u548C\u89E3\u9664\u963B\u65AD\u7684\u5FC5\u8981\u6761\u4EF6\u3002\u4E0D\u8981\u6279\u51C6\u95E8\u7981\u6216\u53D1\u5E03\u3002",
+    questionSuggestions: "\u53EF\u4EE5\u8FD9\u6837\u95EE",
+    questionPrepared: "\u95EE\u9898\u4E0E\u5F15\u7528\u5DF2\u51C6\u5907\u597D\uFF0C\u8BF7\u5728\u4E0B\u65B9\u8F93\u5165\u6846\u53D1\u9001\u3002",
+    continueObject: "\u7EE7\u7EED\u8FFD\u95EE\u539F\u5F15\u7528\u5BF9\u8C61",
+    followupHint: "\u666E\u901A\u8FFD\u95EE\u6CBF\u7528\u4F1A\u8BDD\u5386\u53F2\uFF0C\u4E0D\u4F1A\u81EA\u52A8\u5F15\u7528\u5F53\u524D\u9875\u9762\u3002\u9700\u8981\u6700\u65B0\u8BC1\u636E\u6216\u4FEE\u6539\u65F6\uFF0C\u8BF7\u91CD\u65B0\u5F15\u7528\u5BF9\u8C61\u3002",
+    discussionHistory: "\u672C\u6B21\u8BA8\u8BBA",
+    latestReply: "\u56DE\u5230\u6700\u65B0\u56DE\u590D",
+    followupUnbound: "\u666E\u901A\u8FFD\u95EE \xB7 \u672A\u9644\u5E26\u65B0\u7684\u9875\u9762\u5F15\u7528",
+    evidenceNotChecked: "\u672C\u8F6E\u672A\u91CD\u65B0\u6838\u5BF9\u8BC1\u636E\uFF1B\u4EE5\u4E0B\u662F\u4F1A\u8BDD\u56DE\u7B54\uFF0C\u4E0D\u4EE3\u8868\u5F53\u524D\u9875\u9762\u7684\u6700\u65B0\u72B6\u6001\u3002",
+    aiQuestion: "\u4F60\u7684\u95EE\u9898",
+    answerDetails: "\u4F9D\u636E\u4E0E\u8FD0\u884C\u8BE6\u60C5",
+    identityDetails: "\u7248\u672C\u4E0E\u8EAB\u4EFD\u8BE6\u60C5",
+    draftRecovered: "\u672A\u4FDD\u5B58\u7684\u7F16\u8F91\u5DF2\u6062\u590D",
+    draftLocal: "\u7F16\u8F91\u6682\u5B58\u4E8E\u672C\u6D4F\u89C8\u5668\u6807\u7B7E\u9875\uFF1B\u5207\u6362\u6587\u4EF6\u6216\u5237\u65B0\u53EF\u6062\u590D\uFF0C\u5173\u95ED\u6807\u7B7E\u9875\u540E\u4E0D\u4FDD\u8BC1\u4FDD\u7559\u3002",
+    draftMemoryOnly: "\u6D4F\u89C8\u5668\u6682\u5B58\u4E0D\u53EF\u7528\uFF1A\u7F16\u8F91\u4EC5\u4FDD\u5B58\u5728\u5185\u5B58\u4E2D\uFF0C\u5237\u65B0\u53EF\u80FD\u4E22\u5931\uFF0C\u8BF7\u53CA\u65F6\u590D\u5236\u6216\u4FDD\u5B58\u3002",
+    draftConflict: "\u6E90\u6587\u4EF6\u5DF2\u66F4\u65B0\uFF0C\u5DF2\u4FDD\u7559\u4F60\u7684\u7F16\u8F91\uFF1B\u8BF7\u5BF9\u7167\u6700\u65B0\u6E90\u7801\u5904\u7406\u5DEE\u5F02\u540E\u518D\u4FDD\u5B58\u3002",
+    discardEdits: "\u653E\u5F03\u6B64\u6587\u4EF6\u7684\u7F16\u8F91",
+    discardEditsConfirm: "\u786E\u5B9A\u653E\u5F03\u6B64\u6587\u4EF6\u5C1A\u672A\u4FDD\u5B58\u7684\u7F16\u8F91\uFF0C\u5E76\u6062\u590D\u5DF2\u4FDD\u5B58\u6E90\u7801\uFF1F",
+    acceptNewBase: "\u5DF2\u5408\u5E76\u5DEE\u5F02\uFF0C\u4F7F\u7528\u6700\u65B0\u6E90\u7801\u4F5C\u4E3A\u57FA\u51C6",
+    latestSource: "\u6700\u65B0\u5DF2\u4FDD\u5B58\u6E90\u7801",
+    proposalReview: "AI \u4FEE\u6539\u5EFA\u8BAE",
+    proposalMergeHint: "\u5DF2\u6709\u4EBA\u5DE5\u7F16\u8F91\uFF0C\u672A\u88AB AI \u8986\u76D6\u3002\u4E0B\u65B9\u4FDD\u7559\u5EFA\u8BAE\u5DEE\u5F02\uFF0C\u8BF7\u5408\u5E76\u5230\u7F16\u8F91\u533A\u3002",
+    sourceReviewReady: "\u5DF2\u5B9A\u4F4D\u5BF9\u5E94\u6587\u4EF6\u5E76\u8F7D\u5165\u5EFA\u8BAE\u3002\u53EF\u7EE7\u7EED\u7F16\u8F91\uFF1B\u4EC5\u5728\u5BA1\u9605\u5E76\u4FDD\u5B58\u540E\u521B\u5EFA\u65B0\u7248\u672C\u3002",
+    proposalUnavailable: "\u8BE5\u5EFA\u8BAE\u65E0\u6CD5\u5B89\u5168\u5339\u914D\u5F53\u524D\u6587\u4EF6\u3002\u65E7\u5EFA\u8BAE\u4ECD\u4FDD\u7559\uFF0C\u8BF7\u91CD\u65B0\u9009\u4E2D\u6E90\u7801\u8BF7\u6C42\u4FEE\u6539\u3002",
+    errorNextExpired: "\u65E7\u5EFA\u8BAE\u4E0E\u4EBA\u5DE5\u7F16\u8F91\u4ECD\u4FDD\u7559\u3002\u8BF7\u91CD\u65B0\u5F15\u7528\u539F\u5BF9\u8C61\u51C6\u5907\u65B0\u5EFA\u8BAE\uFF0C\u518D\u5BA1\u9605\u786E\u8BA4\uFF1B\u91CD\u8BD5\u65E7\u6388\u6743\u4E0D\u4F1A\u751F\u6548\u3002",
+    repreparePrompt: "\u8BF7\u91CD\u65B0\u8BFB\u53D6\u8FD9\u4E2A\u5BF9\u8C61\u7684\u6700\u65B0\u8BC1\u636E\uFF0C\u66F4\u65B0\u4E4B\u524D\u7684\u4FEE\u6539\u5EFA\u8BAE\u5E76\u751F\u6210\u65B0\u7684\u8349\u7A3F\u4F9B\u6211\u5BA1\u9605\u3002\u4E0D\u8981\u5199\u5165\u6587\u4EF6\u3001\u8FD0\u884C\u8BC4\u6D4B\u6216\u53D1\u5E03\u3002\u4E4B\u524D\u7684\u5EFA\u8BAE\uFF08\u4EC5\u4F5C\u5F85\u6838\u5B9E\u53C2\u8003\uFF09\uFF1A"
+  },
+  en: {
+    replyReady: "AI replied \xB7 expand to read",
+    historyOnly: "Conversation history; page not re-read",
+    draftRecoveryReselect: "Returned to the original object page. Its content or selection changed; explicitly select it again before asking. Suggestions and edits remain intact; scope is never expanded automatically.",
+    askSourceLabel: "Explain this rule",
+    askSourceChangeLabel: "Suggest a change",
+    askSelectedTrialsLabel: "Analyze selected tasks",
+    askMetricLabel: "Explain this metric",
+    askHypothesisLabel: "Review this hypothesis",
+    askGateReasonLabel: "Explain the blocker",
+    askCandidateChangeLabel: "Suggest an improvement",
+    askHealthLabel: "What needs attention?",
+    askGettingStartedLabel: "Help me get started",
+    askAi: "Ask AI",
+    askAboutThis: "Ask about selection",
+    turnContext: "Reference to send",
+    noTurnContext: "Continue chatting; attach a reference when asking about a new object.",
+    oneShot: "Prepared below. Add your question and send; nothing runs automatically.",
+    jobSection_trials: "Tasks & scores",
+    jobSection_pipeline: "Execution flow",
+    jobSection_evaluator: "Scoring rules & source",
+    jobSection_compare: "Comparison & gate",
+    journeyTitle: "Start with a question",
+    journeyIntro: "Start with the result, then select what you want to understand or improve.",
+    journeyStep1: "\u2460 Open a result; select a task, score, or source fragment",
+    journeyStep2: "\u2461 Ask AI; add your question in the Composer and send",
+    journeyStep3: "\u2462 Inspect evidence, or review changes and save a new version",
+    journeyOpen: "Open latest result",
+    journeyEmpty: "No results yet? Preview a recent-session evaluation below before confirming a run.",
+    journeyHelp: "How to use",
+    askGettingStarted: "Read-only: inspect this workspace and explain how to start with Harbor, any missing prerequisites, and one smallest next step. Do not create or run an evaluation.",
+    askSourceChange: "Propose a minimal change to this selected saved source fragment. Explain the issue and scoring impact, then create an evaluator-draft for review. Do not write files, run evaluations, or Gate.",
+    askCandidateChange: "Based on evidence for this task, propose a minimal Candidate change as a candidate-draft and explain how to validate it. Do not edit the evaluator, write files, or run evaluations.",
+    askSelectedTrials: "Analyze only these selected tasks: identify shared failure causes, evidence, and a minimal improvement. Do not expand scope or run evaluations.",
+    askHypothesis: "Review this hypothesis against the evidence: supporting and opposing evidence, open questions, and a minimal next step. Do not run experiments.",
+    askGateReason: "Explain this gate reason, its evidence, and requirements to unblock it. Do not approve gates or deploy.",
+    questionSuggestions: "Try asking",
+    questionPrepared: "Question and reference prepared. Send from the Composer below.",
+    continueObject: "Follow up on the referenced object",
+    followupHint: "Ordinary follow-ups use conversation history, not the current page. Reattach the object for fresh evidence or a change.",
+    discussionHistory: "This discussion",
+    latestReply: "Latest reply",
+    followupUnbound: "Follow-up \xB7 no new page reference",
+    evidenceNotChecked: "Evidence was not rechecked this turn. This answer does not verify the current page state.",
+    aiQuestion: "Your question",
+    answerDetails: "Evidence & execution details",
+    identityDetails: "Versions & identities",
+    draftRecovered: "Unsaved edits restored",
+    draftLocal: "Drafts are local to this browser tab; switching files or refreshing can recover them. Closing the tab may remove them.",
+    draftMemoryOnly: "Browser draft storage is unavailable. Edits are in memory only; copy or save them before refreshing.",
+    draftConflict: "The source changed. Your edits are preserved; reconcile them with the latest source before saving.",
+    discardEdits: "Discard edits to this file",
+    discardEditsConfirm: "Discard unsaved edits to this file and restore the saved source?",
+    acceptNewBase: "I reconciled the changes; use the latest base",
+    latestSource: "Latest saved source",
+    proposalReview: "AI change proposal",
+    proposalMergeHint: "Your manual edits were preserved. Merge the proposed difference below into the editor.",
+    sourceReviewReady: "Matching file opened with the proposal. Keep editing; only review and save creates a new version.",
+    proposalUnavailable: "The proposal cannot safely match this file. It is retained; select the source again to request an updated change.",
+    errorNextExpired: "Suggestions and edits are retained. Reattach the original object and prepare a new proposal for review; retrying expired authorization will not work.",
+    repreparePrompt: "Read this object\u2019s latest evidence and update the previous proposal as a new draft for my review. Do not write files, run evaluations, or deploy. Previous suggestion (unverified reference only):"
+  }
+};
+
+// src/client/action-draft-card.jsx
+var import_react = __toESM(require("react"), 1);
+
+// src/client/action-draft-state.js
+function actionDraftErrorCode(error) {
+  return typeof error?.code === "string" ? error.code : String(error?.message ?? error ?? "").match(/\b(HARBOR_[A-Z0-9_]+)\b/)?.[1] ?? "";
+}
+function actionDraftExpiry(draft, state = {}) {
+  if (state.operation) return void 0;
+  const expiry = Date.parse(state.preview?.expiresAt ?? draft?.expiresAt);
+  return Number.isFinite(expiry) ? expiry : void 0;
+}
+function actionDraftAuthorizationExpired(draft, state = {}, now = Date.now()) {
+  if (state.operation) return false;
+  if (/ACTION_EXPIRED|CONTEXT_EXPIRED|SELECTION_EXPIRED/.test(actionDraftErrorCode(state.error))) return true;
+  const expiry = actionDraftExpiry(draft, state);
+  return expiry !== void 0 && expiry <= now;
+}
+function actionDraftNeedsReprepare(draft, state = {}, now = Date.now()) {
+  if (state.operation) return false;
+  return actionDraftAuthorizationExpired(draft, state, now) || /REVISION_CONFLICT|STALE_SELECTION|BINDING_STALE/.test(actionDraftErrorCode(state.error)) || state.preview?.blocking?.some((item) => /REVISION_CONFLICT|STALE_SELECTION/.test(item.code)) === true;
+}
+function actionDraftCanConfirm(draft, state, reviewed, now = Date.now()) {
+  const preview = state?.preview;
+  return reviewed === true && state?.status === "READY_FOR_REVIEW" && !state.operation && !state.error && !actionDraftAuthorizationExpired(draft, state, now) && preview?.status === "READY_FOR_REVIEW" && Array.isArray(preview.blocking) && preview.blocking.length === 0 && ["previewId", "contentHash", "baseRevision"].every((key) => typeof preview[key] === "string" && preview[key].length > 0);
+}
+function actionDraftComparison(result) {
+  if (result?.schema !== "harbor-readonly-comparison/v1" || !result.data || typeof result.data !== "object") return void 0;
+  const data = result.data;
+  const count = (key) => Array.isArray(data[key]) ? data[key].length : void 0;
+  return {
+    comparable: typeof data.comparable === "boolean" ? data.comparable : void 0,
+    baseline: typeof data.baselineJob === "string" ? data.baselineJob : void 0,
+    candidate: typeof data.candidateJob === "string" ? data.candidateJob : void 0,
+    metrics: Object.entries(data.metrics ?? {}).slice(0, 6).map(([name2, value]) => ({
+      name: name2,
+      baseline: Number.isFinite(value?.baseline) ? value.baseline : void 0,
+      candidate: Number.isFinite(value?.candidate) ? value.candidate : void 0,
+      delta: Number.isFinite(value?.delta) ? value.delta : void 0,
+      direction: value?.direction === "minimize" ? "minimize" : "maximize"
+    })),
+    improved: count("improvedTrials"),
+    regressed: count("regressedTrials"),
+    invalid: count("invalidTrials"),
+    reasons: (Array.isArray(data.comparabilityReasons) ? data.comparabilityReasons : []).slice(0, 8).map((item) => typeof item === "string" ? item : item?.message).filter((item) => typeof item === "string")
+  };
+}
+
+// src/client/action-draft-card.jsx
+var ACTION_CARD_MESSAGES = {
+  zh: {
+    actionSuggestion: "AI \u5EFA\u8BAE",
+    actionReviewSource: "\u5BA1\u9605\u5E76\u4FEE\u6539",
+    actionSourceBoundary: "\u53EA\u5728\u7F16\u8F91\u5668\u4E2D\u6253\u5F00\u4FEE\u6539\u5EFA\u8BAE\uFF0C\u4E0D\u4F1A\u6539\u52A8\u6587\u4EF6\u3002\u5BA1\u9605\u540E\u4FDD\u5B58\u624D\u4F1A\u521B\u5EFA\u65B0\u7248\u672C\u3002",
+    actionSourceBaseline: "\u4FEE\u6539\u8BC4\u6D4B\u89C4\u5219\u540E\uFF0C\u9700\u8981\u4F7F\u7528\u65B0\u89C4\u5219\u5EFA\u7ACB\u65B0\u7684\u57FA\u7EBF\uFF0C\u65E7\u7ED3\u679C\u4E0D\u4F1A\u88AB\u8986\u76D6\u3002",
+    actionKind_candidate: "Candidate \u4FEE\u6539\u5EFA\u8BAE",
+    actionKind_evaluator: "\u8BC4\u6D4B\u89C4\u5219\u4FEE\u6539\u5EFA\u8BAE",
+    actionKind_compare: "\u7ED3\u679C\u5BF9\u6BD4",
+    actionKind_diagnostic: "\u8BCA\u65AD\u8BC4\u6D4B\u5EFA\u8BAE",
+    actionKind_retry: "\u57FA\u7840\u8BBE\u65BD\u91CD\u8BD5\u5EFA\u8BAE",
+    actionKind_gate: "Gate \u7533\u8BF7\u5EFA\u8BAE",
+    actionKind_handoff: "\u90E8\u7F72\u4EA4\u63A5\u5EFA\u8BAE",
+    actionStateDraft: "\u7B49\u5F85\u4F60\u5BA1\u9605",
+    actionStateChecking: "\u6B63\u5728\u68C0\u67E5",
+    actionStateReady: "\u53EF\u4EE5\u786E\u8BA4",
+    actionStateBlocked: "\u6682\u65F6\u4E0D\u80FD\u6267\u884C",
+    actionStateExecuting: "\u5904\u7406\u4E2D",
+    actionStateFailed: "\u672A\u5B8C\u6210",
+    actionStateExpired: "\u9700\u8981\u5237\u65B0\u4F9D\u636E",
+    actionStateSaved: "\u5EFA\u8BAE\u5DF2\u4FDD\u5B58\uFF0C\u5C1A\u672A\u5E94\u7528",
+    actionStateCompared: "\u5BF9\u6BD4\u5B8C\u6210",
+    actionExpiredHint: "\u539F\u6388\u6743\u5DF2\u8FC7\u671F\u6216\u670D\u52A1\u5DF2\u91CD\u542F\uFF0C\u5EFA\u8BAE\u6587\u5B57\u4ECD\u4FDD\u7559\u3002\u91CD\u65B0\u51C6\u5907\u4F1A\u628A\u95EE\u9898\u653E\u5165\u8F93\u5165\u6846\uFF0C\u7531\u4F60\u786E\u8BA4\u53D1\u9001\uFF0C\u4E0D\u4F1A\u81EA\u52A8\u6267\u884C\u3002",
+    actionStaleHint: "\u5EFA\u8BAE\u4F9D\u636E\u5DF2\u7ECF\u53D8\u5316\u3002\u8BF7\u6309\u6700\u65B0\u5BF9\u8C61\u91CD\u65B0\u51C6\u5907\u95EE\u9898\uFF0C\u65E7\u5EFA\u8BAE\u548C\u4F60\u7684\u7F16\u8F91\u5185\u5BB9\u4E0D\u4F1A\u88AB\u6E05\u9664\u3002",
+    actionReprepare: "\u6309\u6700\u65B0\u5BF9\u8C61\u91CD\u65B0\u51C6\u5907",
+    actionPrepared: "\u95EE\u9898\u5DF2\u653E\u5165\u8F93\u5165\u6846\uFF1B\u8BF7\u68C0\u67E5\u540E\u53D1\u9001\u3002",
+    actionContinueSuggestion: "\u7EE7\u7EED\u5B8C\u5584\u5EFA\u8BAE",
+    actionSaveSuggestion: "\u786E\u8BA4\u4FDD\u5B58\u5EFA\u8BAE",
+    actionConfirmComparison: "\u786E\u8BA4\u53EA\u8BFB\u5BF9\u6BD4",
+    actionOnlyDraft: "\u786E\u8BA4\u4EC5\u4FDD\u5B58\u5EFA\u8BAE\u8BB0\u5F55\uFF0C\u4E0D\u4F1A\u4FEE\u6539\u8D44\u6E90\u3001\u542F\u52A8\u8BC4\u6D4B\u3001\u901A\u8FC7 Gate \u6216\u90E8\u7F72\u3002",
+    actionReadOnly: "\u53EA\u8BFB\u53D6\u8FD9\u4E24\u4E2A\u6279\u6B21\u7684\u5DF2\u6709\u7ED3\u679C\uFF0C\u4E0D\u4F1A\u542F\u52A8\u8BC4\u6D4B\u3001\u901A\u8FC7 Gate \u6216\u90E8\u7F72\u3002",
+    actionUnavailableRunner: "\u5F53\u524D\u5C1A\u672A\u63A5\u901A\u5B89\u5168\u7684\u8BCA\u65AD\u6267\u884C\u5668\uFF1B\u6B64\u5904\u53EA\u80FD\u4FDD\u7559\u5EFA\u8BAE\uFF0C\u4E0D\u80FD\u542F\u52A8\u4EFB\u52A1\u3002",
+    actionCandidateNext: "\u4E0B\u4E00\u6B65\uFF1A\u5148\u5BA1\u9605 Candidate \u4FEE\u6539\u65B9\u6848\u3002\u6B64\u5361\u7247\u4E0D\u4F1A\u628A\u65B9\u6848\u5199\u5165 Candidate\uFF0C\u4E5F\u4E0D\u4F1A\u542F\u52A8\u9A8C\u8BC1\u3002",
+    actionGateNext: "\u4E0B\u4E00\u6B65\uFF1A\u6838\u5BF9\u5BF9\u6BD4\u8BC1\u636E\uFF0C\u518D\u901A\u8FC7\u72EC\u7ACB\u7684 Gate \u5BA1\u6279\u6D41\u7A0B\u5904\u7406\uFF1B\u6B64\u5361\u7247\u6CA1\u6709\u901A\u8FC7 Gate\u3002",
+    actionHandoffNext: "\u4E0B\u4E00\u6B65\uFF1A\u5C06\u5BA1\u9605\u540E\u7684\u4EA4\u63A5\u65B9\u6848\u7528\u4E8E\u72EC\u7ACB\u90E8\u7F72\u6D41\u7A0B\uFF1B\u6B64\u5361\u7247\u6CA1\u6709\u89E6\u53D1\u90E8\u7F72\u3002",
+    actionCollapse: "\u6536\u8D77\u5EFA\u8BAE",
+    actionCollapsed: "\u5EFA\u8BAE\u5DF2\u6536\u8D77\uFF1B\u672A\u6539\u53D8\u6267\u884C\u72B6\u6001",
+    actionExpand: "\u5C55\u5F00\u5EFA\u8BAE",
+    actionDetails: "\u76EE\u6807\u4E0E\u5B89\u5168\u4FE1\u606F",
+    actionTarget: "\u76EE\u6807\u6279\u6B21",
+    actionSource: "\u6E90\u6587\u4EF6",
+    actionScope: "\u9009\u4E2D\u8303\u56F4",
+    actionIdentity: "\u8D44\u6E90\u7248\u672C",
+    actionRisk: "\u98CE\u9669\u4E0E\u4FEE\u6539\u8303\u56F4",
+    actionRevision: "\u4F9D\u636E\u7248\u672C",
+    actionContext: "\u5F15\u7528\u5FEB\u7167",
+    actionBefore: "\u539F\u5185\u5BB9",
+    actionAfter: "\u5EFA\u8BAE\u5185\u5BB9",
+    actionDiff: "\u67E5\u770B\u5EFA\u8BAE\u5DEE\u5F02",
+    actionAudit: "\u67E5\u770B\u64CD\u4F5C\u8BB0\u5F55",
+    actionCheck: "\u68C0\u67E5\u5E76\u9884\u89C8",
+    actionReviewConfirmation: "\u6211\u5DF2\u68C0\u67E5\u8FD9\u4EFD\u9884\u89C8\u7684\u76EE\u6807\u3001\u7248\u672C\u3001\u8303\u56F4\u548C\u5F71\u54CD\u3002",
+    actionPreview: "\u672C\u6B21\u9884\u89C8",
+    actionNoExternalRequests: "\u4E0D\u4F1A\u4EA7\u751F\u5916\u90E8\u6A21\u578B\u6216\u8BC4\u6D4B\u8BF7\u6C42\u3002",
+    actionPreviewDetails: "\u67E5\u770B\u9884\u89C8\u6821\u9A8C\u4FE1\u606F",
+    actionExpires: "\u6388\u6743\u6709\u6548\u81F3",
+    actionReadReceipt: "\u6B63\u5728\u6062\u590D\u64CD\u4F5C\u72B6\u6001\u2026",
+    actionReceiptRetry: "\u91CD\u65B0\u8BFB\u53D6\u64CD\u4F5C\u72B6\u6001",
+    actionReceiptFailure: "\u6682\u65F6\u65E0\u6CD5\u8BFB\u53D6\u5DF2\u6709\u64CD\u4F5C\u72B6\u6001\uFF1B\u786E\u8BA4\u524D\u8BF7\u5148\u6062\u590D\u72B6\u6001\uFF0C\u907F\u514D\u8BEF\u4EE5\u4E3A\u4ECE\u672A\u6267\u884C\u3002",
+    actionFailedReceipt: "\u5DF2\u6709\u4E00\u6B21\u64CD\u4F5C\u672A\u5B8C\u6210\u3002\u8BF7\u5148\u68C0\u67E5\u64CD\u4F5C\u8BB0\u5F55\uFF1B\u7CFB\u7EDF\u4E0D\u4F1A\u81EA\u52A8\u91CD\u8BD5\u6216\u91CD\u590D\u63D0\u4EA4\u3002",
+    actionViewComparison: "\u67E5\u770B\u5B8C\u6574\u5BF9\u6BD4",
+    actionComparable: "\u5177\u5907\u53EF\u6BD4\u6027",
+    actionNotComparable: "\u5F53\u524D\u7ED3\u679C\u4E0D\u53EF\u76F4\u63A5\u6BD4\u8F83",
+    actionComparabilityUnknown: "\u53EF\u6BD4\u6027\u4FE1\u606F\u7F3A\u5931\uFF0C\u8BF7\u67E5\u770B\u5B8C\u6574\u8BC1\u636E",
+    actionMetric: "\u6307\u6807",
+    actionBaseline: "\u57FA\u7EBF",
+    actionCandidate: "\u5019\u9009",
+    actionDelta: "\u53D8\u5316",
+    actionImproved: "\u6539\u5584",
+    actionRegressed: "\u56DE\u5F52",
+    actionInvalid: "\u65E0\u6548\u5206",
+    actionMinimize: "\u8D8A\u4F4E\u8D8A\u597D",
+    actionMaximize: "\u8D8A\u9AD8\u8D8A\u597D",
+    actionBusy: "\u6B63\u5728\u6253\u5F00\u2026"
+  },
+  en: {
+    actionSuggestion: "AI suggestion",
+    actionReviewSource: "Review and edit",
+    actionSourceBoundary: "Opens the suggestion in the editor without changing files. Only your reviewed save creates a new version.",
+    actionSourceBaseline: "Changing evaluation rules requires a fresh baseline. Historical results remain unchanged.",
+    actionKind_candidate: "Candidate change suggestion",
+    actionKind_evaluator: "Evaluation rule suggestion",
+    actionKind_compare: "Result comparison",
+    actionKind_diagnostic: "Diagnostic evaluation suggestion",
+    actionKind_retry: "Infrastructure retry suggestion",
+    actionKind_gate: "Gate request suggestion",
+    actionKind_handoff: "Deployment handoff suggestion",
+    actionStateDraft: "Ready for your review",
+    actionStateChecking: "Checking",
+    actionStateReady: "Ready to confirm",
+    actionStateBlocked: "Cannot execute yet",
+    actionStateExecuting: "Processing",
+    actionStateFailed: "Not completed",
+    actionStateExpired: "Refresh the evidence",
+    actionStateSaved: "Suggestion saved, not applied",
+    actionStateCompared: "Comparison complete",
+    actionExpiredHint: "The authorization expired or the service restarted. Your suggestion remains available. Prepare a new question, then review and send it yourself; nothing runs automatically.",
+    actionStaleHint: "The underlying evidence changed. Prepare a question against the latest object. The old suggestion and your edits will remain available.",
+    actionReprepare: "Prepare with the latest object",
+    actionPrepared: "The question is in the input. Review it before sending.",
+    actionContinueSuggestion: "Refine this suggestion",
+    actionSaveSuggestion: "Confirm and save suggestion",
+    actionConfirmComparison: "Confirm read-only comparison",
+    actionOnlyDraft: "Confirmation saves a suggestion record only. It does not modify resources, start evaluation, approve Gate, or deploy.",
+    actionReadOnly: "Reads existing results for these two jobs only. It does not run evaluation, approve Gate, or deploy.",
+    actionUnavailableRunner: "A safe bounded diagnostic runner is not connected. This suggestion cannot start a job.",
+    actionCandidateNext: "Next: review the Candidate change plan. This card does not write Candidate source or start validation.",
+    actionGateNext: "Next: inspect comparison evidence and use the separate Gate approval workflow. This card did not approve Gate.",
+    actionHandoffNext: "Next: use the reviewed handoff plan in the separate deployment workflow. This card did not deploy anything.",
+    actionCollapse: "Collapse suggestion",
+    actionCollapsed: "Suggestion collapsed; execution state is unchanged",
+    actionExpand: "Expand suggestion",
+    actionDetails: "Target and safety details",
+    actionTarget: "Target job",
+    actionSource: "Source file",
+    actionScope: "Selection",
+    actionIdentity: "Resource versions",
+    actionRisk: "Risk and mutation surface",
+    actionRevision: "Evidence revision",
+    actionContext: "Reference snapshot",
+    actionBefore: "Original",
+    actionAfter: "Suggested",
+    actionDiff: "View suggested changes",
+    actionAudit: "View operation record",
+    actionCheck: "Check and preview",
+    actionReviewConfirmation: "I reviewed the exact target, revision, scope, and impact of this preview.",
+    actionPreview: "This preview",
+    actionNoExternalRequests: "No external model or evaluation requests.",
+    actionPreviewDetails: "Preview verification details",
+    actionExpires: "Authorization expires",
+    actionReadReceipt: "Recovering operation state\u2026",
+    actionReceiptRetry: "Read operation state again",
+    actionReceiptFailure: "The previous operation state is unavailable. Recover it before confirming so an existing operation is not mistaken for an unexecuted draft.",
+    actionFailedReceipt: "An existing operation did not complete. Inspect its record first; nothing is retried or resubmitted automatically.",
+    actionViewComparison: "View full comparison",
+    actionComparable: "Results are comparable",
+    actionNotComparable: "Results are not directly comparable",
+    actionComparabilityUnknown: "Comparability is unavailable; inspect the full evidence",
+    actionMetric: "Metric",
+    actionBaseline: "Baseline",
+    actionCandidate: "Candidate",
+    actionDelta: "Change",
+    actionImproved: "Improved",
+    actionRegressed: "Regressed",
+    actionInvalid: "Invalid scores",
+    actionMinimize: "Lower is better",
+    actionMaximize: "Higher is better",
+    actionBusy: "Opening\u2026"
+  }
+};
+var kindKeys = {
+  "candidate-draft": "actionKind_candidate",
+  "evaluator-draft": "actionKind_evaluator",
+  compare: "actionKind_compare",
+  "diagnostic-evaluation": "actionKind_diagnostic",
+  "retry-infrastructure": "actionKind_retry",
+  "gate-request": "actionKind_gate",
+  "deployment-handoff": "actionKind_handoff"
+};
+var format = (value) => Number.isFinite(value) ? Number(value.toFixed(4)).toLocaleString() : "\u2014";
+var pretty = (value) => JSON.stringify(value, null, 2);
+function ActionDraftCardView({ draft, onSourceDraft, onReprepare, onViewComparison, request, update, ErrorState, t }) {
+  const label = (key) => {
+    const value = t?.(key);
+    return value && value !== key ? value : ACTION_CARD_MESSAGES.zh[key] ?? key;
+  };
+  const [state, setState] = (0, import_react.useState)({ status: "DRAFT" });
+  const [reviewed, setReviewed] = (0, import_react.useState)(false);
+  const [collapsed, setCollapsed] = (0, import_react.useState)(false);
+  const [receipt, setReceipt] = (0, import_react.useState)({ loading: Boolean(draft.operationId) });
+  const [receiptAttempt, setReceiptAttempt] = (0, import_react.useState)(0);
+  const [clock, setClock] = (0, import_react.useState)(Date.now);
+  const [opening, setOpening] = (0, import_react.useState)(false);
+  const [prepared, setPrepared] = (0, import_react.useState)(false);
+  const [interactionError, setInteractionError] = (0, import_react.useState)();
+  const sourceDraft = draft.kind === "evaluator-draft";
+  (0, import_react.useEffect)(() => {
+    if (!draft.operationId) return void 0;
+    let alive = true;
+    setReceipt({ loading: true });
+    void request("action-operation", { operationId: draft.operationId }).then((operation) => {
+      if (!alive) return;
+      setState({ status: operation.status, operation });
+      setReceipt({ loading: false });
+    }).catch((error) => {
+      if (!alive) return;
+      const absent = /ACTION_DENIED|ENOENT|NOT_FOUND/.test(actionDraftErrorCode(error) || error?.code || String(error?.message));
+      setReceipt({ loading: false, ...absent ? {} : { error } });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [draft.operationId, receiptAttempt, request]);
+  const expiresAt = actionDraftExpiry(draft, state);
+  (0, import_react.useEffect)(() => {
+    setClock(Date.now());
+    if (expiresAt === void 0 || expiresAt <= Date.now()) return void 0;
+    const timer = setTimeout(() => {
+      setClock(Date.now());
+      setReviewed(false);
+    }, Math.min(expiresAt - Date.now() + 1, 2147483647));
+    return () => clearTimeout(timer);
+  }, [expiresAt]);
+  const expired = actionDraftAuthorizationExpired(draft, state, clock);
+  const needsReprepare = actionDraftNeedsReprepare(draft, state, clock);
+  const preview = state.preview;
+  const result = state.operation?.events?.at(-1)?.result;
+  const comparison = actionDraftComparison(result);
+  const busy = state.status === "VALIDATING" || state.status === "EXECUTING";
+  const canConfirm = !receipt.loading && !receipt.error && actionDraftCanConfirm(draft, state, reviewed, clock);
+  const statusKey = comparison ? "actionStateCompared" : state.status === "COMPLETED" ? "actionStateSaved" : needsReprepare ? "actionStateExpired" : { VALIDATING: "actionStateChecking", READY_FOR_REVIEW: "actionStateReady", BLOCKED: "actionStateBlocked", EXECUTING: "actionStateExecuting", FAILED: "actionStateFailed" }[state.status] ?? "actionStateDraft";
+  const check = async () => {
+    if (busy || receipt.loading || receipt.error || sourceDraft || needsReprepare || state.operation) return;
+    setReviewed(false);
+    setState({ status: "VALIDATING" });
+    try {
+      const next = await update("action-preview", { draftId: draft.draftId });
+      setClock(Date.now());
+      setState({ status: next.status, preview: next });
+    } catch (error) {
+      setState({ status: "FAILED", error });
+    }
+  };
+  const confirm = async () => {
+    if (sourceDraft || receipt.loading || receipt.error || !actionDraftCanConfirm(draft, state, reviewed)) return;
+    setState((current) => ({ ...current, status: "EXECUTING" }));
+    try {
+      const operation = await update("action-confirm", { previewId: preview.previewId, contentHash: preview.contentHash, expectedRevision: preview.baseRevision, confirmed: true });
+      setState({ status: operation.status, preview, operation });
+    } catch (error) {
+      setState({ status: "FAILED", preview, error });
+    }
+  };
+  const open = async (callback, isReprepare = false) => {
+    if (!callback || opening) return;
+    setOpening(true);
+    setPrepared(false);
+    setInteractionError(void 0);
+    try {
+      const opened = await callback(draft, result);
+      if (isReprepare && opened !== false) setPrepared(true);
+    } catch (error) {
+      setInteractionError(error);
+    } finally {
+      setOpening(false);
+    }
+  };
+  const renderError = (error) => ErrorState ? /* @__PURE__ */ import_react.default.createElement(ErrorState, { error, t }) : /* @__PURE__ */ import_react.default.createElement("p", { role: "alert" }, String(error?.message ?? error));
+  if (collapsed) return /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-action-draft hse-action-collapsed" }, /* @__PURE__ */ import_react.default.createElement("span", null, label("actionCollapsed")), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => setCollapsed(false) }, label("actionExpand")));
+  return /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-action-draft", "data-action-kind": draft.kind, "data-action-status": needsReprepare ? "EXPIRED" : state.status }, /* @__PURE__ */ import_react.default.createElement("header", null, /* @__PURE__ */ import_react.default.createElement("strong", null, label(kindKeys[draft.kind] ?? "actionSuggestion")), /* @__PURE__ */ import_react.default.createElement("span", { role: "status" }, label(statusKey))), /* @__PURE__ */ import_react.default.createElement("p", null, draft.proposal?.summary), sourceDraft ? /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-muted" }, label("actionSourceBoundary")) : /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-muted" }, label(draft.kind === "compare" ? "actionReadOnly" : draft.execution === "requires-registered-runner" ? "actionUnavailableRunner" : "actionOnlyDraft")), sourceDraft && onSourceDraft ? /* @__PURE__ */ import_react.default.createElement("button", { className: "hse-primary", type: "button", disabled: opening, onClick: () => void open(onSourceDraft) }, label(opening ? "actionBusy" : "actionReviewSource")) : null, sourceDraft && draft.freshBaselineRequired ? /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-muted" }, label("actionSourceBaseline")) : null, needsReprepare ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-action-recovery", role: "status" }, /* @__PURE__ */ import_react.default.createElement("p", null, label(expired ? "actionExpiredHint" : "actionStaleHint")), onReprepare ? /* @__PURE__ */ import_react.default.createElement("button", { type: "button", disabled: opening, onClick: () => void open(onReprepare, true) }, label("actionReprepare")) : null) : null, prepared ? /* @__PURE__ */ import_react.default.createElement("p", { role: "status" }, label("actionPrepared")) : null, interactionError ? renderError(interactionError) : null, comparison ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-action-comparison" }, /* @__PURE__ */ import_react.default.createElement("b", null, label(comparison.comparable === true ? "actionComparable" : comparison.comparable === false ? "actionNotComparable" : "actionComparabilityUnknown")), /* @__PURE__ */ import_react.default.createElement("p", null, label("actionBaseline"), ": ", comparison.baseline ?? "\u2014", /* @__PURE__ */ import_react.default.createElement("br", null), label("actionCandidate"), ": ", comparison.candidate ?? "\u2014"), comparison.reasons.map((reason, index) => /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-muted", key: index }, reason)), comparison.metrics.length ? /* @__PURE__ */ import_react.default.createElement("table", null, /* @__PURE__ */ import_react.default.createElement("thead", null, /* @__PURE__ */ import_react.default.createElement("tr", null, /* @__PURE__ */ import_react.default.createElement("th", null, label("actionMetric")), /* @__PURE__ */ import_react.default.createElement("th", null, label("actionBaseline")), /* @__PURE__ */ import_react.default.createElement("th", null, label("actionCandidate")), /* @__PURE__ */ import_react.default.createElement("th", null, label("actionDelta")))), /* @__PURE__ */ import_react.default.createElement("tbody", null, comparison.metrics.map((metric) => /* @__PURE__ */ import_react.default.createElement("tr", { key: metric.name }, /* @__PURE__ */ import_react.default.createElement("th", null, metric.name, /* @__PURE__ */ import_react.default.createElement("small", null, " \xB7 ", label(metric.direction === "minimize" ? "actionMinimize" : "actionMaximize"))), /* @__PURE__ */ import_react.default.createElement("td", null, format(metric.baseline)), /* @__PURE__ */ import_react.default.createElement("td", null, format(metric.candidate)), /* @__PURE__ */ import_react.default.createElement("td", null, Number.isFinite(metric.delta) && metric.delta > 0 ? "+" : "", format(metric.delta)))))) : null, /* @__PURE__ */ import_react.default.createElement("p", null, label("actionImproved"), ": ", comparison.improved ?? "\u2014", " \xB7 ", label("actionRegressed"), ": ", comparison.regressed ?? "\u2014", " \xB7 ", label("actionInvalid"), ": ", comparison.invalid ?? "\u2014"), onViewComparison ? /* @__PURE__ */ import_react.default.createElement("button", { type: "button", disabled: opening, onClick: () => void open(onViewComparison) }, label("actionViewComparison")) : null) : null, state.status === "COMPLETED" && !comparison && !sourceDraft ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-action-next-step" }, /* @__PURE__ */ import_react.default.createElement("p", null, label({ "candidate-draft": "actionCandidateNext", "gate-request": "actionGateNext", "deployment-handoff": "actionHandoffNext" }[draft.kind] ?? "actionOnlyDraft")), onReprepare ? /* @__PURE__ */ import_react.default.createElement("button", { type: "button", disabled: opening, onClick: () => void open(onReprepare, true) }, label("actionContinueSuggestion")) : null) : null, preview && !sourceDraft ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-action-preview" }, /* @__PURE__ */ import_react.default.createElement("b", null, label("actionPreview"), " \xB7 ", label(preview.status === "READY_FOR_REVIEW" ? "actionStateReady" : "actionStateBlocked")), preview.estimatedExternalRequests === 0 ? /* @__PURE__ */ import_react.default.createElement("p", null, label("actionNoExternalRequests")) : null, (preview.blocking ?? []).map((item) => /* @__PURE__ */ import_react.default.createElement("p", { key: item.code }, item.message)), /* @__PURE__ */ import_react.default.createElement("details", null, /* @__PURE__ */ import_react.default.createElement("summary", null, label("actionPreviewDetails")), /* @__PURE__ */ import_react.default.createElement("code", null, preview.contentHash), /* @__PURE__ */ import_react.default.createElement("p", null, preview.baseRevision), /* @__PURE__ */ import_react.default.createElement("small", null, label("actionExpires"), ": ", preview.expiresAt))) : null, receipt.loading && !sourceDraft ? /* @__PURE__ */ import_react.default.createElement("p", { role: "status" }, label("actionReadReceipt")) : null, receipt.error ? /* @__PURE__ */ import_react.default.createElement("div", { role: "alert" }, /* @__PURE__ */ import_react.default.createElement("p", null, label("actionReceiptFailure")), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => setReceiptAttempt((value) => value + 1) }, label("actionReceiptRetry"))) : null, state.error && !needsReprepare ? renderError(state.error) : null, state.operation?.status === "FAILED" ? /* @__PURE__ */ import_react.default.createElement("p", { role: "alert" }, label("actionFailedReceipt")) : null, !sourceDraft && !needsReprepare && !state.operation && state.status === "READY_FOR_REVIEW" ? /* @__PURE__ */ import_react.default.createElement("label", null, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: reviewed, onChange: (event) => setReviewed(event.target.checked) }), label("actionReviewConfirmation")) : null, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-local-actions" }, !sourceDraft && !needsReprepare && !state.operation && state.status !== "READY_FOR_REVIEW" && state.status !== "EXECUTING" ? /* @__PURE__ */ import_react.default.createElement("button", { type: "button", disabled: busy || receipt.loading || Boolean(receipt.error), onClick: () => void check() }, label("actionCheck")) : null, !sourceDraft && !needsReprepare && !state.operation && state.status === "READY_FOR_REVIEW" ? /* @__PURE__ */ import_react.default.createElement("button", { type: "button", disabled: !canConfirm, onClick: () => void confirm() }, label(draft.kind === "compare" ? "actionConfirmComparison" : "actionSaveSuggestion")) : null, /* @__PURE__ */ import_react.default.createElement("button", { type: "button", disabled: busy || opening, onClick: () => setCollapsed(true) }, label("actionCollapse"))), draft.proposal?.before !== void 0 ? /* @__PURE__ */ import_react.default.createElement("details", null, /* @__PURE__ */ import_react.default.createElement("summary", null, label("actionDiff")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-diff-grid" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("b", null, label("actionBefore")), /* @__PURE__ */ import_react.default.createElement("pre", null, draft.proposal.before)), /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("b", null, label("actionAfter")), /* @__PURE__ */ import_react.default.createElement("pre", null, draft.proposal.replacement)))) : null, /* @__PURE__ */ import_react.default.createElement("details", { className: "hse-action-identities" }, /* @__PURE__ */ import_react.default.createElement("summary", null, label("actionDetails")), draft.proposal?.rationale ? /* @__PURE__ */ import_react.default.createElement("p", null, draft.proposal.rationale) : null, /* @__PURE__ */ import_react.default.createElement("dl", null, /* @__PURE__ */ import_react.default.createElement("dt", null, label("actionTarget")), /* @__PURE__ */ import_react.default.createElement("dd", null, draft.target?.job ?? draft.target?.candidate ?? "\u2014"), draft.proposal?.sourceRef ? /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("dt", null, label("actionSource")), /* @__PURE__ */ import_react.default.createElement("dd", null, draft.proposal.sourceRef.relativePath ?? draft.proposal.sourceRef.path ?? draft.proposal.sourceRef.sourceRole ?? "\u2014", " \xB7 L", draft.proposal.sourceRef.startLine ?? "\u2014", "\u2013", draft.proposal.sourceRef.endLine ?? "\u2014")) : null, /* @__PURE__ */ import_react.default.createElement("dt", null, label("actionScope")), /* @__PURE__ */ import_react.default.createElement("dd", null, draft.selection?.find((ref) => ref.selectionCount)?.selectionCount ?? (draft.target?.trial ? 1 : "\u2014")), /* @__PURE__ */ import_react.default.createElement("dt", null, label("actionRisk")), /* @__PURE__ */ import_react.default.createElement("dd", null, draft.risk, " \xB7 ", draft.mutationSurface), /* @__PURE__ */ import_react.default.createElement("dt", null, label("actionRevision")), /* @__PURE__ */ import_react.default.createElement("dd", null, /* @__PURE__ */ import_react.default.createElement("code", null, draft.baseRevision)), /* @__PURE__ */ import_react.default.createElement("dt", null, label("actionContext")), /* @__PURE__ */ import_react.default.createElement("dd", null, /* @__PURE__ */ import_react.default.createElement("code", null, draft.contextSnapshotId))), draft.identities ? /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("b", null, label("actionIdentity")), Object.entries(draft.identities).map(([role, value]) => /* @__PURE__ */ import_react.default.createElement("p", { key: role }, role, ": ", value?.id ?? "\u2014", " ", value?.version ? `@ ${value.version}` : "", /* @__PURE__ */ import_react.default.createElement("br", null), /* @__PURE__ */ import_react.default.createElement("code", null, value?.digest ?? "\u2014")))) : null), state.operation ? /* @__PURE__ */ import_react.default.createElement("details", null, /* @__PURE__ */ import_react.default.createElement("summary", null, label("actionAudit")), /* @__PURE__ */ import_react.default.createElement("pre", null, pretty(state.operation))) : null);
+}
+
+// src/client/conversation-projection.js
+var HUMAN_KINDS = /* @__PURE__ */ new Set(["user", "steering"]);
+var HISTORY_LIMIT = 24;
+function humanText(node) {
+  if (!HUMAN_KINDS.has(node?.kind) || !Array.isArray(node.content)) return "";
+  return node.content.filter((part) => part?.type === "text" && typeof part.text === "string").map((part) => part.text).join("\n");
+}
+function humanReference(node) {
+  const tokens = [];
+  const question = humanText(node).replace(/<harbor-context-ref\b([^<>]*)>[\s\S]*?<\/harbor-context-ref\s*>/g, (reference, attributes) => {
+    const match = attributes.match(/(?:^|\s)context-snapshot-id\s*=\s*(?:"([^"]*)"|'([^']*)')/);
+    const token = match?.[1] ?? match?.[2];
+    if (!/^hctx_[A-Za-z0-9_-]+$/.test(token ?? "")) return reference;
+    tokens.push(token);
+    return "";
+  }).trim();
+  return { tokens, question };
+}
+function emptyProjection() {
+  return { nodes: [], originNodes: [], active: false, anchorSeq: void 0, turn: void 0, question: "", continuation: false, turns: [], selectedSeq: void 0, contextToken: void 0 };
+}
+function humanSegments(nodes) {
+  const segments = [];
+  let anchor;
+  let previous;
+  for (let index = 0; index < nodes.length; index += 1) {
+    const node = nodes[index];
+    if (!HUMAN_KINDS.has(node?.kind) || !Number.isFinite(node.seq)) continue;
+    if (previous) previous.endIndex = index;
+    const reference = humanReference(node);
+    const attached = reference.tokens.length > 0 && reference.tokens.every((value) => value === reference.tokens[0]);
+    if (attached) anchor = { index, seq: node.seq, contextToken: reference.tokens[0] };
+    else if (reference.tokens.length) anchor = void 0;
+    if (!anchor) {
+      previous = void 0;
+      continue;
+    }
+    const segment = { index, endIndex: nodes.length, seq: node.seq, question: reference.question, contextAttached: attached, contextToken: anchor.contextToken, anchor };
+    segments.push(segment);
+    previous = segment;
+  }
+  return segments;
+}
+function segmentNodes(nodes, segment) {
+  const candidates = nodes.slice(segment.index + 1, segment.endIndex).filter((node) => !Number.isFinite(node?.seq) || node.seq > segment.seq);
+  const turn = candidates.find((node) => node?.kind === "assistant" && Number.isFinite(node.turn))?.turn;
+  return { nodes: candidates.filter((node) => turn === void 0 || !Number.isFinite(node?.turn) || node.turn === turn), turn };
+}
+function harborConversationProjection(nodes, token, selectedSeq) {
+  if (!Array.isArray(nodes) || !/^hctx_[A-Za-z0-9_-]+$/.test(token ?? "")) return emptyProjection();
+  const requestedSeq = typeof selectedSeq === "object" && selectedSeq !== null ? selectedSeq.selectedSeq : selectedSeq;
+  const segments = humanSegments(nodes);
+  const history = segments.slice(-HISTORY_LIMIT);
+  const latestForToken = history.findLast((segment) => segment.contextToken === token);
+  if (!latestForToken) return emptyProjection();
+  const selected = history.find((segment) => segment.seq === requestedSeq) ?? latestForToken;
+  const projected = segmentNodes(nodes, selected);
+  const origin = segments.find((segment) => segment.index === selected.anchor.index);
+  return {
+    nodes: projected.nodes,
+    originNodes: origin ? segmentNodes(nodes, origin).nodes : [],
+    active: selected === latestForToken && selected.endIndex === nodes.length && selected.contextToken === token,
+    anchorSeq: selected.anchor.seq,
+    turn: projected.turn,
+    question: selected.question,
+    continuation: !selected.contextAttached,
+    turns: history.map(({ seq, question, contextAttached, contextToken }) => ({ seq, question, contextAttached, contextToken })),
+    selectedSeq: selected.seq,
+    contextToken: selected.contextToken
+  };
+}
+
+// src/client/evaluator-editor.jsx
+var import_react2 = __toESM(require("react"), 1);
+
+// src/client/editor-drafts.js
+var STORAGE_KEY = "harbor.editor-drafts.v1";
+var SCHEMA = "harbor-editor-drafts/v1";
+var MAX_TEXT_LENGTH = 256 * 1024;
+var MAX_KEY_LENGTH = 8 * 1024;
+var MAX_SERIALIZED_LENGTH = 20 * 1024 * 1024;
+var KEY_FIELDS = ["sessionId", "workspace", "jobId", "role", "path"];
+function failure(code, message) {
+  return { code, message };
+}
+function scopeValue(value, name2) {
+  if (typeof value !== "string" || !value.trim() || value.length > 2048 || /[\u0000-\u001f]/.test(value)) {
+    throw new TypeError(`HARBOR_EDITOR_DRAFT_SCOPE_INVALID: ${name2} must be a non-empty, bounded string.`);
+  }
+  return value;
+}
+function makeEditorDraftKey(scope) {
+  const key = JSON.stringify(KEY_FIELDS.map((name2) => scopeValue(scope?.[name2], name2)));
+  if (key.length > MAX_KEY_LENGTH) throw new TypeError("HARBOR_EDITOR_DRAFT_SCOPE_INVALID: Source scope is too long.");
+  return key;
+}
+function validKey(key) {
+  if (typeof key !== "string" || key.length > MAX_KEY_LENGTH) return false;
+  try {
+    const parts = JSON.parse(key);
+    if (!Array.isArray(parts) || parts.length !== KEY_FIELDS.length) return false;
+    return makeEditorDraftKey(Object.fromEntries(KEY_FIELDS.map((name2, index) => [name2, parts[index]]))) === key;
+  } catch {
+    return false;
+  }
+}
+function assertKey(key) {
+  if (!validKey(key)) throw new TypeError("HARBOR_EDITOR_DRAFT_SCOPE_INVALID: Use makeEditorDraftKey for this editor scope.");
+}
+function validContent(value) {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value) && typeof value.baseDigest === "string" && value.baseDigest.length > 0 && value.baseDigest.length <= 1024 && typeof value.baseText === "string" && value.baseText.length <= MAX_TEXT_LENGTH && typeof value.text === "string" && value.text.length <= MAX_TEXT_LENGTH);
+}
+function copy(value) {
+  return value ? { ...value } : void 0;
+}
+function createEditorDraftStore({ storage, now = Date.now, maxEntries = 32 } = {}) {
+  if (!Number.isSafeInteger(maxEntries) || maxEntries < 1 || maxEntries > 128) throw new TypeError("maxEntries must be between 1 and 128.");
+  if (typeof now !== "function") throw new TypeError("now must be a function.");
+  const drafts = /* @__PURE__ */ new Map();
+  const adapter = storage && typeof storage.getItem === "function" && typeof storage.setItem === "function" && typeof storage.removeItem === "function" ? storage : void 0;
+  let persistence = adapter ? { persisted: true, error: void 0 } : { persisted: false, error: failure("HARBOR_EDITOR_DRAFT_MEMORY_ONLY", "Drafts are kept in this page only. Browser storage is unavailable; copy your edits before refreshing.") };
+  if (adapter) {
+    try {
+      const serialized = adapter.getItem(STORAGE_KEY);
+      if (serialized !== null && serialized !== void 0) {
+        if (typeof serialized !== "string" || serialized.length > MAX_SERIALIZED_LENGTH) throw new Error("Oversized draft data");
+        const saved = JSON.parse(serialized);
+        if (!saved || saved.schema !== SCHEMA || !Array.isArray(saved.entries) || saved.entries.length > maxEntries) throw new Error("Invalid draft schema");
+        for (const entry of saved.entries) {
+          if (!validKey(entry?.key) || !validContent(entry) || !Number.isSafeInteger(entry.updatedAt) || entry.updatedAt < 0 || drafts.has(entry.key)) throw new Error("Invalid draft record");
+          drafts.set(entry.key, { baseDigest: entry.baseDigest, baseText: entry.baseText, text: entry.text, updatedAt: entry.updatedAt });
+        }
+      }
+    } catch {
+      drafts.clear();
+      persistence = { persisted: false, error: failure("HARBOR_EDITOR_DRAFT_RESTORE_FAILED", "Saved editor drafts could not be restored. New edits will remain visible; check browser storage before refreshing.") };
+    }
+  }
+  function status() {
+    return { persisted: persistence.persisted, error: copy(persistence.error) };
+  }
+  function persist() {
+    if (!adapter) return status();
+    try {
+      if (!drafts.size) adapter.removeItem(STORAGE_KEY);
+      else {
+        const serialized = JSON.stringify({ schema: SCHEMA, entries: [...drafts].map(([key, value]) => ({ key, ...value })) });
+        if (serialized.length > MAX_SERIALIZED_LENGTH) throw new Error("Oversized draft data");
+        adapter.setItem(STORAGE_KEY, serialized);
+      }
+      persistence = { persisted: true, error: void 0 };
+    } catch {
+      persistence = { persisted: false, error: failure("HARBOR_EDITOR_DRAFT_PERSIST_FAILED", "The latest draft change could not be saved in this browser. Keep this page open or copy your edits; refreshing may restore an older draft.") };
+    }
+    return status();
+  }
+  return {
+    list(scope) {
+      const prefix = ["sessionId", "workspace", "jobId"].map((name2) => scopeValue(scope?.[name2], name2));
+      return [...drafts].flatMap(([key, value]) => {
+        const parts = JSON.parse(key);
+        return prefix.every((part, index) => part === parts[index]) ? [{ key, role: parts[3], path: parts[4], ...copy(value) }] : [];
+      });
+    },
+    get(key) {
+      assertKey(key);
+      return copy(drafts.get(key));
+    },
+    put(key, value) {
+      assertKey(key);
+      if (!validContent(value)) return { draft: copy(drafts.get(key)), accepted: false, persisted: false, error: failure("HARBOR_EDITOR_DRAFT_TOO_LARGE", "This draft cannot be stored: source identity must be present and each source buffer must be at most 256 Ki characters. Keep the visible edits or copy them before leaving.") };
+      if (!drafts.has(key) && drafts.size >= maxEntries) return { draft: void 0, accepted: false, persisted: false, error: failure("HARBOR_EDITOR_DRAFT_CAPACITY", `All ${maxEntries} draft slots are in use. Save or discard another draft before leaving this editor.`) };
+      const updatedAt = now();
+      if (!Number.isSafeInteger(updatedAt) || updatedAt < 0) throw new TypeError("now must return a non-negative integer timestamp.");
+      const previous = drafts.get(key);
+      const draft = {
+        baseDigest: previous?.baseDigest ?? value.baseDigest,
+        baseText: previous?.baseText ?? value.baseText,
+        text: value.text,
+        updatedAt
+      };
+      drafts.set(key, draft);
+      return { draft: copy(draft), accepted: true, baseChanged: Boolean(previous && (previous.baseDigest !== value.baseDigest || previous.baseText !== value.baseText)), ...persist() };
+    },
+    remove(key) {
+      assertKey(key);
+      drafts.delete(key);
+      return persist();
+    },
+    status
+  };
+}
+
+// src/client/evaluator-editor.jsx
+var MAX_EDITOR_LENGTH = 256 * 1024;
+var EMPTY_FILES = [];
+var buffers;
+function editorBuffers() {
+  if (buffers) return buffers;
+  let storage;
+  try {
+    storage = globalThis.sessionStorage;
+  } catch {
+  }
+  const store = createEditorDraftStore({ storage });
+  const volatile = /* @__PURE__ */ new Map();
+  const unsafe = /* @__PURE__ */ new Set();
+  const handledProposals = /* @__PURE__ */ new Set();
+  if (typeof globalThis.addEventListener === "function") globalThis.addEventListener("beforeunload", (event) => {
+    if (!unsafe.size) return;
+    event.preventDefault();
+    event.returnValue = "";
+  });
+  buffers = {
+    store,
+    volatile,
+    handledProposals,
+    get(key) {
+      return volatile.get(key) ?? store.get(key);
+    },
+    list(scope) {
+      const entries = new Map(store.list(scope).map((entry) => [entry.key, entry]));
+      for (const [key, value] of volatile) {
+        const [sessionId, workspace, jobId, role, path] = JSON.parse(key);
+        if (sessionId === scope.sessionId && workspace === scope.workspace && jobId === scope.jobId) entries.set(key, { key, role, path, ...value });
+      }
+      return [...entries.values()];
+    },
+    canKeep(key) {
+      return Boolean(store.get(key) || volatile.has(key) || volatile.size < 32);
+    },
+    put(key, record) {
+      const result = store.put(key, record);
+      if (!result.accepted && (volatile.has(key) || volatile.size < 32)) {
+        const original = volatile.get(key) ?? store.get(key);
+        volatile.set(key, { ...record, baseDigest: original?.baseDigest ?? record.baseDigest, baseText: original?.baseText ?? record.baseText, updatedAt: Date.now() });
+      } else if (result.accepted) volatile.delete(key);
+      if (result.persisted) {
+        for (const item of unsafe) if (!volatile.has(item)) unsafe.delete(item);
+      } else unsafe.add(key);
+      return result;
+    },
+    remove(key) {
+      volatile.delete(key);
+      unsafe.delete(key);
+      return store.remove(key);
+    }
+  };
+  return buffers;
+}
+var EVALUATOR_EDITOR_MESSAGES = {
+  zh: { unsavedFile: "\u672A\u4FDD\u5B58", editorStorageLimit: "\u6682\u5B58\u7A7A\u95F4\u5DF2\u6EE1\u3002\u8BF7\u5148\u4FDD\u5B58\u6216\u653E\u5F03\u5176\u4ED6\u6587\u4EF6\u7684\u8349\u7A3F\uFF1B\u5F53\u524D\u7F16\u8F91\u5DF2\u4FDD\u7559\u5728\u672C\u9875\uFF0C\u79BB\u5F00\u524D\u8BF7\u590D\u5236\u3002", editorSourceTooLarge: "\u6B64\u6587\u4EF6\u8D85\u8FC7\u5B89\u5168\u7F16\u8F91\u4E0A\u9650\uFF08256 Ki \u5B57\u7B26\uFF09\uFF0C\u8BF7\u5728\u672C\u5730\u7F16\u8F91\u3002", draftRestoreFailed: "\u6D4F\u89C8\u5668\u4E2D\u7684\u7F16\u8F91\u8349\u7A3F\u65E0\u6CD5\u6062\u590D\uFF1B\u5DF2\u4FDD\u5B58\u6E90\u7801\u672A\u53D7\u5F71\u54CD\u3002\u8BF7\u68C0\u67E5\u662F\u5426\u9700\u8981\u4ECE\u5176\u4ED6\u7A97\u53E3\u627E\u56DE\u65E7\u7F16\u8F91\uFF0C\u518D\u7EE7\u7EED\u3002", originalDraftBase: "\u5F00\u59CB\u7F16\u8F91\u65F6\u7684\u6E90\u7801", proposalOpenFile: "\u67E5\u770B\u5EFA\u8BAE\u5BF9\u5E94\u6587\u4EF6", proposalLoad: "\u5C06\u5EFA\u8BAE\u8F7D\u5165\u672A\u4FEE\u6539\u7684\u7F16\u8F91\u533A", rebaseConfirm: "\u5DF2\u4FDD\u7559\u4F60\u7684\u7F16\u8F91\u3002\u786E\u8BA4\u4F60\u5DF2\u7ECF\u5BF9\u7167\u6700\u65B0\u6E90\u7801\u5408\u5E76\u5DEE\u5F02\uFF0C\u5E76\u4EE5\u6700\u65B0\u6E90\u7801\u4F5C\u4E3A\u4FDD\u5B58\u57FA\u51C6\uFF1F", saveFailedReload: "\u4FDD\u5B58\u5931\u8D25\uFF1B\u7F16\u8F91\u5DF2\u4FDD\u7559\u3002\u8BF7\u5148\u91CD\u65B0\u8BFB\u53D6\u6E90\u7801\uFF0C\u518D\u68C0\u67E5\u662F\u5426\u5B58\u5728\u7248\u672C\u51B2\u7A81\u3002" },
+  en: { unsavedFile: "Unsaved", editorStorageLimit: "Draft storage is full. Save or discard another file draft. Current edits remain in this page; copy them before leaving.", editorSourceTooLarge: "This file exceeds the safe editor limit (256 Ki characters). Edit it locally.", draftRestoreFailed: "Browser editor drafts could not be restored. Saved source files are unaffected. Check whether another open window has the previous edits before continuing.", originalDraftBase: "Source when editing began", proposalOpenFile: "Open the proposed file", proposalLoad: "Load proposal into the unchanged editor", rebaseConfirm: "Your edits are preserved. Confirm you reconciled them with the latest source and want to use that source as the save baseline?", saveFailedReload: "Save failed; your edits are retained. Reload the source, then check for a version conflict." }
+};
+function matchEvaluatorProposalFile(value, proposal) {
+  const source = proposal?.proposal ?? proposal;
+  if (value?.job && source?.sourceRef?.job !== value.job) return void 0;
+  const role = source?.sourceRef?.sourceRole;
+  const fileRole = role === "evaluator" ? "implementation" : role === "rubric" ? "rubric" : void 0;
+  const component = value?.components?.[role];
+  const savedText = component?.source?.text;
+  if (!fileRole || typeof savedText !== "string") return void 0;
+  const candidates = (value?.evaluatorInterface?.evaluator?.editable_files ?? []).filter((file) => file.role === fileRole && file.text === savedText);
+  if (candidates.length === 1) return candidates[0];
+  const entry = role === "evaluator" ? value?.evaluatorInterface?.evaluator?.implementation?.path : component?.entry;
+  const exact = typeof entry === "string" ? candidates.filter((file) => file.path === entry || file.relative_path === entry) : [];
+  return exact.length === 1 ? exact[0] : void 0;
+}
+function evaluatorDraftConflict(record, file) {
+  return Boolean(record && file && (record.baseDigest !== file.digest || record.baseText !== file.text));
+}
+function prepareEvaluatorProposal({ value, proposal, file, text, record, currentBinding, applySourceProposal: applySourceProposal2 }) {
+  const source = proposal?.proposal;
+  const proposedFile = matchEvaluatorProposalFile(value, proposal);
+  const sourceRef = value?.interactionObjects?.find((ref) => ref.id === source?.sourceRef?.id);
+  if (!source || !file || file.path !== proposedFile?.path || !currentBinding) return { status: "unavailable" };
+  if (evaluatorDraftConflict(record, file) || text !== file.text) return { status: "merge" };
+  try {
+    const replacement = applySourceProposal2(file.text, sourceRef, source);
+    return typeof replacement === "string" && replacement.length <= MAX_EDITOR_LENGTH ? { status: "ready", text: replacement } : { status: "unavailable" };
+  } catch {
+    return { status: "unavailable" };
+  }
+}
+function focusEvaluatorReview({ requestId, previousRequestId, selectedPath, proposedPath, element, selectFile }) {
+  if (typeof requestId !== "string" || !requestId || requestId === previousRequestId || !proposedPath) return previousRequestId;
+  if (selectedPath !== proposedPath) {
+    selectFile(proposedPath);
+    return previousRequestId;
+  }
+  if (!element || element.disabled || element.readOnly) return previousRequestId;
+  element.scrollIntoView({ block: "center", inline: "nearest", behavior: "instant" });
+  element.focus({ preventScroll: true });
+  return requestId;
+}
+function EvaluatorEditorView({ value, workspace, job, sessionId, bindingKey, bindingIsCurrent, reload, onSaved, proposal, update, ErrorState, t, applySourceProposal: applySourceProposal2, nextVersion: nextVersion2 }) {
+  const active = value.evaluatorInterface;
+  const evaluator = active?.evaluator;
+  const files = evaluator?.editable_files ?? EMPTY_FILES;
+  const sourceProposal = proposal?.proposal;
+  const proposedFile = matchEvaluatorProposalFile(value, proposal);
+  const cache = editorBuffers();
+  const fileKey = (file) => file ? makeEditorDraftKey({ sessionId, workspace, jobId: job, role: file.role, path: file.path }) : void 0;
+  const [selectedPath, setSelectedPath] = (0, import_react2.useState)(proposedFile?.path ?? files[0]?.path ?? "");
+  const selected = files.find((item) => item.path === selectedPath) ?? files[0];
+  const key = fileKey(selected);
+  const initialRecord = key ? cache.get(key) : void 0;
+  const [buffer, setBuffer] = (0, import_react2.useState)(() => ({ key, record: initialRecord, text: initialRecord?.text ?? selected?.text ?? "", restored: Boolean(initialRecord) }));
+  const current = buffer.key === key ? buffer : { key, record: initialRecord, text: initialRecord?.text ?? selected?.text ?? "", restored: Boolean(initialRecord) };
+  const draft = current.text;
+  const record = current.record;
+  const conflict = evaluatorDraftConflict(record, selected);
+  const [storageState, setStorageState] = (0, import_react2.useState)(() => cache.store.status());
+  const [evaluatorVersion, setEvaluatorVersion] = (0, import_react2.useState)(nextVersion2(evaluator?.version));
+  const [stackVersion, setStackVersion] = (0, import_react2.useState)(nextVersion2(active?.stack?.version));
+  const [saveState, setSaveState] = (0, import_react2.useState)({ status: "idle" });
+  const [reviewed, setReviewed] = (0, import_react2.useState)("");
+  const [proposalStatus, setProposalStatus] = (0, import_react2.useState)("");
+  const [, setRecoveryRevision] = (0, import_react2.useState)(0);
+  const mounted = (0, import_react2.useRef)(true);
+  const editorInput = (0, import_react2.useRef)(null);
+  const focusedReviewRequest = (0, import_react2.useRef)("");
+  const currentIdentity = (0, import_react2.useRef)({ key, bindingKey });
+  currentIdentity.current = { key, bindingKey };
+  const changed = Boolean(selected && draft !== selected.text);
+  const reviewIdentity = JSON.stringify([bindingKey, key, record?.baseDigest ?? selected?.digest, selected?.digest, draft, evaluatorVersion, stackVersion]);
+  const proposalIdentity = sourceProposal ? JSON.stringify([sessionId, workspace, job, proposal.draftId ?? proposal.id ?? sourceProposal]) : "";
+  const currentBinding = bindingIsCurrent(bindingKey);
+  const editable = Boolean(selected && typeof selected.text === "string" && selected.text.length <= MAX_EDITOR_LENGTH && key && cache.canKeep(key));
+  const storageNotice = storageState.persisted ? t("draftLocal") : storageState.error?.code === "HARBOR_EDITOR_DRAFT_RESTORE_FAILED" ? t("draftRestoreFailed") : t("draftMemoryOnly");
+  (0, import_react2.useEffect)(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  (0, import_react2.useEffect)(() => {
+    const restored = key ? cache.get(key) : void 0;
+    setBuffer({ key, record: restored, text: restored?.text ?? selected?.text ?? "", restored: Boolean(restored) });
+    setReviewed("");
+    setSaveState({ status: "idle" });
+    setStorageState(cache.store.status());
+  }, [key, selected?.digest, selected?.text]);
+  (0, import_react2.useEffect)(() => {
+    setEvaluatorVersion(nextVersion2(evaluator?.version));
+    setStackVersion(nextVersion2(active?.stack?.version));
+  }, [evaluator?.version, active?.stack?.version]);
+  function keepText(text) {
+    if (!selected || !key) return;
+    const next = { baseDigest: record?.baseDigest ?? selected.digest, baseText: record?.baseText ?? selected.text, text };
+    const clean = !conflict && text === selected.text;
+    const result = clean ? cache.remove(key) : cache.put(key, next);
+    setBuffer({ key, record: clean ? void 0 : cache.get(key) ?? next, text, restored: false });
+    setStorageState(result);
+    setReviewed("");
+    setSaveState({ status: "idle" });
+  }
+  function loadProposal() {
+    if (!editable) {
+      setProposalStatus("unavailable");
+      return;
+    }
+    const prepared = prepareEvaluatorProposal({ value, proposal, file: selected, text: draft, record, currentBinding, applySourceProposal: applySourceProposal2 });
+    if (prepared.status === "ready") keepText(prepared.text);
+    setProposalStatus(prepared.status);
+  }
+  (0, import_react2.useEffect)(() => {
+    if (!sourceProposal) return;
+    if (!proposedFile) {
+      setProposalStatus("unavailable");
+      return;
+    }
+    const handledKey = `${proposalIdentity}:${fileKey(proposedFile)}`;
+    if (cache.handledProposals.has(handledKey)) return;
+    if (selected?.path !== proposedFile.path) {
+      setSelectedPath(proposedFile.path);
+      return;
+    }
+    cache.handledProposals.add(handledKey);
+    if (cache.handledProposals.size > 256) cache.handledProposals.delete(cache.handledProposals.values().next().value);
+    loadProposal();
+  }, [proposalIdentity, proposedFile?.path, key, selected?.digest]);
+  (0, import_react2.useEffect)(() => {
+    if (active?.error || !evaluator || !currentBinding) return;
+    focusedReviewRequest.current = focusEvaluatorReview({ requestId: proposal?.reviewRequestId, previousRequestId: focusedReviewRequest.current, selectedPath: selected?.path, proposedPath: proposedFile?.path, element: editorInput.current, selectFile: setSelectedPath });
+  }, [proposal?.reviewRequestId, proposedFile?.path, selected?.path, currentBinding, editable, active?.error, saveState.status]);
+  if (active?.error || !evaluator) {
+    const recovered = cache.list({ sessionId, workspace, jobId: job });
+    return /* @__PURE__ */ import_react2.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react2.default.createElement("h3", null, t("evaluatorImplementation")), /* @__PURE__ */ import_react2.default.createElement("div", { className: "hse-capability" }, active?.error ?? t("noEvaluatorInterface")), /* @__PURE__ */ import_react2.default.createElement("button", { type: "button", className: "hse-button", onClick: () => void reload() }, t("refresh")), recovered.map((entry) => /* @__PURE__ */ import_react2.default.createElement("section", { className: "hse-diff-review", key: entry.key }, /* @__PURE__ */ import_react2.default.createElement("h4", null, t("draftRecovered"), " \xB7 ", entry.path), /* @__PURE__ */ import_react2.default.createElement("p", null, t("draftConflict")), /* @__PURE__ */ import_react2.default.createElement("textarea", { className: "hse-editor", readOnly: true, "aria-label": `${t("draftRecovered")} \xB7 ${entry.path}`, value: entry.text }), /* @__PURE__ */ import_react2.default.createElement("button", { type: "button", className: "hse-button", onClick: () => {
+      if (globalThis.confirm?.(`${t("discardEditsConfirm")}
+${entry.path}`)) {
+        setStorageState(cache.remove(entry.key));
+        setRecoveryRevision((value2) => value2 + 1);
+      }
+    } }, t("discardEdits")))), storageState.error ? /* @__PURE__ */ import_react2.default.createElement("p", { role: "alert" }, storageNotice) : null, sourceProposal ? /* @__PURE__ */ import_react2.default.createElement("section", { className: "hse-action-preview" }, /* @__PURE__ */ import_react2.default.createElement("b", null, t("proposalReview")), /* @__PURE__ */ import_react2.default.createElement("p", null, t("proposalUnavailable")), /* @__PURE__ */ import_react2.default.createElement("div", { className: "hse-report-compare" }, /* @__PURE__ */ import_react2.default.createElement("pre", null, sourceProposal.before), /* @__PURE__ */ import_react2.default.createElement("pre", null, sourceProposal.replacement))) : null);
+  }
+  const discard = () => {
+    if (!key || !globalThis.confirm?.(`${t("discardEditsConfirm")}
+${selected.path}`)) return;
+    setStorageState(cache.remove(key));
+    setBuffer({ key, record: void 0, text: selected.text, restored: false });
+    setReviewed("");
+    setSaveState({ status: "idle" });
+    setProposalStatus(sourceProposal ? "discarded" : "");
+  };
+  const rebase = () => {
+    if (!key || !currentBinding || !globalThis.confirm?.(`${t("rebaseConfirm")}
+${selected.path}`)) return;
+    cache.remove(key);
+    const next = { baseDigest: selected.digest, baseText: selected.text, text: draft };
+    const result = draft === selected.text ? cache.store.status() : cache.put(key, next);
+    setBuffer({ key, record: draft === selected.text ? void 0 : cache.get(key) ?? next, text: draft, restored: false });
+    setStorageState(result);
+    setReviewed("");
+    setSaveState({ status: "idle" });
+  };
+  const save = async () => {
+    if (!key || !selected || !changed || conflict || reviewed !== reviewIdentity || saveState.status === "saving") return;
+    if (!bindingIsCurrent(bindingKey)) {
+      setSaveState({ status: "error", error: { code: "HARBOR_EVALUATOR_BINDING_STALE", message: t("reloadBeforeSave") } });
+      return;
+    }
+    const submitted = { key, bindingKey, text: draft };
+    setSaveState({ status: "saving" });
+    try {
+      const receipt = await update("evaluator", { workspace, stackPath: active.stack.path, filePath: selected.path, content: draft, expectedDigest: record?.baseDigest ?? selected.digest, newEvaluatorVersion: evaluatorVersion, newStackVersion: stackVersion });
+      if (cache.get(submitted.key)?.text === submitted.text) cache.remove(submitted.key);
+      if (bindingIsCurrent(submitted.bindingKey)) {
+        onSaved?.(receipt);
+        if (mounted.current && currentIdentity.current.key === submitted.key) setSaveState({ status: "saved" });
+        await reload();
+      }
+    } catch (error) {
+      if (mounted.current && currentIdentity.current.key === submitted.key && bindingIsCurrent(submitted.bindingKey)) setSaveState({ status: "error", error: { code: error.code ?? "HARBOR_EVALUATOR_SAVE_FAILED", message: error.message ?? String(error), nextStep: t("saveFailedReload") } });
+    }
+  };
+  return /* @__PURE__ */ import_react2.default.createElement("section", { className: "hse-section", "data-editor-scope": job }, /* @__PURE__ */ import_react2.default.createElement("div", { className: "hse-editor-head" }, /* @__PURE__ */ import_react2.default.createElement("div", null, /* @__PURE__ */ import_react2.default.createElement("h3", null, t("evaluatorImplementation")), /* @__PURE__ */ import_react2.default.createElement("p", { className: "hse-muted" }, evaluator.evaluator_id, " \xB7 ", evaluator.version)), /* @__PURE__ */ import_react2.default.createElement("details", null, /* @__PURE__ */ import_react2.default.createElement("summary", null, t("identityDetails")), /* @__PURE__ */ import_react2.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react2.default.createElement("span", null, t("evaluatorKind")), /* @__PURE__ */ import_react2.default.createElement("b", null, evaluator.kind), /* @__PURE__ */ import_react2.default.createElement("code", null, evaluator.interface), /* @__PURE__ */ import_react2.default.createElement("span", null, t("evaluatorProtocol")), /* @__PURE__ */ import_react2.default.createElement("b", null, evaluator.protocol?.input, " \u2192 ", evaluator.protocol?.output), /* @__PURE__ */ import_react2.default.createElement("code", null, evaluator.implementation?.language, " \xB7 ", evaluator.implementation?.callable)))), /* @__PURE__ */ import_react2.default.createElement("div", { className: "hse-editor-tabs", "aria-label": t("editableFiles") }, files.map((file) => {
+    const saved = cache.get(fileKey(file));
+    const dirty = Boolean(saved && (saved.text !== file.text || evaluatorDraftConflict(saved, file)));
+    return /* @__PURE__ */ import_react2.default.createElement("button", { type: "button", className: "hse-editor-tab", "data-active": file.path === selected?.path, "data-dirty": dirty, key: file.path, onClick: () => setSelectedPath(file.path) }, /* @__PURE__ */ import_react2.default.createElement("b", null, file.path.split("/").at(-1), dirty ? ` \u25CF ${t("unsavedFile")}` : ""), /* @__PURE__ */ import_react2.default.createElement("span", null, file.role));
+  })), /* @__PURE__ */ import_react2.default.createElement("div", { className: "hse-editor-current" }, /* @__PURE__ */ import_react2.default.createElement("span", null, t("editingFile")), /* @__PURE__ */ import_react2.default.createElement("b", null, selected?.path.split("/").at(-1)), /* @__PURE__ */ import_react2.default.createElement("code", null, selected?.path)), current.restored && record ? /* @__PURE__ */ import_react2.default.createElement("p", { className: "hse-capability", role: "status" }, t("draftRecovered")) : null, record || changed || storageState.error ? /* @__PURE__ */ import_react2.default.createElement("p", { className: "hse-muted", role: storageState.persisted ? "status" : "alert" }, storageNotice, storageState.error?.code === "HARBOR_EDITOR_DRAFT_CAPACITY" ? ` ${t("editorStorageLimit")}` : "") : null, !editable ? /* @__PURE__ */ import_react2.default.createElement("p", { className: "hse-capability", role: "alert" }, selected?.text?.length > MAX_EDITOR_LENGTH ? t("editorSourceTooLarge") : t("editorStorageLimit")) : null, conflict ? /* @__PURE__ */ import_react2.default.createElement("section", { className: "hse-action-preview", role: "alert" }, /* @__PURE__ */ import_react2.default.createElement("b", null, t("draftConflict")), /* @__PURE__ */ import_react2.default.createElement("div", { className: "hse-report-compare" }, /* @__PURE__ */ import_react2.default.createElement("div", null, /* @__PURE__ */ import_react2.default.createElement("h4", null, t("originalDraftBase")), /* @__PURE__ */ import_react2.default.createElement("pre", null, record.baseText)), /* @__PURE__ */ import_react2.default.createElement("div", null, /* @__PURE__ */ import_react2.default.createElement("h4", null, t("latestSource")), /* @__PURE__ */ import_react2.default.createElement("pre", null, selected.text))), /* @__PURE__ */ import_react2.default.createElement("button", { type: "button", className: "hse-button", disabled: !currentBinding, onClick: rebase }, t("acceptNewBase"))) : null, /* @__PURE__ */ import_react2.default.createElement("textarea", { ref: editorInput, className: "hse-editor", "aria-label": t("editSource"), spellCheck: "false", maxLength: MAX_EDITOR_LENGTH, disabled: !editable || saveState.status === "saving", value: draft, onChange: (event) => keepText(event.target.value) }), sourceProposal ? /* @__PURE__ */ import_react2.default.createElement("section", { className: "hse-action-preview" }, /* @__PURE__ */ import_react2.default.createElement("b", null, t("proposalReview")), /* @__PURE__ */ import_react2.default.createElement("p", null, proposalStatus === "ready" ? t("sourceReviewReady") : proposalStatus === "unavailable" || !proposedFile ? t("proposalUnavailable") : t("proposalMergeHint")), /* @__PURE__ */ import_react2.default.createElement("div", { className: "hse-report-compare" }, /* @__PURE__ */ import_react2.default.createElement("pre", { "aria-label": `${t("proposalReview")} \xB7 ${t("beforeChange")}` }, sourceProposal.before), /* @__PURE__ */ import_react2.default.createElement("pre", { "aria-label": `${t("proposalReview")} \xB7 ${t("afterChange")}` }, sourceProposal.replacement)), proposedFile && selected?.path !== proposedFile.path ? /* @__PURE__ */ import_react2.default.createElement("button", { type: "button", className: "hse-button", onClick: () => setSelectedPath(proposedFile.path) }, t("proposalOpenFile")) : proposedFile && draft === selected?.text && !conflict ? /* @__PURE__ */ import_react2.default.createElement("button", { type: "button", className: "hse-button", disabled: !editable || !currentBinding, onClick: loadProposal }, t("proposalLoad")) : null) : null, changed ? /* @__PURE__ */ import_react2.default.createElement("section", { className: "hse-diff-review" }, /* @__PURE__ */ import_react2.default.createElement("h4", null, t("reviewDiff")), /* @__PURE__ */ import_react2.default.createElement("div", { className: "hse-report-compare" }, /* @__PURE__ */ import_react2.default.createElement("pre", { "aria-label": t("beforeChange") }, record?.baseText ?? selected.text), /* @__PURE__ */ import_react2.default.createElement("pre", { "aria-label": t("afterChange") }, draft)), /* @__PURE__ */ import_react2.default.createElement("label", null, /* @__PURE__ */ import_react2.default.createElement("input", { type: "checkbox", disabled: conflict || !currentBinding, checked: !conflict && reviewed === reviewIdentity, onChange: (event) => setReviewed(event.target.checked ? reviewIdentity : "") }), t("confirmDiff"))) : null, /* @__PURE__ */ import_react2.default.createElement("div", { className: "hse-editor-versions" }, /* @__PURE__ */ import_react2.default.createElement("label", { className: "hse-card" }, /* @__PURE__ */ import_react2.default.createElement("span", null, t("evaluatorVersion")), /* @__PURE__ */ import_react2.default.createElement("input", { className: "hse-input", value: evaluatorVersion, disabled: saveState.status === "saving", onChange: (event) => setEvaluatorVersion(event.target.value) })), /* @__PURE__ */ import_react2.default.createElement("label", { className: "hse-card" }, /* @__PURE__ */ import_react2.default.createElement("span", null, t("stackVersion")), /* @__PURE__ */ import_react2.default.createElement("input", { className: "hse-input", value: stackVersion, disabled: saveState.status === "saving", onChange: (event) => setStackVersion(event.target.value) }))), saveState.status === "error" ? /* @__PURE__ */ import_react2.default.createElement(ErrorState, { error: saveState.error, retry: () => void reload(), retryLabel: t("refresh"), t }) : null, /* @__PURE__ */ import_react2.default.createElement("div", { className: "hse-editor-actions" }, /* @__PURE__ */ import_react2.default.createElement("p", { className: saveState.status === "saved" ? "hse-editor-success" : "hse-muted" }, saveState.status === "saved" ? t("saved") : t("editWarning")), record || changed ? /* @__PURE__ */ import_react2.default.createElement("button", { type: "button", className: "hse-button", disabled: saveState.status === "saving", onClick: discard }, t("discardEdits")) : null, /* @__PURE__ */ import_react2.default.createElement("button", { type: "button", className: "hse-button", disabled: !currentBinding || !editable || !changed || conflict || reviewed !== reviewIdentity || !evaluatorVersion || !stackVersion || saveState.status === "saving", onClick: () => void save() }, saveState.status === "saving" ? t("saving") : t("saveEvaluator"))));
 }
 
 // src/client/index.jsx
@@ -947,9 +1836,12 @@ var dictionaries = {
     badcase: "Badcase"
   }
 };
+for (const locale of ["zh", "en"]) Object.assign(dictionaries[locale], JOURNEY_MESSAGES[locale], ACTION_CARD_MESSAGES[locale], EVALUATOR_EDITOR_MESSAGES[locale]);
 var CSS = `
+.hse-journey{padding:18px;margin-bottom:18px;border:1px solid #2875ff35;border-radius:14px;background:#2875ff08}.hse-journey h2{margin:0;font-size:20px}.hse-journey p,.hse-journey li{font-size:13px;line-height:1.7}.hse-journey ol{padding:0;list-style:none}.hse-journey details summary{cursor:pointer}.hse-question{font-size:12px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}.hse-discussion-history{margin:10px 0;font-size:12px}.hse-discussion-history button{display:block;width:100%;margin:5px 0;padding:7px;text-align:left;color:inherit;border:1px solid #70cfff55;background:transparent;border-radius:6px;cursor:pointer}.hse-draft-notice{padding:10px;border:1px solid #2875ff44;border-radius:8px;font-size:12px;line-height:1.6}.hse-editor-tab[data-dirty=true]:after{content:' \u2022';color:#c78312}.hse-local-actions{flex-wrap:wrap}.hse-answer-unverified>p{font-size:11px;color:#f3c779}.hse-copilot details>summary{cursor:pointer;font-size:11px}.hse-copilot-actions{flex-wrap:wrap}.hse-context-questions{max-height:70px;overflow:auto}.hse-job-identities>summary{cursor:pointer;font-size:12px}.hse-job-identities[open]>.hse-identity-tags{margin-top:12px}
 .hse-root{--ocean-950:#03152f;--ocean-800:#07366f;--ocean-600:#1464c8;--ocean-300:#75b7ff;--foam-50:#f4fbff;--whale-500:#2875ff;--coral-500:#ee6478;--amber-500:#e4a23b;--kelp-500:#1f9b72;height:100%;min-height:0;overflow:auto;color:var(--dsw-alias-label-primary,#142038);background:var(--dsw-alias-bg-layer-1,#f2f7fc);font-family:inherit}.hse-page{width:min(1320px,calc(100% - 36px));margin:auto;padding:24px 0 56px}
 .hse-dashboard-back{margin-bottom:10px}
+.hse-action-draft button{padding:7px 10px;border:1px solid #70cfff55;border-radius:7px;background:transparent;color:inherit;cursor:pointer;font:inherit}.hse-action-draft>.hse-primary{background:#2875ff;color:#fff;border-color:#2875ff}.hse-action-draft header{flex-wrap:wrap}.hse-action-draft header>span{font-size:10px;color:#a8d9ff}.hse-action-recovery,.hse-action-next-step{padding:8px;margin:8px 0;border:1px solid #e4a23b55;border-radius:8px}.hse-action-comparison{overflow:auto}.hse-action-comparison table{width:100%;border-collapse:collapse}.hse-action-comparison th,.hse-action-comparison td{padding:6px;border-bottom:1px solid #70cfff35;text-align:left}.hse-action-collapsed{display:flex;gap:10px;align-items:center}.hse-copilot-answer{font-size:12px}.hse-copilot-status{font-size:11px}.hse-editor-actions{flex-wrap:wrap}
 .hse-root-switch{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin:16px 0 8px;padding:14px;border:1px solid #2875ff42;border-radius:12px;background:#2875ff0b}.hse-root-switch label{grid-column:1/-1;font-size:11px;font-weight:700}.hse-root-switch input{min-width:0;padding:10px 12px;border:1px solid #c8d6e7;border-radius:8px;color:inherit;background:var(--dsw-alias-bg-layer-2,#fff);font:11px ui-monospace,SFMono-Regular,Menlo,monospace}.hse-root-switch button{padding:9px 13px;border:0;border-radius:8px;color:#fff;background:var(--ocean-600);cursor:pointer}.hse-root-switch small{grid-column:1/-1;color:var(--dsw-alias-label-secondary,#748096)}
 .hse-hero{position:relative;isolation:isolate;overflow:hidden;min-height:225px;padding:32px;border-radius:24px;color:#fff;background:var(--ocean-950) var(--ocean-image) center/cover no-repeat;box-shadow:0 22px 65px #03152f38}.hse-hero:before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,#02132fea,#062b62d6 55%,#0e6dc42e)}.hse-hero:after{content:"";position:absolute;width:220px;height:220px;right:8%;bottom:-170px;border:1px solid #8be9ff66;border-radius:50%;box-shadow:0 0 0 28px #68dfff0b,0 0 0 60px #68dfff08;animation:hse-ripple 5s ease-out infinite}.hse-hero h1{max-width:780px;margin:15px 0 10px;font-size:clamp(28px,4vw,46px);line-height:1.08;letter-spacing:-.04em}.hse-hero p{max-width:760px;margin:0;color:#d9eeff;font-size:14px;line-height:1.75}.hse-eyebrow{color:#86e8ff;font-size:11px;font-weight:800;letter-spacing:.17em}.hse-whale{margin-right:8px;font-size:17px}.hse-refresh{position:absolute;right:22px;top:22px;padding:8px 13px;border:1px solid #ffffff52;border-radius:999px;color:#fff;background:#06245eb8;cursor:pointer}.hse-stats{display:flex;gap:9px;margin-top:24px;flex-wrap:wrap}.hse-stat{min-width:130px;padding:11px 13px;border:1px solid #ffffff29;border-radius:13px;background:#031a41a8;backdrop-filter:blur(8px)}.hse-stat span{display:block;color:#cde7fb;font-size:10px}.hse-stat b{display:block;margin-top:4px;font-size:20px}.hse-head{margin:28px 0 12px}.hse-head h2{margin:0;font-size:18px}.hse-head p{margin:4px 0 0;color:#728097;font-size:12px}
 .hse-list{display:grid;gap:10px}.hse-job{display:block;width:100%;padding:0;border:1px solid var(--dsw-alias-border-l1,#d7e2ef);border-radius:16px;color:inherit;background:var(--dsw-alias-bg-layer-2,#fff);text-align:left;cursor:pointer;overflow:hidden;box-shadow:0 5px 18px #1736600d;transition:.18s ease}.hse-job:hover,.hse-job:focus-visible{border-color:var(--ocean-300);transform:translateY(-1px);outline:3px solid #2875ff20}.hse-job-body{padding:16px 18px}.hse-job-top{display:flex;justify-content:space-between;gap:14px}.hse-job-title{min-width:0}.hse-job-title strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}.hse-job-title small{display:block;margin-top:4px;color:#7b879c;font-size:10px}.hse-status{flex:none;padding:5px 9px;border-radius:999px;color:#126d50;background:#23ba8318;font-size:10px;font-weight:700}.hse-status:before{content:"\u2713 ";}.hse-status[data-status=running],.hse-status[data-status=pending]{color:#245dcc;background:#2875ff18}.hse-status[data-status=running]:before{content:"\u25CF ";animation:hse-pulse 1.6s ease-in-out infinite}.hse-status[data-status=partial],.hse-status[data-status=attention]{color:#8e5b0c;background:#e4a23b1b}.hse-status[data-status=partial]:before,.hse-status[data-status=attention]:before{content:"\u25B3 "}.hse-status[data-status=failed]{color:#b52f45;background:#ee647818}.hse-status[data-status=failed]:before{content:"\xD7 "}.hse-meta-grid{display:grid;grid-template-columns:1.35fr 1fr .9fr .65fr .75fr .75fr;gap:7px;margin-top:13px}.hse-meta{min-width:0;padding:8px 9px;border-radius:9px;background:var(--dsw-alias-bg-layer-1,#f3f7fb)}.hse-meta span{display:block;color:#7b879c;font-size:9px}.hse-meta b,.hse-meta code{display:block;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.hse-progress{height:5px;margin-top:11px;border-radius:99px;background:#dbe8f5;overflow:hidden}.hse-progress i{display:block;height:100%;background:linear-gradient(90deg,var(--ocean-600),#54d7f5);transition:width .3s}.hse-metrics{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.hse-pill{padding:5px 7px;border:1px solid var(--dsw-alias-border-l1,#dce4f0);border-radius:7px;font-size:10px}.hse-pill b{margin-left:5px;color:var(--ocean-600)}
@@ -996,18 +1888,18 @@ function installStyles() {
 function isRecord(value) {
   return value && typeof value === "object" && !Array.isArray(value);
 }
-function format(value) {
+function format2(value) {
   return typeof value === "number" ? value.toFixed(4).replace(/0+$/, "").replace(/\.$/, "") : String(value ?? "\u2014");
 }
 function short(value) {
   return typeof value === "string" && value.length > 25 ? `${value.slice(0, 17)}\u2026${value.slice(-6)}` : value ?? "\u2014";
 }
-function pretty(value) {
+function pretty2(value) {
   return JSON.stringify(value, null, 2);
 }
 function gateReasonText(value) {
   if (!isRecord(value)) return String(value ?? "\u2014");
-  return [value.code, value.message].filter(Boolean).join(" \xB7 ") || pretty(value);
+  return [value.code, value.message].filter(Boolean).join(" \xB7 ") || pretty2(value);
 }
 var HISTORICAL_JOB_KIND = "historical-generation-evaluation";
 function isHistoricalJob(value) {
@@ -1018,7 +1910,7 @@ function generatorPopulationText(population, t) {
   const label = population.homogeneous === false ? t("mixedPopulation") : population.homogeneous === true ? t("homogeneousPopulation") : void 0;
   const agents = population.agent_presets ?? population.agent_ids ?? population.agents ?? [];
   const models = population.model_routes ?? population.models ?? [];
-  return [label, ...agents, ...models].filter(Boolean).join(" \xB7 ") || pretty(population);
+  return [label, ...agents, ...models].filter(Boolean).join(" \xB7 ") || pretty2(population);
 }
 function judgeIdentityDetails(judge) {
   return [
@@ -1035,7 +1927,7 @@ function normalizeHarborUiError(value, observedAt = (/* @__PURE__ */ new Date())
   const code = typeof source.code === "string" && source.code ? source.code : embeddedCode ?? (Number.isInteger(source.status) ? `HTTP_${source.status}` : "HARBOR_REQUEST_FAILED");
   const fallbackObservedAt = !Number.isNaN(Date.parse(observedAt)) ? new Date(observedAt).toISOString() : (/* @__PURE__ */ new Date()).toISOString();
   const normalizedObservedAt = typeof source.observedAt === "string" && !Number.isNaN(Date.parse(source.observedAt)) ? new Date(source.observedAt).toISOString() : fallbackObservedAt;
-  const category = /REVISION_CONFLICT|STALE_SELECTION|BINDING_STALE/i.test(code) || /source changed after it was opened/i.test(message) ? "conflict" : /PERMISSION|UNAUTHORIZED|FORBIDDEN|SESSION_PROJECT|PROJECT_MISMATCH/i.test(code) ? "permission" : /NOT_FOUND|MISSING|UNKNOWN_OBJECT|NO_SUCH/i.test(code) ? "missing" : /ARTIFACT|CONTEXT_INVALID|PROVENANCE|INVALID_JSON|SCHEMA/i.test(code) ? "artifact" : "retry";
+  const category = /REVISION_CONFLICT|STALE_SELECTION|BINDING_STALE|SOURCE_CONFLICT/i.test(code) || /source changed after it was opened/i.test(message) ? "conflict" : /EXPIRED/i.test(code) ? "expired" : /PERMISSION|UNAUTHORIZED|FORBIDDEN|SESSION_PROJECT|PROJECT_MISMATCH/i.test(code) ? "permission" : /NOT_FOUND|MISSING|UNKNOWN_OBJECT|NO_SUCH/i.test(code) ? "missing" : /ARTIFACT|CONTEXT_INVALID|PROVENANCE|INVALID_JSON|SCHEMA/i.test(code) ? "artifact" : "retry";
   return Object.freeze({
     code,
     message,
@@ -1090,31 +1982,32 @@ async function mutate(route, value) {
     body: JSON.stringify(value)
   });
 }
-var HarborSessionContext = (0, import_react.createContext)(void 0);
+var HarborSessionContext = (0, import_react3.createContext)(void 0);
 function useHarborApi() {
-  const sessionId = (0, import_react.useContext)(HarborSessionContext);
+  const sessionId = (0, import_react3.useContext)(HarborSessionContext);
   if (!sessionId) throw new Error("Harbor workspace requests require a DSH Session");
-  return (0, import_react.useCallback)((route, params = {}) => api(route, { ...params, sessionId }), [sessionId]);
+  return (0, import_react3.useCallback)((route, params = {}) => api(route, { ...params, sessionId }), [sessionId]);
 }
 function useHarborMutation() {
-  const sessionId = (0, import_react.useContext)(HarborSessionContext);
+  const sessionId = (0, import_react3.useContext)(HarborSessionContext);
   if (!sessionId) throw new Error("Harbor workspace mutations require a DSH Session");
-  return (0, import_react.useCallback)((route, value = {}) => mutate(route, { ...value, sessionId }), [sessionId]);
+  return (0, import_react3.useCallback)((route, value = {}) => mutate(route, { ...value, sessionId }), [sessionId]);
 }
 function HarborSkeleton({ kind = "default", rows = 5, label = "Loading" }) {
-  return /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-skeleton", "data-kind": kind, role: "status", "aria-label": label, "aria-busy": "true" }, Array.from({ length: rows }, (_, index) => /* @__PURE__ */ import_react.default.createElement("i", { "aria-hidden": "true", key: index })));
+  return /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-skeleton", "data-kind": kind, role: "status", "aria-label": label, "aria-busy": "true" }, Array.from({ length: rows }, (_, index) => /* @__PURE__ */ import_react3.default.createElement("i", { "aria-hidden": "true", key: index })));
 }
 function errorNextStep(error, t) {
   if (error.nextStep) return error.nextStep;
+  if (error.category === "expired") return t("errorNextExpired");
   if (error.category === "conflict") return t("reloadBeforeSave");
   if (error.category === "permission") return t("errorNextPermission");
   if (error.category === "missing") return t("errorNextMissing");
   if (error.category === "artifact") return t("errorNextArtifact");
   return t("errorNextRetry");
 }
-function HarborErrorState({ error, title, retry, t }) {
+function HarborErrorState({ error, title, retry, retryLabel, t }) {
   const value = normalizeHarborUiError(error);
-  return /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-error-state", "data-category": value.category, role: "alert" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("b", null, title ?? value.message), title && title !== value.message ? /* @__PURE__ */ import_react.default.createElement("span", null, value.message) : null, /* @__PURE__ */ import_react.default.createElement("small", null, t("errorCode"), ": ", /* @__PURE__ */ import_react.default.createElement("code", null, value.code), " \xB7 ", t("errorAt"), ": ", /* @__PURE__ */ import_react.default.createElement("time", { dateTime: value.observedAt }, new Date(value.observedAt).toLocaleString())), /* @__PURE__ */ import_react.default.createElement("small", null, t("nextStep"), ": ", errorNextStep(value, t))), retry ? /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: retry }, t("retry")) : null);
+  return /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-error-state", "data-category": value.category, role: "alert" }, /* @__PURE__ */ import_react3.default.createElement("div", null, /* @__PURE__ */ import_react3.default.createElement("b", null, title ?? value.message), title && title !== value.message ? /* @__PURE__ */ import_react3.default.createElement("span", null, value.message) : null, /* @__PURE__ */ import_react3.default.createElement("small", null, t("errorCode"), ": ", /* @__PURE__ */ import_react3.default.createElement("code", null, value.code), " \xB7 ", t("errorAt"), ": ", /* @__PURE__ */ import_react3.default.createElement("time", { dateTime: value.observedAt }, new Date(value.observedAt).toLocaleString())), /* @__PURE__ */ import_react3.default.createElement("small", null, t("nextStep"), ": ", errorNextStep(value, t))), retry ? /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", onClick: retry }, retryLabel ?? t("retry")) : null);
 }
 var EMPTY_UI_STATE = Object.freeze({ current: void 0, explicit: void 0, lastSent: void 0, status: "idle", error: void 0, navigation: void 0, pendingAction: void 0 });
 function pageSessionIdentity() {
@@ -1288,9 +2181,9 @@ var HarborUiBridge = class {
   }
 };
 function useHarborUi(bridge, sessionId) {
-  return (0, import_react.useSyncExternalStore)(
-    (0, import_react.useCallback)((listener) => bridge.subscribe(sessionId, listener), [bridge, sessionId]),
-    (0, import_react.useCallback)(() => bridge.getSnapshot(sessionId), [bridge, sessionId]),
+  return (0, import_react3.useSyncExternalStore)(
+    (0, import_react3.useCallback)((listener) => bridge.subscribe(sessionId, listener), [bridge, sessionId]),
+    (0, import_react3.useCallback)(() => bridge.getSnapshot(sessionId), [bridge, sessionId]),
     () => EMPTY_UI_STATE
   );
 }
@@ -1366,10 +2259,10 @@ function workbenchFailureState(current, error, now = Date.now()) {
   };
 }
 function useDashboard(poll = true, workspace = "", offset = 0, sessionId, attention = "all") {
-  const [state, setState] = (0, import_react.useState)({ status: "loading" });
-  const requestSequence = (0, import_react.useRef)(0);
-  const pollDelay = (0, import_react.useRef)(15e3);
-  const load = (0, import_react.useCallback)(async (quiet = false) => {
+  const [state, setState] = (0, import_react3.useState)({ status: "loading" });
+  const requestSequence = (0, import_react3.useRef)(0);
+  const pollDelay = (0, import_react3.useRef)(15e3);
+  const load = (0, import_react3.useCallback)(async (quiet = false) => {
     const sequence = ++requestSequence.current;
     if (!quiet) setState((current) => ({ ...current, status: current.value ? "refreshing" : "loading" }));
     try {
@@ -1380,17 +2273,17 @@ function useDashboard(poll = true, workspace = "", offset = 0, sessionId, attent
       if (sequence === requestSequence.current) setState((current) => ({ ...current, ...dashboardFailureState(current), status: quiet && current.value ? "ready" : "error", error: errorDetails.message, errorDetails }));
     }
   }, [workspace, offset, sessionId, attention]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     setState({ status: "loading" });
     void load();
     return () => {
       requestSequence.current += 1;
     };
   }, [load]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     pollDelay.current = state.value?.overview?.activeJobs ? 2500 : 15e3;
   }, [state.value?.overview?.activeJobs]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (!poll || !state.value) return void 0;
     let stopped = false;
     let timer;
@@ -1407,8 +2300,8 @@ function useDashboard(poll = true, workspace = "", offset = 0, sessionId, attent
   return { ...state, load };
 }
 function useVersionCheck() {
-  const [state, setState] = (0, import_react.useState)({ status: "loading" });
-  const load = (0, import_react.useCallback)(async (refresh = false) => {
+  const [state, setState] = (0, import_react3.useState)({ status: "loading" });
+  const load = (0, import_react3.useCallback)(async (refresh = false) => {
     setState((current) => ({ ...current, status: "loading" }));
     try {
       setState({ status: "ready", value: await api("version", refresh ? { refresh: "true" } : {}) });
@@ -1416,7 +2309,7 @@ function useVersionCheck() {
       setState((current) => ({ ...current, status: "error" }));
     }
   }, []);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     void load();
   }, [load]);
   return { ...state, load };
@@ -1615,7 +2508,6 @@ function trustedHarborResolvedContext(nodes) {
   }
   return void 0;
 }
-var HARBOR_QUESTION_KEYS = ["suggestedQuestion1", "suggestedQuestion2", "suggestedQuestion3", "suggestedQuestion4"];
 function ContextFlags({ context, t }) {
   const flags = context?.flags ?? {};
   const values = [
@@ -1623,7 +2515,7 @@ function ContextFlags({ context, t }) {
     flags.comparable === false ? t("contextNonComparable") : void 0,
     flags.scoreValid === false ? t("contextInvalidScore") : void 0
   ].filter(Boolean);
-  return values.length ? /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-context-flags" }, values.map((value) => /* @__PURE__ */ import_react.default.createElement("em", { key: value }, value))) : null;
+  return values.length ? /* @__PURE__ */ import_react3.default.createElement("span", { className: "hse-context-flags" }, values.map((value) => /* @__PURE__ */ import_react3.default.createElement("em", { key: value }, value))) : null;
 }
 function harborReferenceIdentity(reference) {
   const value = reference?.ref ?? reference?.action?.target ?? {};
@@ -1740,21 +2632,21 @@ function removeContextPart(context, part) {
 }
 function ContextDock({ bridge, sessionId, useInput, useSession, stop, inputActions, replaceHarborReference, clearHarborReferences, t }) {
   const ui = useHarborUi(bridge, sessionId);
-  const dockNode = (0, import_react.useRef)();
+  const dockNode = (0, import_react3.useRef)();
   const draft = useInput((state) => state?.draft ?? "");
   const phase = useInput((state) => state?.phase ?? "plain");
-  const phaseRef = (0, import_react.useRef)(phase);
+  const phaseRef = (0, import_react3.useRef)(phase);
   phaseRef.current = phase;
   const occurrences = useInput((state) => state?.occurrences ?? []);
-  const submitted = (0, import_react.useRef)();
-  const observedTokens = (0, import_react.useRef)(/* @__PURE__ */ new Set());
-  const [clock, setClock] = (0, import_react.useState)(Date.now);
+  const submitted = (0, import_react3.useRef)();
+  const observedTokens = (0, import_react3.useRef)(/* @__PURE__ */ new Set());
+  const [clock, setClock] = (0, import_react3.useState)(Date.now);
   const explicit = ui.explicit;
   const token = explicit?.contextSnapshotId;
   const hasReference = hasHarborReference(draft, occurrences, token);
   const expiry = Date.parse(explicit?.expiresAt ?? "");
   const expired = isExplicitContextExpired(explicit?.expiresAt, clock);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     const measure = () => {
       const top = dockNode.current?.getBoundingClientRect().top;
       if (Number.isFinite(top) && bridge.getSnapshot(sessionId).composerTop !== Math.floor(top)) bridge.update(sessionId, { composerTop: Math.floor(top) });
@@ -1769,17 +2661,17 @@ function ContextDock({ bridge, sessionId, useInput, useSession, stop, inputActio
       window.removeEventListener("resize", measure);
     };
   }, [bridge, sessionId, draft, phase, token]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (!explicit || isHarborInputBusy(phase) || !needsStructuredHarborNormalization(draft, occurrences, explicit, observedTokens.current.has(token))) return;
     replaceHarborReference?.(explicit, "");
   }, [draft, explicit, occurrences, phase, replaceHarborReference, token]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     setClock(Date.now());
     if (!Number.isFinite(expiry) || expiry <= Date.now()) return void 0;
     const timer = window.setTimeout(() => setClock(Date.now()), Math.min(expiry - Date.now() + 25, 2147483647));
     return () => window.clearTimeout(timer);
   }, [expiry]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (token && hasReference) observedTokens.current.add(token);
     const wasObserved = Boolean(token && observedTokens.current.has(token));
     const effectiveHasReference = effectiveHarborSubmissionReference(wasObserved, phase, hasReference);
@@ -1824,75 +2716,37 @@ function ContextDock({ bridge, sessionId, useInput, useSession, stop, inputActio
     ...capsuleContext.object?.trial ? [{ key: "trial", label: `Trial ${capsuleContext.object.trial}` }] : [],
     ...(capsuleContext.selection ?? []).map((ref, index) => ({ key: `selection-${index}`, label: `${ref.kind}${ref.selectionCount ? ` (${ref.selectionCount})` : ""} \xB7 ${ref.criterion ?? ref.evidenceRef ?? short(ref.id)}${ref.startLine ? ` \xB7 L${ref.startLine}\u2013${ref.endLine}` : ""}` }))
   ] : [];
-  const ask = async (prompt) => {
+  const ask = async (prompt, context) => {
     if (expired) return;
     try {
-      const reusingExplicit = Boolean(explicit);
-      const issued = explicit ?? await bind(ui.current);
+      const reusingExplicit = Boolean(explicit && !context);
+      const issued = reusingExplicit ? explicit : await bind(context ?? ui.current);
       if (!issued) return;
       commitIssuedDraft(bridge, sessionId, issued, replaceHarborReference, prompt, phaseRef.current, !reusingExplicit);
     } catch {
     }
   };
-  return /* @__PURE__ */ import_react.default.createElement(HarborSessionContext.Provider, { value: sessionId }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-input-dock", ref: dockNode }, ui.workbenchDock?.narrow ? /* @__PURE__ */ import_react.default.createElement("aside", { className: "hse-mobile-copilot" }, /* @__PURE__ */ import_react.default.createElement(CopilotDock, { bridge, sessionId, useSession, stop, resolveLatest: ui.workbenchDock.resolveLatest, reanalyzeLatest: ui.workbenchDock.reanalyzeLatest, t })) : null, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-context-dock", "aria-live": "polite" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-context-line" }, /* @__PURE__ */ import_react.default.createElement("strong", null, t("currentPage")), ui.current ? /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-context-chip" }, /* @__PURE__ */ import_react.default.createElement("span", null, contextLabel(ui.current))), /* @__PURE__ */ import_react.default.createElement(ContextFlags, { context: ui.current, t }), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-context-link", disabled: ui.status === "binding", onClick: () => void update(ui.current) }, explicit ? t("updateContext") : t("askAboutThis"))) : /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-muted" }, "Harbor \u2014")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-context-line" }, /* @__PURE__ */ import_react.default.createElement("strong", null, t("turnContext")), explicit ? /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-context-chip" }, /* @__PURE__ */ import_react.default.createElement("span", null, explicit.context.route?.params?.stage ?? "Harbor"), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", "aria-label": t("clearContext"), disabled: isHarborInputBusy(phase), onClick: clear }, t("clearContext"), " \xD7")), /* @__PURE__ */ import_react.default.createElement(ContextFlags, { context: explicit.context, t }), expired ? /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("em", { className: "hse-context-error" }, t("contextExpired")), /* @__PURE__ */ import_react.default.createElement("small", null, t("contextExpiredHint")), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-context-link", disabled: !ui.current || ui.status === "binding", onClick: () => void update(ui.current) }, t("updateContext"))) : /* @__PURE__ */ import_react.default.createElement("small", null, t("oneShot"))) : /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-muted" }, ui.status === "binding" ? t("bindingContext") : t("noTurnContext"))), explicit ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-capsule-parts" }, capsuleParts.map((part) => /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-context-chip", key: part.key }, /* @__PURE__ */ import_react.default.createElement("span", null, part.label), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", "aria-label": `${t("clearContext")} ${part.label}`, disabled: isHarborInputBusy(phase) || ui.status === "binding", onClick: () => void removePart(part.key) }, "\xD7"))), /* @__PURE__ */ import_react.default.createElement("details", { className: "hse-context-identity" }, /* @__PURE__ */ import_react.default.createElement("summary", null, t("contextIdentity")), /* @__PURE__ */ import_react.default.createElement("pre", null, pretty({ ...capsuleContext, contextSnapshotId: explicit.contextSnapshotId, expiresAt: explicit.expiresAt })))) : null, ui.error ? /* @__PURE__ */ import_react.default.createElement(HarborErrorState, { error: ui.error, title: t("contextBindFailed"), t }) : null, ui.current ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-context-questions" }, HARBOR_QUESTION_KEYS.map((key) => /* @__PURE__ */ import_react.default.createElement("button", { type: "button", key, disabled: expired, onClick: () => void ask(t(key)) }, t(key)))) : null)));
+  return /* @__PURE__ */ import_react3.default.createElement(HarborSessionContext.Provider, { value: sessionId }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-input-dock", ref: dockNode }, ui.workbenchDock?.narrow ? /* @__PURE__ */ import_react3.default.createElement("aside", { className: "hse-mobile-copilot" }, /* @__PURE__ */ import_react3.default.createElement(CopilotDock, { bridge, sessionId, useSession, stop, resolveLatest: ui.workbenchDock.resolveLatest, reanalyzeLatest: ui.workbenchDock.reanalyzeLatest, prepareQuestion: ui.workbenchDock.prepareQuestion, t })) : null, /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-context-dock", "aria-live": "polite" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-context-line" }, /* @__PURE__ */ import_react3.default.createElement("strong", null, t("currentPage")), ui.current ? /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement("span", { className: "hse-context-chip" }, /* @__PURE__ */ import_react3.default.createElement("span", null, contextLabel(ui.current))), /* @__PURE__ */ import_react3.default.createElement(ContextFlags, { context: ui.current, t }), /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "hse-context-link", disabled: ui.status === "binding", onClick: () => void update(ui.current) }, explicit ? t("updateContext") : t("askAboutThis"))) : /* @__PURE__ */ import_react3.default.createElement("span", { className: "hse-muted" }, "Harbor \u2014")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-context-line" }, /* @__PURE__ */ import_react3.default.createElement("strong", null, t("turnContext")), explicit ? /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement("span", { className: "hse-context-chip" }, /* @__PURE__ */ import_react3.default.createElement("span", null, explicit.context.route?.params?.stage ?? "Harbor"), /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", "aria-label": t("clearContext"), disabled: isHarborInputBusy(phase), onClick: clear }, t("clearContext"), " \xD7")), /* @__PURE__ */ import_react3.default.createElement(ContextFlags, { context: explicit.context, t }), expired ? /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement("em", { className: "hse-context-error" }, t("contextExpired")), /* @__PURE__ */ import_react3.default.createElement("small", null, t("contextExpiredHint")), /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "hse-context-link", disabled: !ui.current || ui.status === "binding", onClick: () => void update(ui.current) }, t("updateContext"))) : /* @__PURE__ */ import_react3.default.createElement("small", null, t("oneShot"))) : /* @__PURE__ */ import_react3.default.createElement("span", { className: "hse-muted" }, ui.status === "binding" ? t("bindingContext") : t("noTurnContext"))), explicit ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-capsule-parts" }, capsuleParts.map((part) => /* @__PURE__ */ import_react3.default.createElement("span", { className: "hse-context-chip", key: part.key }, /* @__PURE__ */ import_react3.default.createElement("span", null, part.label), /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", "aria-label": `${t("clearContext")} ${part.label}`, disabled: isHarborInputBusy(phase) || ui.status === "binding", onClick: () => void removePart(part.key) }, "\xD7"))), /* @__PURE__ */ import_react3.default.createElement("details", { className: "hse-context-identity" }, /* @__PURE__ */ import_react3.default.createElement("summary", null, t("contextIdentity")), /* @__PURE__ */ import_react3.default.createElement("pre", null, pretty2({ ...capsuleContext, contextSnapshotId: explicit.contextSnapshotId, expiresAt: explicit.expiresAt })))) : null, ui.error ? /* @__PURE__ */ import_react3.default.createElement(HarborErrorState, { error: ui.error, title: t("contextBindFailed"), t }) : null, ui.current ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-context-questions", "aria-label": t("questionSuggestions") }, harborQuestionKeys(explicit?.context ?? ui.current).map((key) => /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", key, disabled: expired || isHarborInputBusy(phase) || ui.status === "binding", onClick: () => void ask(t(key)) }, t(harborQuestionLabelKey(key)))), ui.lastSent?.context && !explicit ? /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", disabled: isHarborInputBusy(phase) || ui.status === "binding", title: t("followupHint"), onClick: () => void ask("", ui.lastSent.context) }, t("continueObject")) : null) : null)));
 }
 function AnswerText({ text }) {
   const lines = String(text ?? "").split("\n");
   let code = false;
-  const inline = (line) => line.split(/(`[^`]+`)/g).map((part, i) => part.startsWith("`") && part.endsWith("`") ? /* @__PURE__ */ import_react.default.createElement("code", { key: i }, part.slice(1, -1)) : part);
-  return /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-answer-text" }, lines.map((line, index) => {
+  const inline = (line) => line.split(/(`[^`]+`)/g).map((part, i) => part.startsWith("`") && part.endsWith("`") ? /* @__PURE__ */ import_react3.default.createElement("code", { key: i }, part.slice(1, -1)) : part);
+  return /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-answer-text" }, lines.map((line, index) => {
     if (line.startsWith("```")) {
       code = !code;
-      return /* @__PURE__ */ import_react.default.createElement("hr", { key: index });
+      return /* @__PURE__ */ import_react3.default.createElement("hr", { key: index });
     }
-    if (code) return /* @__PURE__ */ import_react.default.createElement("pre", { key: index }, line || " ");
-    if (/^#{1,4} /.test(line)) return /* @__PURE__ */ import_react.default.createElement("h4", { key: index }, inline(line.replace(/^#{1,4} /, "")));
-    if (/^[-*] /.test(line)) return /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-answer-bullet", key: index }, "\u2022 ", inline(line.slice(2)));
-    return line.trim() ? /* @__PURE__ */ import_react.default.createElement("p", { key: index }, inline(line)) : null;
+    if (code) return /* @__PURE__ */ import_react3.default.createElement("pre", { key: index }, line || " ");
+    if (/^#{1,4} /.test(line)) return /* @__PURE__ */ import_react3.default.createElement("h4", { key: index }, inline(line.replace(/^#{1,4} /, "")));
+    if (/^[-*] /.test(line)) return /* @__PURE__ */ import_react3.default.createElement("p", { className: "hse-answer-bullet", key: index }, "\u2022 ", inline(line.slice(2)));
+    return line.trim() ? /* @__PURE__ */ import_react3.default.createElement("p", { key: index }, inline(line)) : null;
   }));
 }
-function ActionDraftCard({ draft, onSourceDraft, t }) {
+function ActionDraftCard({ draft, onSourceDraft, onReprepare, onViewComparison, t }) {
   const update = useHarborMutation();
   const request = useHarborApi();
-  const [state, setState] = (0, import_react.useState)({ status: "DRAFT" });
-  const [reviewed, setReviewed] = (0, import_react.useState)(false);
-  const [dismissed, setDismissed] = (0, import_react.useState)(false);
-  (0, import_react.useEffect)(() => {
-    if (!draft.operationId) return void 0;
-    let alive = true;
-    void request("action-operation", { operationId: draft.operationId }).then((operation) => {
-      if (alive) setState((current) => current.operation ? current : { status: operation.status, operation });
-    }).catch(() => {
-    });
-    return () => {
-      alive = false;
-    };
-  }, [draft.operationId, request]);
-  const check = async () => {
-    setReviewed(false);
-    setState({ status: "VALIDATING" });
-    try {
-      const preview2 = await update("action-preview", { draftId: draft.draftId });
-      setState({ status: preview2.status, preview: preview2 });
-    } catch (error) {
-      setState({ status: "FAILED", error: normalizeHarborUiError(error) });
-    }
-  };
-  const confirm = async () => {
-    if (!reviewed || state.status !== "READY_FOR_REVIEW") return;
-    const preview2 = state.preview;
-    setState((current) => ({ ...current, status: "EXECUTING" }));
-    try {
-      const operation = await update("action-confirm", { previewId: preview2.previewId, contentHash: preview2.contentHash, expectedRevision: preview2.baseRevision, confirmed: true });
-      setState({ status: operation.status, preview: preview2, operation });
-    } catch (error) {
-      setState({ status: "FAILED", preview: preview2, error: normalizeHarborUiError(error) });
-    }
-  };
-  if (dismissed) return /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-action-draft" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("draftDiscarded")), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => setDismissed(false) }, t("expand")));
-  const preview = state.preview;
-  const result = state.operation?.events?.at(-1)?.result;
-  return /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-action-draft" }, /* @__PURE__ */ import_react.default.createElement("header", null, /* @__PURE__ */ import_react.default.createElement("strong", null, t("actionDraft"), " \xB7 ", draft.kind), /* @__PURE__ */ import_react.default.createElement("code", null, state.status)), /* @__PURE__ */ import_react.default.createElement("p", null, draft.proposal?.summary), /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-muted" }, draft.proposal?.rationale), /* @__PURE__ */ import_react.default.createElement("dl", null, /* @__PURE__ */ import_react.default.createElement("dt", null, "Target"), /* @__PURE__ */ import_react.default.createElement("dd", null, draft.target?.job ?? draft.target?.candidate ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("dt", null, "Risk / Surface"), /* @__PURE__ */ import_react.default.createElement("dd", null, draft.risk, " \xB7 ", draft.mutationSurface), /* @__PURE__ */ import_react.default.createElement("dt", null, "Production"), /* @__PURE__ */ import_react.default.createElement("dd", null, t("noProductionImpact")), /* @__PURE__ */ import_react.default.createElement("dt", null, "Revision"), /* @__PURE__ */ import_react.default.createElement("dd", null, /* @__PURE__ */ import_react.default.createElement("code", null, short(draft.baseRevision))), /* @__PURE__ */ import_react.default.createElement("dt", null, "Context"), /* @__PURE__ */ import_react.default.createElement("dd", null, draft.freshBaselineRequired ? t("freshBaseline") : draft.execution), /* @__PURE__ */ import_react.default.createElement("dt", null, t("selectedCount")), /* @__PURE__ */ import_react.default.createElement("dd", null, draft.selection?.find((ref) => ref.selectionCount)?.selectionCount ?? (draft.target?.trial ? 1 : "\u2014"))), draft.identities ? /* @__PURE__ */ import_react.default.createElement("details", { className: "hse-action-identities" }, /* @__PURE__ */ import_react.default.createElement("summary", null, t("mainIdentity")), Object.entries(draft.identities).map(([role, value]) => /* @__PURE__ */ import_react.default.createElement("p", { key: role }, /* @__PURE__ */ import_react.default.createElement("b", null, role, ": ", value.id, " ", value.version ? `@ ${value.version}` : ""), /* @__PURE__ */ import_react.default.createElement("br", null), /* @__PURE__ */ import_react.default.createElement("code", null, value.digest ?? "\u2014")))) : null, draft.proposal?.before !== void 0 ? /* @__PURE__ */ import_react.default.createElement("details", { open: true }, /* @__PURE__ */ import_react.default.createElement("summary", null, t("reviewDiff")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-diff-grid" }, /* @__PURE__ */ import_react.default.createElement("pre", null, draft.proposal.before), /* @__PURE__ */ import_react.default.createElement("pre", null, draft.proposal.replacement))) : null, preview ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-action-preview" }, /* @__PURE__ */ import_react.default.createElement("b", null, preview.status), /* @__PURE__ */ import_react.default.createElement("p", null, preview.costEstimate), /* @__PURE__ */ import_react.default.createElement("code", null, preview.contentHash), preview.blocking.map((item) => /* @__PURE__ */ import_react.default.createElement("p", { key: item.code }, /* @__PURE__ */ import_react.default.createElement("b", null, item.code), " \xB7 ", item.message)), /* @__PURE__ */ import_react.default.createElement("small", null, t("tokenExpiry"), ": ", preview.expiresAt)) : null, state.error ? /* @__PURE__ */ import_react.default.createElement(HarborErrorState, { error: state.error, t }) : null, state.status === "READY_FOR_REVIEW" ? /* @__PURE__ */ import_react.default.createElement("label", null, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: reviewed, onChange: (event) => setReviewed(event.target.checked) }), t("confirmActionReview")) : null, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-local-actions" }, !state.operation && state.status !== "EXECUTING" ? /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("button", { type: "button", disabled: state.status === "VALIDATING", onClick: () => void check() }, t("checkParameters")), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => setDismissed(true) }, t("discardDraft"))) : null, state.status === "READY_FOR_REVIEW" ? /* @__PURE__ */ import_react.default.createElement("button", { type: "button", disabled: !reviewed, onClick: () => void confirm() }, t("confirmAction")) : null, state.status === "COMPLETED" && result?.kind === "evaluator-draft" ? /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => onSourceDraft?.(draft) }, t("openDiffEditor")) : null), result?.schema === "harbor-change-draft/v1" ? /* @__PURE__ */ import_react.default.createElement("p", { role: "status" }, t("savedDraftOnly")) : null, state.operation ? /* @__PURE__ */ import_react.default.createElement("details", null, /* @__PURE__ */ import_react.default.createElement("summary", null, state.operation.operationId, " \xB7 ", t("audit")), /* @__PURE__ */ import_react.default.createElement("pre", null, pretty(state.operation))) : null);
+  return /* @__PURE__ */ import_react3.default.createElement(ActionDraftCardView, { ...{ draft, onSourceDraft, onReprepare, onViewComparison, update, request, t }, ErrorState: HarborErrorState });
 }
 function recoverHarborTurn(nodes, sessionId) {
   for (const node of [...nodes ?? []].reverse()) {
@@ -1906,13 +2760,53 @@ function recoverHarborTurn(nodes, sessionId) {
   }
   return void 0;
 }
-function CopilotDock({ bridge, sessionId, useSession, stop, resolveLatest, reanalyzeLatest, t }) {
-  const [expanded, setExpanded] = (0, import_react.useState)(true);
-  const [latest, setLatest] = (0, import_react.useState)({ status: "idle" });
-  const latestSequence = (0, import_react.useRef)(0);
+function resolvedUiContext(resolved, sessionId) {
+  if (resolved?.schema !== "harbor-resolved-context/v1") return void 0;
+  const ref = resolved.context?.focus?.localObject;
+  const context = actionDraftContext({ target: resolved.refs?.object, selection: resolved.refs?.selection, ...ref?.kind === "evaluator-source" ? { proposal: { sourceRef: ref } } : {} }, sessionId, resolved.context?.pageSessionId);
+  return context ? { ...context, identities: resolved.context.identities, flags: resolved.context.flags, artifactRevision: resolved.basedOn?.artifactRevision, observedAt: resolved.basedOn?.observedAt } : void 0;
+}
+function harborDisplayedAnswerBasis(resolved, references, continuation, latest, fallback) {
+  const matching = resolved?.contextSnapshotId === latest?.contextSnapshotId ? latest : void 0;
+  const verified = resolved ? { ...resolved, basedOn: { ...resolved.basedOn, currentRevision: matching?.basedOn?.currentRevision ?? resolved.basedOn?.currentRevision } } : void 0;
+  return harborAnswerBasis(verified, references, continuation ? void 0 : fallback);
+}
+function actionDraftContext(draft, sessionId, pageSessionId) {
+  const target = draft?.target;
+  if (!target?.workspace) return void 0;
+  if (!target.job) return target.kind === "harbor.workspace/v1" ? buildUiContext({ sessionId, pageSessionId, workspace: target.workspace }) : void 0;
+  const source = draft.proposal?.sourceRef;
+  const kind = target.kind?.replace(/^harbor\.(.+)\/v1$/, "$1");
+  const stage = source?.stage ?? target.stage ?? draft.selection?.at(-1)?.stage ?? { trial: "judge", evaluator: "judge", compare: "gate", gate: "gate", dataset: "dataset" }[kind] ?? "candidate";
+  const selections = (draft.selection ?? []).map((ref) => {
+    const kind2 = ref.kind?.replace(/^harbor\.(.+)\/v1$/, "$1");
+    return { ...ref, kind: kind2, id: ref.id ?? ref.evidenceRef ?? ref.criterion ?? ref.hypothesis ?? ref.trial, stage };
+  });
+  const context = buildUiContext({ sessionId, pageSessionId, workspace: target.workspace, job: target.job, stage, trial: target.trial, localObject: source, selections: source ? void 0 : selections });
+  const focus = selections.at(-1);
+  if (!source && focus?.evidenceRef) context.route.params.evidenceRef = focus.evidenceRef;
+  else if (!source && focus?.criterion) context.route.params.criterion = focus.criterion;
+  if (target.kind === "harbor.compare/v1") {
+    context.object = { ...target, kind: "compare", id: target.comparisonDigest, stage: "gate" };
+    context.route = { name: "harbor.compare", params: { job: target.job, stage: "gate", baseline: target.baseline, candidate: target.candidate } };
+  } else if (kind === "gate") {
+    const gate = { baseline: target.baseline, candidate: target.candidate, policy: target.policy?.id, policyVersion: target.policy?.version, policyDigest: target.policy?.digest, reportDigest: target.reportDigest };
+    context.object = { kind, id: target.reportDigest, job: target.job, stage: "gate", ...gate };
+    context.route = { name: "harbor.gate", params: { job: target.job, stage: "gate", ...gate } };
+  } else if (["candidate", "dataset", "evaluator"].includes(kind)) {
+    context.object = { kind, id: target[kind], job: target.job, stage };
+    if (kind === "evaluator") context.route.name = "harbor.evaluator";
+  }
+  return context;
+}
+function CopilotDock({ bridge, sessionId, useSession, stop, resolveLatest, reanalyzeLatest, prepareQuestion, t }) {
+  const [expanded, setExpanded] = (0, import_react3.useState)(() => !bridge.getSnapshot(sessionId).workbenchDock?.narrow);
+  const [selectedSeq, setSelectedSeq] = (0, import_react3.useState)();
+  const [latest, setLatest] = (0, import_react3.useState)({ status: "idle" });
+  const latestSequence = (0, import_react3.useRef)(0);
   const ui = useHarborUi(bridge, sessionId);
   const nodes = useSession((state) => state?.nodes ?? []);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (bridge.getSnapshot(sessionId).lastSent) return;
     const recovered = recoverHarborTurn(nodes, sessionId);
     if (recovered) bridge.update(sessionId, { lastSent: recovered });
@@ -1921,7 +2815,7 @@ function CopilotDock({ bridge, sessionId, useSession, stop, resolveLatest, reana
   const runningCalls = useSession((state) => state?.runningCalls ?? []);
   const running = useSession((state) => Boolean(state?.running));
   const lastAgentError = useSession((state) => state?.lastAgentError ?? null);
-  const projection = harborTurnProjection(nodes, ui.lastSent?.contextSnapshotId);
+  const projection = harborConversationProjection(nodes, ui.lastSent?.contextSnapshotId, selectedSeq);
   const recent = projection.nodes;
   const completed = [...recent].reverse().find((node) => node?.kind === "assistant");
   const answer = projection.active && running && partial ? assistantText(partial) : assistantText(completed);
@@ -1931,17 +2825,31 @@ function CopilotDock({ bridge, sessionId, useSession, stop, resolveLatest, reana
   const resolved = trustedHarborResolvedContext(recent);
   const actionDrafts = recent.filter((node) => node?.call?.name === "harbor_propose_action").map(toolResultValue).filter((value) => value?.schema === "harbor-action-draft/v1" && value?.draftId);
   const openSourceDraft = (draft) => {
-    bridge.update(sessionId, { evaluatorProposal: draft });
+    bridge.update(sessionId, { evaluatorProposal: { ...draft, reviewRequestId: pageSessionIdentity() } });
     const ref = draft.proposal?.sourceRef;
-    if (ref) bridge.navigate(sessionId, { kind: "harbor.navigate", actionId: `draft-source-${draft.draftId}`, target: { route: "harbor.evaluator", workspace: draft.target.workspace, job: ref.job, stage: "judge", localObject: ref } }, { force: true });
+    if (ref) bridge.navigate(sessionId, { kind: "harbor.navigate", actionId: `draft-source-${draft.draftId}`, target: { route: "harbor.evaluator", workspace: draft.target.workspace, job: ref.job, stage: "judge" } }, { force: true });
   };
+  const reprepare = async (draft) => {
+    const original = actionDraftContext(draft, sessionId, ui.current?.pageSessionId ?? ui.lastSent?.context?.pageSessionId);
+    if (!original) return false;
+    const prepared = await prepareQuestion?.(original, `${t("repreparePrompt")}
+${draft.proposal?.summary ?? ""}`);
+    const error = bridge.getSnapshot(sessionId).error;
+    if (!prepared && ["conflict", "expired"].includes(error?.category)) {
+      const source = draft.proposal?.sourceRef;
+      bridge.update(sessionId, { error: { ...error, nextStep: t("draftRecoveryReselect") } });
+      bridge.navigate(sessionId, { kind: "harbor.navigate", actionId: `reselect-${draft.draftId}`, target: { route: source ? "harbor.evaluator" : "harbor.job", workspace: draft.target.workspace, job: draft.target.job, stage: source || draft.selection?.some((ref) => /trial-set/.test(ref.kind)) ? "judge" : original.route.params.stage, ...draft.target.trial ? { trial: draft.target.trial } : {} } }, { force: true });
+    }
+    return prepared === true;
+  };
+  const viewComparison = (draft) => bridge.navigate(sessionId, { kind: "harbor.navigate", actionId: `comparison-${draft.draftId}`, target: { route: "harbor.compare", workspace: draft.target.workspace, job: draft.target.job, stage: "gate", baseline: draft.target.baseline, candidate: draft.target.candidate } }, { force: true });
   const activeCalls = projection.active ? runningCalls : [];
   const activeRunning = projection.active && running;
   const relevantError = projection.active ? lastAgentError : null;
   const turnId = projection.turn ?? projection.anchorSeq;
-  const token = ui.lastSent?.contextSnapshotId;
+  const token = resolved?.contextSnapshotId ?? projection.contextToken ?? ui.lastSent?.contextSnapshotId;
   const completionId = completed?.messageId ?? completed?.seq;
-  const refreshLatest = (0, import_react.useCallback)(async () => {
+  const refreshLatest = (0, import_react3.useCallback)(async () => {
     if (!token || !resolveLatest) return;
     const sequence = ++latestSequence.current;
     try {
@@ -1953,9 +2861,9 @@ function CopilotDock({ bridge, sessionId, useSession, stop, resolveLatest, reana
       setLatest({ status: "error", token, turnId, freshness: expired ? "EXPIRED" : "UNAVAILABLE", error: normalizeHarborUiError(error) });
     }
   }, [resolveLatest, sessionId, token, turnId]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     latestSequence.current += 1;
-    if (!token || !completionId || activeRunning || !resolveLatest) {
+    if (!token || !completionId || activeRunning || !resolveLatest || !resolved) {
       setLatest({ status: "idle" });
       return void 0;
     }
@@ -1965,17 +2873,19 @@ function CopilotDock({ bridge, sessionId, useSession, stop, resolveLatest, reana
       window.clearInterval(timer);
       latestSequence.current += 1;
     };
-  }, [activeRunning, completionId, refreshLatest, resolveLatest, token]);
+  }, [activeRunning, completionId, refreshLatest, resolveLatest, token, resolved?.contextSnapshotId]);
   const currentLatest = latest.token === token ? latest : void 0;
-  const freshness = currentLatest?.value?.freshness ?? currentLatest?.freshness ?? resolved?.freshness;
-  const contextSummary = currentLatest?.value?.context ?? resolved?.context ?? ui.lastSent?.context;
-  const basis = harborAnswerBasis(resolved ? { ...resolved, basedOn: { ...resolved.basedOn, currentRevision: currentLatest?.value?.basedOn?.currentRevision ?? resolved.basedOn?.currentRevision } } : currentLatest?.value, references, ui.lastSent?.context);
+  const origin = trustedHarborResolvedContext(projection.originNodes ?? []);
+  const discussionContext = resolvedUiContext(resolved ?? origin, sessionId) ?? (token === ui.lastSent?.contextSnapshotId ? ui.lastSent?.context : void 0);
+  const freshness = resolved ? currentLatest?.value?.freshness ?? currentLatest?.freshness ?? resolved.freshness : "UNVERIFIED";
+  const contextSummary = resolved?.context ?? (projection.continuation ? void 0 : discussionContext);
+  const basis = harborDisplayedAnswerBasis(resolved, references, projection.continuation, currentLatest?.value, discussionContext);
   const stale = freshness === "DRIFTED_READ_ONLY" || freshness === "DRIFTED" || freshness === "EXPIRED";
   const status = relevantError ? t("copilotFailed") : activeCalls.length ? t("copilotReading") : activeRunning ? t("copilotAnalyzing") : ui.lastSent ? t("fullConversation") : t("copilotIdle");
-  return /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-copilot", style: !ui.workbenchDock?.narrow && ui.composerTop ? { maxHeight: Math.max(80, ui.composerTop - 120), boxSizing: "border-box" } : void 0, "data-collapsed": String(!expanded), "aria-live": "polite" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-copilot-head" }, /* @__PURE__ */ import_react.default.createElement("h3", null, "\u{1F433} ", t("copilot")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-copilot-controls" }, activeRunning && stop ? /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => void stop() }, t("stopAgent")) : null, /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-copilot-toggle", "aria-expanded": expanded, "aria-label": expanded ? t("collapse") : t("expand"), onClick: () => setExpanded((value) => !value) }, expanded ? "\u2212" : "+"))), expanded ? /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-copilot-status" }, status, freshness && freshness !== "FRESH" ? ` \xB7 ${t("contextStale")}` : ""), actionDrafts.map((draft) => /* @__PURE__ */ import_react.default.createElement(ActionDraftCard, { key: draft.draftId, draft, onSourceDraft: openSourceDraft, t })), token ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-hook-state" }, /* @__PURE__ */ import_react.default.createElement("b", null, t("copilotTurn"), ": ", turnId ?? "\u2014", " \xB7 ", t("contextFreshness"), ": ", freshness ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("br", null), contextSummary ? contextLabel(contextSummary) : "\u2014") : null, activeCalls.length || settledTools.length ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-copilot-tools" }, [...activeCalls.map((call) => call.name ?? call.toolName ?? call.callId), ...settledTools].filter(Boolean).map((name2, index) => /* @__PURE__ */ import_react.default.createElement("span", { key: `${name2}-${index}` }, name2))) : null, basis ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-copilot-basis" }, /* @__PURE__ */ import_react.default.createElement("strong", null, t("basedOn")), basis.job ? /* @__PURE__ */ import_react.default.createElement("span", null, "Job", /* @__PURE__ */ import_react.default.createElement("b", null, basis.job)) : null, basis.artifactRevision ? /* @__PURE__ */ import_react.default.createElement("span", null, t("revision"), /* @__PURE__ */ import_react.default.createElement("code", null, short(basis.artifactRevision))) : null, basis.currentRevision && basis.currentRevision !== basis.artifactRevision ? /* @__PURE__ */ import_react.default.createElement("span", null, t("currentRevision"), /* @__PURE__ */ import_react.default.createElement("code", null, short(basis.currentRevision))) : null, basis.observedAt ? /* @__PURE__ */ import_react.default.createElement("span", null, t("observedAt"), /* @__PURE__ */ import_react.default.createElement("time", { dateTime: basis.observedAt }, new Date(basis.observedAt).toLocaleString())) : null) : null, answer && (activeRunning || references.some((ref) => ref.kind === "evidence" && ref.available)) ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-copilot-answer" }, /* @__PURE__ */ import_react.default.createElement(AnswerText, { text: answer })) : answer ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-answer-unverified", role: "status" }, /* @__PURE__ */ import_react.default.createElement("p", null, t("unverifiedAnswer")), /* @__PURE__ */ import_react.default.createElement("details", null, /* @__PURE__ */ import_react.default.createElement("summary", null, t("showUnverified")), /* @__PURE__ */ import_react.default.createElement("pre", { className: "hse-copilot-answer" }, answer)), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => void reanalyzeLatest?.(ui.lastSent?.context) }, t("suggestedQuestion3"))) : null, references.length ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-copilot-refs" }, /* @__PURE__ */ import_react.default.createElement("strong", null, references.some((reference) => reference.kind === "evidence") ? t("evidenceRefs") : t("objectRefs")), references.map((reference) => /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-copilot-ref", "data-available": String(reference.available), key: reference.action.actionId, onClick: () => bridge.navigate(sessionId, reference.action, { force: true }) }, /* @__PURE__ */ import_react.default.createElement("b", null, reference.label ?? t("viewInHarbor")), /* @__PURE__ */ import_react.default.createElement("span", null, reference.kind === "evidence" ? t("evidence") : t("objectRefs")), /* @__PURE__ */ import_react.default.createElement("code", null, harborReferenceIdentity(reference), reference.available ? "" : ` \xB7 ${t("evidenceUnavailable")}`)))) : null, relevantError ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-context-error" }, relevantError) : null, currentLatest?.status === "error" && freshness !== "EXPIRED" ? /* @__PURE__ */ import_react.default.createElement(HarborErrorState, { error: currentLatest.error, t }) : null, stale && reanalyzeLatest ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-copilot-actions" }, /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => void reanalyzeLatest(ui.lastSent?.context) }, t("reanalyzeLatest")), /* @__PURE__ */ import_react.default.createElement("small", null, freshness)) : null, !references.length && action ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-copilot-actions" }, /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => bridge.navigate(sessionId, action, { force: true }) }, t("viewInHarbor")), /* @__PURE__ */ import_react.default.createElement("small", null, ui.pendingAction?.actionId === action.actionId ? t("preparedInHarbor") : t("fullConversation"))) : null) : null);
+  return /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-copilot", style: !ui.workbenchDock?.narrow && ui.composerTop ? { maxHeight: Math.max(80, ui.composerTop - 120), boxSizing: "border-box" } : void 0, "data-collapsed": String(!expanded), "aria-live": "polite" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-copilot-head" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, "\u{1F433} ", t("copilot")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-copilot-controls" }, activeRunning && stop ? /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", onClick: () => void stop() }, t("stopAgent")) : null, /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "hse-copilot-toggle", "aria-expanded": expanded, "aria-label": expanded ? t("collapse") : t("expand"), onClick: () => setExpanded((value) => !value) }, expanded ? "\u2212" : "+"))), !expanded ? /* @__PURE__ */ import_react3.default.createElement("p", { className: "hse-copilot-status" }, activeRunning ? status : answer ? t("replyReady") : t("copilotIdle")) : null, expanded ? /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement("p", { className: "hse-copilot-status" }, status), projection.turns?.length > 1 ? /* @__PURE__ */ import_react3.default.createElement("details", { className: "hse-discussion-history" }, /* @__PURE__ */ import_react3.default.createElement("summary", null, t("discussionHistory"), " \xB7 ", projection.turns.length), projection.turns.map((item) => /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", key: item.seq, "aria-current": item.seq === projection.selectedSeq ? "true" : void 0, onClick: () => setSelectedSeq(item.seq) }, item.question || t("aiQuestion"))), /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", onClick: () => setSelectedSeq(void 0) }, t("latestReply"))) : null, projection.question ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-question" }, /* @__PURE__ */ import_react3.default.createElement("strong", null, t("aiQuestion")), /* @__PURE__ */ import_react3.default.createElement("p", null, projection.question)) : null, projection.continuation ? /* @__PURE__ */ import_react3.default.createElement("p", { className: "hse-copilot-status" }, t("followupUnbound")) : null, token ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-hook-state" }, /* @__PURE__ */ import_react3.default.createElement("b", null, t("copilotTurn"), ": ", turnId ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("br", null), contextSummary ? contextLabel(contextSummary) : basis?.job ? `Job ${basis.job}` : t("historyOnly"), stale ? /* @__PURE__ */ import_react3.default.createElement("p", null, t("contextStale")) : null) : null, answer ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-copilot-answer" }, /* @__PURE__ */ import_react3.default.createElement(AnswerText, { text: answer })) : null, answer && !activeRunning && !references.some((ref) => ref.kind === "evidence" && ref.available) ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-answer-unverified", role: "status" }, /* @__PURE__ */ import_react3.default.createElement("p", null, t("evidenceNotChecked"))) : null, references.length ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-copilot-refs" }, /* @__PURE__ */ import_react3.default.createElement("strong", null, references.some((reference) => reference.kind === "evidence") ? t("evidenceRefs") : t("objectRefs")), references.map((reference) => /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "hse-copilot-ref", "data-available": String(reference.available), key: reference.action.actionId, onClick: () => bridge.navigate(sessionId, reference.action, { force: true }) }, /* @__PURE__ */ import_react3.default.createElement("b", null, reference.label ?? t("viewInHarbor")), /* @__PURE__ */ import_react3.default.createElement("span", null, reference.kind === "evidence" ? t("evidence") : t("objectRefs")), /* @__PURE__ */ import_react3.default.createElement("code", null, harborReferenceIdentity(reference), reference.available ? "" : ` \xB7 ${t("evidenceUnavailable")}`)))) : null, actionDrafts.map((draft) => /* @__PURE__ */ import_react3.default.createElement(ActionDraftCard, { key: draft.draftId, draft, onSourceDraft: openSourceDraft, onReprepare: reprepare, onViewComparison: viewComparison, t })), discussionContext && prepareQuestion ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-copilot-actions" }, /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", disabled: activeRunning || ui.status === "binding", onClick: () => void prepareQuestion(discussionContext, "") }, t("continueObject")), /* @__PURE__ */ import_react3.default.createElement("small", null, t("followupHint"))) : null, basis || activeCalls.length || settledTools.length ? /* @__PURE__ */ import_react3.default.createElement("details", { className: "hse-answer-details" }, /* @__PURE__ */ import_react3.default.createElement("summary", null, t("answerDetails")), /* @__PURE__ */ import_react3.default.createElement("p", null, t("contextFreshness"), ": ", freshness ?? "\u2014"), activeCalls.length || settledTools.length ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-copilot-tools" }, [...activeCalls.map((call) => call.name ?? call.toolName ?? call.callId), ...settledTools].filter(Boolean).map((name2, index) => /* @__PURE__ */ import_react3.default.createElement("span", { key: `${name2}-${index}` }, name2))) : null, basis ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-copilot-basis" }, /* @__PURE__ */ import_react3.default.createElement("strong", null, t("basedOn")), basis.job ? /* @__PURE__ */ import_react3.default.createElement("span", null, "Job", /* @__PURE__ */ import_react3.default.createElement("b", null, basis.job)) : null, basis.artifactRevision ? /* @__PURE__ */ import_react3.default.createElement("span", null, t("revision"), /* @__PURE__ */ import_react3.default.createElement("code", null, short(basis.artifactRevision))) : null, basis.currentRevision && basis.currentRevision !== basis.artifactRevision ? /* @__PURE__ */ import_react3.default.createElement("span", null, t("currentRevision"), /* @__PURE__ */ import_react3.default.createElement("code", null, short(basis.currentRevision))) : null, basis.observedAt ? /* @__PURE__ */ import_react3.default.createElement("span", null, t("observedAt"), /* @__PURE__ */ import_react3.default.createElement("time", { dateTime: basis.observedAt }, new Date(basis.observedAt).toLocaleString())) : null) : null) : null, relevantError ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-context-error" }, relevantError) : null, currentLatest?.status === "error" && freshness !== "EXPIRED" ? /* @__PURE__ */ import_react3.default.createElement(HarborErrorState, { error: currentLatest.error, t }) : null, stale && reanalyzeLatest ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-copilot-actions" }, /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", onClick: () => void reanalyzeLatest(discussionContext) }, t("reanalyzeLatest"))) : null, !references.length && action ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-copilot-actions" }, /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", onClick: () => bridge.navigate(sessionId, action, { force: true }) }, t("viewInHarbor"))) : null) : null);
 }
 function MetricPills({ metrics }) {
-  return /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-metrics" }, Object.entries(metrics ?? {}).map(([key, value]) => /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-pill", key }, key, /* @__PURE__ */ import_react.default.createElement("b", null, format(value)))));
+  return /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-metrics" }, Object.entries(metrics ?? {}).map(([key, value]) => /* @__PURE__ */ import_react3.default.createElement("span", { className: "hse-pill", key }, key, /* @__PURE__ */ import_react3.default.createElement("b", null, format2(value)))));
 }
 function JobCard({ job, t, open, ask }) {
   const candidate = job.candidate ?? {};
@@ -1984,10 +2894,10 @@ function JobCard({ job, t, open, ask }) {
   const target = job.evaluationTarget ?? {};
   const coverage = job.coverage ?? {};
   const attention = jobAttention(job);
-  return /* @__PURE__ */ import_react.default.createElement("article", { className: "hse-job" }, /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-job-open", onClick: () => open(job.name) }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-job-body" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-job-top" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-job-title" }, /* @__PURE__ */ import_react.default.createElement("strong", null, job.name), /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-attention-label", "data-kind": attention.kind }, t(`health_${attention.kind}`), attention.count ? ` \xB7 ${attention.count} Trials / conditions` : ""), /* @__PURE__ */ import_react.default.createElement("small", null, new Date(job.updatedAt).toLocaleString(), " \xB7 ", progress.health ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-status", "data-status": job.status }, t(job.status))), historical ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("historicalTarget")), /* @__PURE__ */ import_react.default.createElement("b", null, target.source_kind ?? job.generationSource?.kind ?? "\u2014", " \xB7 ", target.record_count ?? job.nTrials ?? 0, " ", t("generationRecords"))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("generatorPopulation")), /* @__PURE__ */ import_react.default.createElement("b", null, generatorPopulationText(job.generatorPopulation ?? target.generator_population, t))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("executionMode")), /* @__PURE__ */ import_react.default.createElement("b", null, job.executionMode ?? t("observationMode"), " \xB7 ", t("gateNotApplicable"))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("progress")), /* @__PURE__ */ import_react.default.createElement("b", null, progress.completed ?? 0, "/", progress.total ?? job.nTrials ?? 0)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("scoredTrials")), /* @__PURE__ */ import_react.default.createElement("b", null, coverage.scored_trials ?? job.nValidScores ?? "\u2014", " / ", coverage.total_trials ?? job.nTrials ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("unscoredTrials")), /* @__PURE__ */ import_react.default.createElement("b", null, coverage.unscored_trials ?? job.nUnscoredTrials ?? 0, " \xB7 completed-unscored"))) : /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("candidate")), /* @__PURE__ */ import_react.default.createElement("b", null, candidate.candidate_id ?? "\u2014", " \xB7 ", candidate.version ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("dataset")), /* @__PURE__ */ import_react.default.createElement("b", null, job.dataset?.dataset_id ?? "\u2014", " \xB7 ", job.dataset?.version ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("mode")), /* @__PURE__ */ import_react.default.createElement("b", null, job.mode ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("progress")), /* @__PURE__ */ import_react.default.createElement("b", null, progress.completed ?? 0, "/", progress.total ?? job.nTrials ?? 0)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("validity")), /* @__PURE__ */ import_react.default.createElement("b", null, typeof job.nValidScores === "number" ? `${t("validScores")} ${job.nValidScores}` : t("unavailable"))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("exceptions")), /* @__PURE__ */ import_react.default.createElement("b", null, job.nExceptions))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-progress", "aria-label": `${progress.percent ?? 0}%` }, /* @__PURE__ */ import_react.default.createElement("i", { style: { width: `${progress.percent ?? 0}%` } })), /* @__PURE__ */ import_react.default.createElement(MetricPills, { metrics: job.metrics }))), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-job-ask", onClick: () => void ask(job) }, t("askAi")));
+  return /* @__PURE__ */ import_react3.default.createElement("article", { className: "hse-job" }, /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "hse-job-open", onClick: () => open(job.name) }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-job-body" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-job-top" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-job-title" }, /* @__PURE__ */ import_react3.default.createElement("strong", null, job.name), /* @__PURE__ */ import_react3.default.createElement("span", { className: "hse-attention-label", "data-kind": attention.kind }, t(`health_${attention.kind}`), attention.count ? ` \xB7 ${attention.count} Trials / conditions` : ""), /* @__PURE__ */ import_react3.default.createElement("small", null, new Date(job.updatedAt).toLocaleString(), " \xB7 ", progress.health ?? "\u2014")), /* @__PURE__ */ import_react3.default.createElement("span", { className: "hse-status", "data-status": job.status }, t(job.status))), historical ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-meta-grid" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("historicalTarget")), /* @__PURE__ */ import_react3.default.createElement("b", null, target.source_kind ?? job.generationSource?.kind ?? "\u2014", " \xB7 ", target.record_count ?? job.nTrials ?? 0, " ", t("generationRecords"))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("generatorPopulation")), /* @__PURE__ */ import_react3.default.createElement("b", null, generatorPopulationText(job.generatorPopulation ?? target.generator_population, t))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("executionMode")), /* @__PURE__ */ import_react3.default.createElement("b", null, job.executionMode ?? t("observationMode"), " \xB7 ", t("gateNotApplicable"))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("progress")), /* @__PURE__ */ import_react3.default.createElement("b", null, progress.completed ?? 0, "/", progress.total ?? job.nTrials ?? 0)), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("scoredTrials")), /* @__PURE__ */ import_react3.default.createElement("b", null, coverage.scored_trials ?? job.nValidScores ?? "\u2014", " / ", coverage.total_trials ?? job.nTrials ?? "\u2014")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("unscoredTrials")), /* @__PURE__ */ import_react3.default.createElement("b", null, coverage.unscored_trials ?? job.nUnscoredTrials ?? 0, " \xB7 completed-unscored"))) : /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-meta-grid" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("candidate")), /* @__PURE__ */ import_react3.default.createElement("b", null, candidate.candidate_id ?? "\u2014", " \xB7 ", candidate.version ?? "\u2014")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("dataset")), /* @__PURE__ */ import_react3.default.createElement("b", null, job.dataset?.dataset_id ?? "\u2014", " \xB7 ", job.dataset?.version ?? "\u2014")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("mode")), /* @__PURE__ */ import_react3.default.createElement("b", null, job.mode ?? "\u2014")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("progress")), /* @__PURE__ */ import_react3.default.createElement("b", null, progress.completed ?? 0, "/", progress.total ?? job.nTrials ?? 0)), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("validity")), /* @__PURE__ */ import_react3.default.createElement("b", null, typeof job.nValidScores === "number" ? `${t("validScores")} ${job.nValidScores}` : t("unavailable"))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-meta" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("exceptions")), /* @__PURE__ */ import_react3.default.createElement("b", null, job.nExceptions))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-progress", "aria-label": `${progress.percent ?? 0}%` }, /* @__PURE__ */ import_react3.default.createElement("i", { style: { width: `${progress.percent ?? 0}%` } })), /* @__PURE__ */ import_react3.default.createElement(MetricPills, { metrics: job.metrics }))), /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "hse-job-ask", onClick: () => void ask(job) }, t("askAi")));
 }
 function JsonSection({ title, value }) {
-  return /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, title), value ? /* @__PURE__ */ import_react.default.createElement("pre", { className: "hse-source" }, pretty(value)) : /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-muted" }, "\u2014"));
+  return /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, title), value ? /* @__PURE__ */ import_react3.default.createElement("pre", { className: "hse-source" }, pretty2(value)) : /* @__PURE__ */ import_react3.default.createElement("span", { className: "hse-muted" }, "\u2014"));
 }
 function evidenceCriterionOwners(criteria, evidenceRef) {
   if (!evidenceRef) return [];
@@ -2077,20 +2987,20 @@ function trialDetailErrorState(trial, error, observedAt) {
   return Object.freeze({ status: "error", trial: String(trial ?? ""), error: normalizeHarborUiError(error, observedAt) });
 }
 function TrialIssueActions({ detail, focused, onAsk, t }) {
-  const ref = (0, import_react.useRef)();
+  const ref = (0, import_react3.useRef)();
   const objects = detail?.interactionObjects?.filter((item) => item.kind === "exception") ?? [];
   const selected = objects.some((item) => item.id === focused?.localObject?.id);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (selected) ref.current?.scrollIntoView({ block: "center" });
   }, [selected]);
   if (!objects.length) return null;
   const reasons = detail.assessment?.score?.invalid_reasons ?? detail.lifecycle?.score?.invalid_reasons ?? [];
-  return /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-detail-group", ref, "data-highlight": String(selected) }, /* @__PURE__ */ import_react.default.createElement("h4", null, t("exceptions"), " / ", t("validity")), objects.map((object, index) => /* @__PURE__ */ import_react.default.createElement("p", { key: object.id }, reasons[index] ?? detail.lifecycle?.exception?.classification ?? detail.lifecycle?.exception?.type ?? t("exceptions"), " ", /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-inline-ask", onClick: () => void onAsk({ localObject: object }, t("askFinding")) }, t("askAboutThis")))));
+  return /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-detail-group", ref, "data-highlight": String(selected) }, /* @__PURE__ */ import_react3.default.createElement("h4", null, t("exceptions"), " / ", t("validity")), objects.map((object, index) => /* @__PURE__ */ import_react3.default.createElement("p", { key: object.id }, reasons[index] ?? detail.lifecycle?.exception?.classification ?? detail.lifecycle?.exception?.type ?? t("exceptions"), " ", /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "hse-inline-ask", onClick: () => void onAsk({ localObject: object }, t("askFinding")) }, t("askAboutThis")))));
 }
 function TrialDetail({ state, t, focused, onFocus, onAsk, retry }) {
-  const focusNodes = (0, import_react.useRef)(/* @__PURE__ */ new Map());
+  const focusNodes = (0, import_react3.useRef)(/* @__PURE__ */ new Map());
   const detail = state?.status === "ready" ? state.value : void 0;
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     const key = focused?.localObject?.id ? `local:${focused.localObject.id}` : focused?.evidenceRef ? evidenceFocusKey(focused.criterion, focused.evidenceRef) : focused?.criterion ? `criterion:${focused.criterion}` : void 0;
     const node = key ? focusNodes.current.get(key) : void 0;
     if (!node) return;
@@ -2101,30 +3011,30 @@ function TrialDetail({ state, t, focused, onFocus, onAsk, retry }) {
     if (node) focusNodes.current.set(key, node);
     else focusNodes.current.delete(key);
   };
-  if (state?.status === "loading") return /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-trial-detail" }, /* @__PURE__ */ import_react.default.createElement(HarborSkeleton, { kind: "trial-detail", rows: 7, label: t("loadingTrial") }));
-  if (state?.status === "error") return /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-trial-detail" }, /* @__PURE__ */ import_react.default.createElement(HarborErrorState, { error: state.error, retry, t }));
-  if (!detail) return /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-trial-detail hse-muted" }, t("selectTrialHint"));
+  if (state?.status === "loading") return /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-trial-detail" }, /* @__PURE__ */ import_react3.default.createElement(HarborSkeleton, { kind: "trial-detail", rows: 7, label: t("loadingTrial") }));
+  if (state?.status === "error") return /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-trial-detail" }, /* @__PURE__ */ import_react3.default.createElement(HarborErrorState, { error: state.error, retry, t }));
+  if (!detail) return /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-trial-detail hse-muted" }, t("selectTrialHint"));
   const assessment = detail.assessment;
   const attemptObject = detail.interactionObjects?.find((ref) => ref.kind === "attempt");
-  if (!assessment) return /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-trial-detail" }, /* @__PURE__ */ import_react.default.createElement(TrialIssueActions, { detail, focused, onAsk, t }), attemptObject ? /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-inline-ask", onClick: () => void onAsk({ localObject: attemptObject }, t("askAttempt")) }, t("askAboutThis"), " \xB7 ", t("attempt")) : null, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-trial-score" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("span", null, detail.lifecycle?.name ?? detail.trial), /* @__PURE__ */ import_react.default.createElement("b", null, "\u2014")), /* @__PURE__ */ import_react.default.createElement("span", null, detail.status)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-detail-group" }, /* @__PURE__ */ import_react.default.createElement("h4", null, t("currentStatus")), /* @__PURE__ */ import_react.default.createElement("pre", null, pretty(detail.lifecycle))));
+  if (!assessment) return /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-trial-detail" }, /* @__PURE__ */ import_react3.default.createElement(TrialIssueActions, { detail, focused, onAsk, t }), attemptObject ? /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "hse-inline-ask", onClick: () => void onAsk({ localObject: attemptObject }, t("askAttempt")) }, t("askAboutThis"), " \xB7 ", t("attempt")) : null, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-trial-score" }, /* @__PURE__ */ import_react3.default.createElement("div", null, /* @__PURE__ */ import_react3.default.createElement("span", null, detail.lifecycle?.name ?? detail.trial), /* @__PURE__ */ import_react3.default.createElement("b", null, "\u2014")), /* @__PURE__ */ import_react3.default.createElement("span", null, detail.status)), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-detail-group" }, /* @__PURE__ */ import_react3.default.createElement("h4", null, t("currentStatus")), /* @__PURE__ */ import_react3.default.createElement("pre", null, pretty2(detail.lifecycle))));
   const score = assessment.score ?? { value: assessment.rewards?.reward, valid: assessment.status === "assessed" };
   const unscored = detail.status === "completed-unscored" || detail.lifecycle?.status === "completed-unscored";
   const criteria = assessment.criteria ?? Object.entries(assessment.rewards ?? {}).map(([id, value]) => ({ id, score: value }));
   const findingObjects = detail.interactionObjects?.filter((ref) => ref.kind === "finding") ?? [];
-  return /* @__PURE__ */ import_react.default.createElement("article", { className: "hse-trial-detail", "aria-live": "polite" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-trial-score" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("span", null, t("score")), /* @__PURE__ */ import_react.default.createElement("b", null, score.valid ? format(score.value) : "\u2014")), /* @__PURE__ */ import_react.default.createElement("span", { className: unscored ? "hse-muted" : score.valid ? "hse-valid" : "hse-invalid" }, unscored ? "completed-unscored" : score.valid ? `\u2713 ${t("valid")}` : `\xD7 ${t("invalid")}`)), /* @__PURE__ */ import_react.default.createElement(TrialIssueActions, { detail, focused, onAsk, t }), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-detail-group" }, /* @__PURE__ */ import_react.default.createElement("h4", null, t("findings")), /* @__PURE__ */ import_react.default.createElement("ul", null, (assessment.findings ?? []).length ? assessment.findings.map((item, index) => /* @__PURE__ */ import_react.default.createElement("li", { key: index, ref: (node) => ownFocusNode(`local:${findingObjects[index]?.id}`, node), "data-highlight": String(Boolean(findingObjects[index]?.id) && focused?.localObject?.id === findingObjects[index]?.id) }, item.code ? `${item.code}: ` : "", item.message ?? String(item), findingObjects[index] ? /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-inline-ask", onClick: () => void onAsk({ localObject: findingObjects[index] }, t("askFinding")) }, t("askAboutThis")) : null)) : /* @__PURE__ */ import_react.default.createElement("li", null, "\u2014"))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-detail-group" }, /* @__PURE__ */ import_react.default.createElement("h4", null, t("recommendations")), /* @__PURE__ */ import_react.default.createElement("ul", null, (assessment.recommendations ?? []).length ? assessment.recommendations.map((item, index) => /* @__PURE__ */ import_react.default.createElement("li", { key: index }, item.message ?? String(item))) : /* @__PURE__ */ import_react.default.createElement("li", null, "\u2014"))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-detail-group" }, /* @__PURE__ */ import_react.default.createElement("h4", null, t("output")), /* @__PURE__ */ import_react.default.createElement(ArtifactPreview, { detail, t })), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-detail-group" }, /* @__PURE__ */ import_react.default.createElement("h4", null, t("criteria")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-criteria" }, criteria.map((item) => /* @__PURE__ */ import_react.default.createElement("div", { ref: (node) => ownFocusNode(`criterion:${item.id}`, node), className: "hse-criterion", "data-highlight": String(focused?.criterion === item.id), key: item.id, role: "button", tabIndex: 0, onClick: () => onFocus({ criterion: item.id }), onKeyDown: (event) => {
+  return /* @__PURE__ */ import_react3.default.createElement("article", { className: "hse-trial-detail", "aria-live": "polite" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-trial-score" }, /* @__PURE__ */ import_react3.default.createElement("div", null, /* @__PURE__ */ import_react3.default.createElement("span", null, t("score")), /* @__PURE__ */ import_react3.default.createElement("b", null, score.valid ? format2(score.value) : "\u2014")), /* @__PURE__ */ import_react3.default.createElement("span", { className: unscored ? "hse-muted" : score.valid ? "hse-valid" : "hse-invalid" }, unscored ? "completed-unscored" : score.valid ? `\u2713 ${t("valid")}` : `\xD7 ${t("invalid")}`)), /* @__PURE__ */ import_react3.default.createElement(TrialIssueActions, { detail, focused, onAsk, t }), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-detail-group" }, /* @__PURE__ */ import_react3.default.createElement("h4", null, t("findings")), /* @__PURE__ */ import_react3.default.createElement("ul", null, (assessment.findings ?? []).length ? assessment.findings.map((item, index) => /* @__PURE__ */ import_react3.default.createElement("li", { key: index, ref: (node) => ownFocusNode(`local:${findingObjects[index]?.id}`, node), "data-highlight": String(Boolean(findingObjects[index]?.id) && focused?.localObject?.id === findingObjects[index]?.id) }, item.code ? `${item.code}: ` : "", item.message ?? String(item), findingObjects[index] ? /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "hse-inline-ask", onClick: () => void onAsk({ localObject: findingObjects[index] }, t("askFinding")) }, t("askAboutThis")) : null)) : /* @__PURE__ */ import_react3.default.createElement("li", null, "\u2014"))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-detail-group" }, /* @__PURE__ */ import_react3.default.createElement("h4", null, t("recommendations")), /* @__PURE__ */ import_react3.default.createElement("ul", null, (assessment.recommendations ?? []).length ? assessment.recommendations.map((item, index) => /* @__PURE__ */ import_react3.default.createElement("li", { key: index }, item.message ?? String(item))) : /* @__PURE__ */ import_react3.default.createElement("li", null, "\u2014"))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-detail-group" }, /* @__PURE__ */ import_react3.default.createElement("h4", null, t("output")), /* @__PURE__ */ import_react3.default.createElement(ArtifactPreview, { detail, t })), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-detail-group" }, /* @__PURE__ */ import_react3.default.createElement("h4", null, t("criteria")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-criteria" }, criteria.map((item) => /* @__PURE__ */ import_react3.default.createElement("div", { ref: (node) => ownFocusNode(`criterion:${item.id}`, node), className: "hse-criterion", "data-highlight": String(focused?.criterion === item.id), key: item.id, role: "button", tabIndex: 0, onClick: () => onFocus({ criterion: item.id }), onKeyDown: (event) => {
     if (event.key === "Enter" || event.key === " ") onFocus({ criterion: item.id });
-  } }, /* @__PURE__ */ import_react.default.createElement("span", null, item.label ?? item.id), /* @__PURE__ */ import_react.default.createElement("b", null, format(item.score)), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-inline-ask", onClick: (event) => {
+  } }, /* @__PURE__ */ import_react3.default.createElement("span", null, item.label ?? item.id), /* @__PURE__ */ import_react3.default.createElement("b", null, format2(item.score)), /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "hse-inline-ask", onClick: (event) => {
     event.stopPropagation();
     void onAsk({ criterion: item.id }, t("suggestedQuestion1"));
-  } }, t("askAi")), (item.evidence_refs ?? []).map((ref) => /* @__PURE__ */ import_react.default.createElement("button", { ref: (node) => ownFocusNode(evidenceFocusKey(item.id, ref), node), type: "button", className: "hse-inline-ask", "data-highlight": String(isEvidenceFocused(focused, item.id, ref)), key: ref, onClick: (event) => {
+  } }, t("askAi")), (item.evidence_refs ?? []).map((ref) => /* @__PURE__ */ import_react3.default.createElement("button", { ref: (node) => ownFocusNode(evidenceFocusKey(item.id, ref), node), type: "button", className: "hse-inline-ask", "data-highlight": String(isEvidenceFocused(focused, item.id, ref)), key: ref, onClick: (event) => {
     event.stopPropagation();
     void onAsk({ criterion: item.id, evidenceRef: ref }, t("suggestedQuestion3"));
-  } }, t("evidence"), " \xB7 ", short(ref))))))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-detail-group" }, /* @__PURE__ */ import_react.default.createElement("h4", null, t("provenance")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-provenance" }, (assessment.evidence_provenance ?? assessment.evidence ?? []).map((item, index) => {
+  } }, t("evidence"), " \xB7 ", short(ref))))))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-detail-group" }, /* @__PURE__ */ import_react3.default.createElement("h4", null, t("provenance")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-provenance" }, (assessment.evidence_provenance ?? assessment.evidence ?? []).map((item, index) => {
     const ref = item.id ?? item.evidence_ref;
     const owners = evidenceCriterionOwners(criteria, ref);
     const enabled = Boolean(ref && owners.length === 1);
-    return /* @__PURE__ */ import_react.default.createElement("button", { type: "button", disabled: !enabled, "data-highlight": String(enabled && isEvidenceFocused(focused, owners[0], ref)), key: ref ?? index, title: enabled ? item.artifact_ref : t("chooseCriterionEvidence"), onClick: () => enabled && void onAsk({ criterion: owners[0], evidenceRef: ref }, t("suggestedQuestion3")) }, item.label ?? item.kind ?? "Evidence");
-  }))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-detail-group", ref: (node) => ownFocusNode(`local:${attemptObject?.id}`, node), "data-highlight": String(Boolean(attemptObject?.id) && focused?.localObject?.id === attemptObject?.id) }, /* @__PURE__ */ import_react.default.createElement("h4", null, t("timing")), attemptObject ? /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-inline-ask", onClick: () => void onAsk({ localObject: attemptObject }, t("askAttempt")) }, t("askAboutThis"), " \xB7 ", t("attempt"), " ", detail.lifecycle?.attempt) : null, /* @__PURE__ */ import_react.default.createElement("pre", null, pretty(assessment.process ?? detail.lifecycle))), /* @__PURE__ */ import_react.default.createElement("details", { className: "hse-detail-group" }, /* @__PURE__ */ import_react.default.createElement("summary", null, t("audit")), /* @__PURE__ */ import_react.default.createElement("pre", null, pretty(assessment))));
+    return /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", disabled: !enabled, "data-highlight": String(enabled && isEvidenceFocused(focused, owners[0], ref)), key: ref ?? index, title: enabled ? item.artifact_ref : t("chooseCriterionEvidence"), onClick: () => enabled && void onAsk({ criterion: owners[0], evidenceRef: ref }, t("suggestedQuestion3")) }, item.label ?? item.kind ?? "Evidence");
+  }))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-detail-group", ref: (node) => ownFocusNode(`local:${attemptObject?.id}`, node), "data-highlight": String(Boolean(attemptObject?.id) && focused?.localObject?.id === attemptObject?.id) }, /* @__PURE__ */ import_react3.default.createElement("h4", null, t("timing")), attemptObject ? /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "hse-inline-ask", onClick: () => void onAsk({ localObject: attemptObject }, t("askAttempt")) }, t("askAboutThis"), " \xB7 ", t("attempt"), " ", detail.lifecycle?.attempt) : null, /* @__PURE__ */ import_react3.default.createElement("pre", null, pretty2(assessment.process ?? detail.lifecycle))), /* @__PURE__ */ import_react3.default.createElement("details", { className: "hse-detail-group" }, /* @__PURE__ */ import_react3.default.createElement("summary", null, t("audit")), /* @__PURE__ */ import_react3.default.createElement("pre", null, pretty2(assessment))));
 }
 function mergeHarborFocus(current, incoming) {
   if (incoming.localObject) return { localObject: incoming.localObject };
@@ -2134,9 +3044,9 @@ function mergeHarborFocus(current, incoming) {
 }
 function TrialSelectionBar({ job, workspace, checked, setChecked, page, filters, contextFor, setContext, askContext, t }) {
   const update = useHarborMutation();
-  const [state, setState] = (0, import_react.useState)({ status: "idle" });
-  const owner = (0, import_react.useRef)(0);
-  (0, import_react.useEffect)(() => {
+  const [state, setState] = (0, import_react3.useState)({ status: "idle" });
+  const owner = (0, import_react3.useRef)(0);
+  (0, import_react3.useEffect)(() => {
     owner.current += 1;
     setState({ status: "idle" });
     return () => {
@@ -2157,22 +3067,22 @@ function TrialSelectionBar({ job, workspace, checked, setChecked, page, filters,
       if (generation === owner.current) setState({ status: "error", error: normalizeHarborUiError(error) });
     }
   };
-  return /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-selection-bar" }, /* @__PURE__ */ import_react.default.createElement("strong", null, t("selectedCount"), ": ", state.value?.count ?? checked.length, state.value ? ` \xB7 ${state.value.mode}` : ""), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-local-actions" }, /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => setChecked([.../* @__PURE__ */ new Set([...checked, ...(page?.items ?? []).map((trial) => trial.id)])]) }, t("allVisible")), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", disabled: !page?.total || state.status === "loading", onClick: () => void select("query-snapshot") }, t("selectFiltered"), " (", page?.total ?? 0, ")"), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", disabled: state.status === "loading" || !checked.length && !state.value, onClick: () => state.value ? void askContext(state.context, t("askSelected")) : void select("explicit", true) }, t("askSelected")), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => {
+  return /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-selection-bar" }, /* @__PURE__ */ import_react3.default.createElement("strong", null, t("selectedCount"), ": ", state.value?.count ?? checked.length, state.value ? ` \xB7 ${state.value.mode}` : ""), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-local-actions" }, /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", onClick: () => setChecked([.../* @__PURE__ */ new Set([...checked, ...(page?.items ?? []).map((trial) => trial.id)])]) }, t("allVisible")), /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", disabled: !page?.total || state.status === "loading", onClick: () => void select("query-snapshot") }, t("selectFiltered"), " (", page?.total ?? 0, ")"), /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", disabled: state.status === "loading" || !checked.length && !state.value, onClick: () => state.value ? void askContext(state.context, t("askSelected")) : void select("explicit", true) }, t("askSelected")), /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", onClick: () => {
     owner.current += 1;
     setChecked([]);
     setState({ status: "idle" });
     setContext(contextFor({}));
-  } }, t("clearSelection"))), state.status === "loading" ? /* @__PURE__ */ import_react.default.createElement("small", null, t("bindingContext")) : null, state.value ? /* @__PURE__ */ import_react.default.createElement("details", null, /* @__PURE__ */ import_react.default.createElement("summary", null, t("contextIdentity")), /* @__PURE__ */ import_react.default.createElement("code", null, state.value.ref.sourceDigest, " \xB7 ", state.value.filterDigest, " \xB7 ", state.value.expiresAt)) : null, state.error ? /* @__PURE__ */ import_react.default.createElement(HarborErrorState, { error: state.error, t }) : null);
+  } }, t("clearSelection"))), state.status === "loading" ? /* @__PURE__ */ import_react3.default.createElement("small", null, t("bindingContext")) : null, state.value ? /* @__PURE__ */ import_react3.default.createElement("details", null, /* @__PURE__ */ import_react3.default.createElement("summary", null, t("contextIdentity")), /* @__PURE__ */ import_react3.default.createElement("code", null, state.value.ref.sourceDigest, " \xB7 ", state.value.filterDigest, " \xB7 ", state.value.expiresAt)) : null, state.error ? /* @__PURE__ */ import_react3.default.createElement(HarborErrorState, { error: state.error, t }) : null);
 }
 function TrialExplorer({ job, workspace, active, navigation, restoreView, onViewStateChange, onRestoreReady, onRestoreCancel, contextFor, setContext, resetContext, askContext, t }) {
   const requestApi = useHarborApi();
-  const [checked, setChecked] = (0, import_react.useState)([]);
-  const [selectionError, setSelectionError] = (0, import_react.useState)();
-  const selectionSequence = (0, import_react.useRef)(0);
-  (0, import_react.useEffect)(() => () => {
+  const [checked, setChecked] = (0, import_react3.useState)([]);
+  const [selectionError, setSelectionError] = (0, import_react3.useState)();
+  const selectionSequence = (0, import_react3.useRef)(0);
+  (0, import_react3.useEffect)(() => () => {
     selectionSequence.current += 1;
   }, []);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     const ref = navigation?.target?.localObject;
     if (ref?.kind !== "trial-set") return void 0;
     const sequence = ++selectionSequence.current;
@@ -2188,30 +3098,30 @@ function TrialExplorer({ job, workspace, active, navigation, restoreView, onView
       if (sequence === selectionSequence.current) selectionSequence.current += 1;
     };
   }, [navigation?.actionId]);
-  const [query, setQuery] = (0, import_react.useState)("");
-  const [status, setStatus] = (0, import_react.useState)("");
-  const [validity, setValidity] = (0, import_react.useState)("");
-  const [sort, setSort] = (0, import_react.useState)("dataset-order");
-  const [offset, setOffset] = (0, import_react.useState)(0);
-  const [listState, setListState] = (0, import_react.useState)({ status: "loading", stale: false });
-  const [listRetry, setListRetry] = (0, import_react.useState)(0);
-  const [selected, setSelected] = (0, import_react.useState)();
-  const [detailState, setDetailState] = (0, import_react.useState)({ status: "empty" });
-  const [focused, setFocused] = (0, import_react.useState)({});
-  const [restoreSettled, setRestoreSettled] = (0, import_react.useState)();
-  const detailSequence = (0, import_react.useRef)(0);
-  const alive = (0, import_react.useRef)(true);
-  const handledNavigation = (0, import_react.useRef)();
-  const handledRestore = (0, import_react.useRef)();
-  const reportedRestore = (0, import_react.useRef)();
-  const restoreOwner = (0, import_react.useRef)();
-  const listRequestKey = (0, import_react.useMemo)(
+  const [query, setQuery] = (0, import_react3.useState)("");
+  const [status, setStatus] = (0, import_react3.useState)("");
+  const [validity, setValidity] = (0, import_react3.useState)("");
+  const [sort, setSort] = (0, import_react3.useState)("dataset-order");
+  const [offset, setOffset] = (0, import_react3.useState)(0);
+  const [listState, setListState] = (0, import_react3.useState)({ status: "loading", stale: false });
+  const [listRetry, setListRetry] = (0, import_react3.useState)(0);
+  const [selected, setSelected] = (0, import_react3.useState)();
+  const [detailState, setDetailState] = (0, import_react3.useState)({ status: "empty" });
+  const [focused, setFocused] = (0, import_react3.useState)({});
+  const [restoreSettled, setRestoreSettled] = (0, import_react3.useState)();
+  const detailSequence = (0, import_react3.useRef)(0);
+  const alive = (0, import_react3.useRef)(true);
+  const handledNavigation = (0, import_react3.useRef)();
+  const handledRestore = (0, import_react3.useRef)();
+  const reportedRestore = (0, import_react3.useRef)();
+  const restoreOwner = (0, import_react3.useRef)();
+  const listRequestKey = (0, import_react3.useMemo)(
     () => JSON.stringify([workspace, job, offset, query, status, validity, sort]),
     [workspace, job, offset, query, status, validity, sort]
   );
   const page = listState.page;
   const detail = detailState.status === "ready" ? detailState.value : void 0;
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     let cancelled = false;
     let poll;
     setListState((current) => current.requestKey === listRequestKey ? { ...current, status: current.page ? "refreshing" : "loading" } : { requestKey: listRequestKey, status: "loading", page: void 0, stale: false, error: void 0 });
@@ -2234,12 +3144,12 @@ function TrialExplorer({ job, workspace, active, navigation, restoreView, onView
       if (poll) window.clearTimeout(poll);
     };
   }, [active, listRequestKey, listRetry, requestApi]);
-  const cancelPendingRestore = (0, import_react.useCallback)(() => {
+  const cancelPendingRestore = (0, import_react3.useCallback)(() => {
     restoreOwner.current = void 0;
     setRestoreSettled(void 0);
     onRestoreCancel?.();
   }, [onRestoreCancel]);
-  const choose = (0, import_react.useCallback)(async (trial, focus2 = {}, view = {}, restoreId) => {
+  const choose = (0, import_react3.useCallback)(async (trial, focus2 = {}, view = {}, restoreId) => {
     if (restoreId) restoreOwner.current = restoreId;
     else cancelPendingRestore();
     const sequence = ++detailSequence.current;
@@ -2269,20 +3179,20 @@ function TrialExplorer({ job, workspace, active, navigation, restoreView, onView
     setContext(context);
     return { owned: true, context };
   }, [cancelPendingRestore, contextFor, job, requestApi, resetContext, setContext, sort, status, validity, workspace]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     alive.current = true;
     return () => {
       alive.current = false;
       detailSequence.current += 1;
     };
   }, []);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     detailSequence.current += 1;
     setSelected(void 0);
     setDetailState({ status: "empty" });
     setFocused({});
   }, [job, workspace]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     const target = navigation?.target;
     if (!navigation?.actionId) {
       handledNavigation.current = void 0;
@@ -2307,7 +3217,7 @@ function TrialExplorer({ job, workspace, active, navigation, restoreView, onView
     setOffset(0);
     void choose(target.trial, view.focus, view);
   }, [cancelPendingRestore, choose, navigation, resetContext]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (!restoreView?.restoreId || handledRestore.current === restoreView.restoreId) return;
     const restoreId = restoreView.restoreId;
     handledRestore.current = restoreId;
@@ -2331,7 +3241,7 @@ function TrialExplorer({ job, workspace, active, navigation, restoreView, onView
       setRestoreSettled(restoreId);
     }
   }, [choose, resetContext, restoreView?.restoreId]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     const restoreId = restoreView?.restoreId;
     const listSettled = listState.status === "ready" || listState.status === "error";
     if (!restoreId || restoreOwner.current !== restoreId || restoreSettled !== restoreId || !listSettled || reportedRestore.current === restoreId) return void 0;
@@ -2341,7 +3251,7 @@ function TrialExplorer({ job, workspace, active, navigation, restoreView, onView
     });
     return () => window.cancelAnimationFrame(frame);
   }, [listState.status, onRestoreReady, restoreSettled, restoreView?.restoreId]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     onViewStateChange?.({
       trial: selected,
       focus: { ...focused },
@@ -2350,7 +3260,7 @@ function TrialExplorer({ job, workspace, active, navigation, restoreView, onView
       offset
     });
   }, [focused, offset, onViewStateChange, query, selected, sort, status, validity]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (!selected) return;
     setContext(contextFor({
       trial: selected,
@@ -2388,39 +3298,39 @@ function TrialExplorer({ job, workspace, active, navigation, restoreView, onView
     if (selected) void choose(selected, focused);
   };
   const filtered = hasTrialFilters({ query, status, validity });
-  const selectionFilters = (0, import_react.useMemo)(() => ({ query, status, validity, sort }), [query, status, validity, sort]);
+  const selectionFilters = (0, import_react3.useMemo)(() => ({ query, status, validity, sort }), [query, status, validity, sort]);
   const emptyPage = Boolean(page && !page.items?.length);
-  return /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-trial-layout" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-trial-list" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-trial-tools" }, /* @__PURE__ */ import_react.default.createElement("input", { className: "hse-input", value: query, placeholder: t("search"), onChange: (event) => {
+  return /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-trial-layout" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-trial-list" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-trial-tools" }, /* @__PURE__ */ import_react3.default.createElement("input", { className: "hse-input", value: query, placeholder: t("search"), onChange: (event) => {
     cancelPendingRestore();
     setQuery(event.target.value);
     setOffset(0);
-  } }), /* @__PURE__ */ import_react.default.createElement("select", { className: "hse-select", value: status, onChange: (event) => {
+  } }), /* @__PURE__ */ import_react3.default.createElement("select", { className: "hse-select", value: status, onChange: (event) => {
     cancelPendingRestore();
     setStatus(event.target.value);
     setOffset(0);
-  } }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, t("all")), /* @__PURE__ */ import_react.default.createElement("option", { value: "completed" }, "completed"), /* @__PURE__ */ import_react.default.createElement("option", { value: "completed-unscored" }, "completed-unscored"), /* @__PURE__ */ import_react.default.createElement("option", { value: "candidate-quality-failed" }, "candidate-quality-failed"), /* @__PURE__ */ import_react.default.createElement("option", { value: "infrastructure-error" }, "infrastructure-error"), /* @__PURE__ */ import_react.default.createElement("option", { value: "evaluation-error" }, "evaluation-error"), /* @__PURE__ */ import_react.default.createElement("option", { value: "running-agent" }, "running-agent"), /* @__PURE__ */ import_react.default.createElement("option", { value: "evaluating" }, "evaluating")), /* @__PURE__ */ import_react.default.createElement("select", { className: "hse-select", value: validity, onChange: (event) => {
+  } }, /* @__PURE__ */ import_react3.default.createElement("option", { value: "" }, t("all")), /* @__PURE__ */ import_react3.default.createElement("option", { value: "completed" }, "completed"), /* @__PURE__ */ import_react3.default.createElement("option", { value: "completed-unscored" }, "completed-unscored"), /* @__PURE__ */ import_react3.default.createElement("option", { value: "candidate-quality-failed" }, "candidate-quality-failed"), /* @__PURE__ */ import_react3.default.createElement("option", { value: "infrastructure-error" }, "infrastructure-error"), /* @__PURE__ */ import_react3.default.createElement("option", { value: "evaluation-error" }, "evaluation-error"), /* @__PURE__ */ import_react3.default.createElement("option", { value: "running-agent" }, "running-agent"), /* @__PURE__ */ import_react3.default.createElement("option", { value: "evaluating" }, "evaluating")), /* @__PURE__ */ import_react3.default.createElement("select", { className: "hse-select", value: validity, onChange: (event) => {
     cancelPendingRestore();
     setValidity(event.target.value);
     setOffset(0);
-  } }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, t("validity")), /* @__PURE__ */ import_react.default.createElement("option", { value: "true" }, t("valid")), /* @__PURE__ */ import_react.default.createElement("option", { value: "false" }, t("invalid"))), /* @__PURE__ */ import_react.default.createElement("select", { className: "hse-select", value: sort, onChange: (event) => {
+  } }, /* @__PURE__ */ import_react3.default.createElement("option", { value: "" }, t("validity")), /* @__PURE__ */ import_react3.default.createElement("option", { value: "true" }, t("valid")), /* @__PURE__ */ import_react3.default.createElement("option", { value: "false" }, t("invalid"))), /* @__PURE__ */ import_react3.default.createElement("select", { className: "hse-select", value: sort, onChange: (event) => {
     cancelPendingRestore();
     setSort(event.target.value);
-  } }, /* @__PURE__ */ import_react.default.createElement("option", { value: "dataset-order" }, t("datasetOrder")), /* @__PURE__ */ import_react.default.createElement("option", { value: "latest-completed" }, t("latest")), /* @__PURE__ */ import_react.default.createElement("option", { value: "lowest-score" }, t("lowest")), /* @__PURE__ */ import_react.default.createElement("option", { value: "errors" }, t("errorsFirst")))), selectionError ? /* @__PURE__ */ import_react.default.createElement(HarborErrorState, { error: selectionError, t }) : null, /* @__PURE__ */ import_react.default.createElement(TrialSelectionBar, { job, workspace, checked, setChecked, page, filters: selectionFilters, contextFor, setContext, askContext, t }), listState.error ? /* @__PURE__ */ import_react.default.createElement(HarborErrorState, { error: listState.errorDetails ?? listState.error, title: listState.stale ? t("trialListStale") : t("trialListUnavailable"), retry: () => setListRetry((value) => value + 1), t }) : null, !page && listState.status === "loading" ? /* @__PURE__ */ import_react.default.createElement(HarborSkeleton, { kind: "trial-list", rows: 6, label: t("loading") }) : emptyPage ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-filter-empty" }, /* @__PURE__ */ import_react.default.createElement("b", null, filtered ? t("noFilteredTrials") : t("noData")), filtered ? /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: clearFilters }, t("clearFilters")) : null) : page ? /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-table-wrap" }, /* @__PURE__ */ import_react.default.createElement("table", { className: "hse-table" }, /* @__PURE__ */ import_react.default.createElement("thead", null, /* @__PURE__ */ import_react.default.createElement("tr", null, /* @__PURE__ */ import_react.default.createElement("th", null, "#"), /* @__PURE__ */ import_react.default.createElement("th", null, t("queryTrial")), /* @__PURE__ */ import_react.default.createElement("th", null, t("statusLabel")), /* @__PURE__ */ import_react.default.createElement("th", null, t("score")), /* @__PURE__ */ import_react.default.createElement("th", null, t("attempt")))), /* @__PURE__ */ import_react.default.createElement("tbody", null, page.items?.map((trial) => {
+  } }, /* @__PURE__ */ import_react3.default.createElement("option", { value: "dataset-order" }, t("datasetOrder")), /* @__PURE__ */ import_react3.default.createElement("option", { value: "latest-completed" }, t("latest")), /* @__PURE__ */ import_react3.default.createElement("option", { value: "lowest-score" }, t("lowest")), /* @__PURE__ */ import_react3.default.createElement("option", { value: "errors" }, t("errorsFirst")))), selectionError ? /* @__PURE__ */ import_react3.default.createElement(HarborErrorState, { error: selectionError, t }) : null, /* @__PURE__ */ import_react3.default.createElement(TrialSelectionBar, { job, workspace, checked, setChecked, page, filters: selectionFilters, contextFor, setContext, askContext, t }), listState.error ? /* @__PURE__ */ import_react3.default.createElement(HarborErrorState, { error: listState.errorDetails ?? listState.error, title: listState.stale ? t("trialListStale") : t("trialListUnavailable"), retry: () => setListRetry((value) => value + 1), t }) : null, !page && listState.status === "loading" ? /* @__PURE__ */ import_react3.default.createElement(HarborSkeleton, { kind: "trial-list", rows: 6, label: t("loading") }) : emptyPage ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-filter-empty" }, /* @__PURE__ */ import_react3.default.createElement("b", null, filtered ? t("noFilteredTrials") : t("noData")), filtered ? /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", onClick: clearFilters }, t("clearFilters")) : null) : page ? /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-table-wrap" }, /* @__PURE__ */ import_react3.default.createElement("table", { className: "hse-table" }, /* @__PURE__ */ import_react3.default.createElement("thead", null, /* @__PURE__ */ import_react3.default.createElement("tr", null, /* @__PURE__ */ import_react3.default.createElement("th", null, "#"), /* @__PURE__ */ import_react3.default.createElement("th", null, t("queryTrial")), /* @__PURE__ */ import_react3.default.createElement("th", null, t("statusLabel")), /* @__PURE__ */ import_react3.default.createElement("th", null, t("score")), /* @__PURE__ */ import_react3.default.createElement("th", null, t("attempt")))), /* @__PURE__ */ import_react3.default.createElement("tbody", null, page.items?.map((trial) => {
     const trialId = trial.id ?? trial.datasetTrial;
-    return /* @__PURE__ */ import_react.default.createElement("tr", { key: `${trial.id}-${trial.attempt}`, "data-selected": String(selected) === String(trialId) }, /* @__PURE__ */ import_react.default.createElement("td", null, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", "aria-label": `${t("selectTrial")} ${trialId}`, checked: checked.includes(trialId), onChange: (event) => setChecked((current) => event.target.checked ? [.../* @__PURE__ */ new Set([...current, trialId])] : current.filter((id) => id !== trialId)) }), trial.datasetOrder + 1), /* @__PURE__ */ import_react.default.createElement("td", null, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-trial-name" }, /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => void choose(trialId) }, trial.displayName ?? trial.datasetTrial ?? trial.name), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-trial-ask", onClick: () => void askTrial(trialId) }, t("askAi")))), /* @__PURE__ */ import_react.default.createElement("td", null, trial.status), /* @__PURE__ */ import_react.default.createElement("td", null, trial.score?.valid ? format(trial.score.value ?? trial.rewards?.reward) : "\u2014"), /* @__PURE__ */ import_react.default.createElement("td", null, trial.attempt));
-  })))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-pager" }, /* @__PURE__ */ import_react.default.createElement("span", null, page.total ? `${offset + 1}\u2013${Math.min(offset + (page.items?.length ?? 0), page.total)} / ${page.total}` : "0 / 0"), /* @__PURE__ */ import_react.default.createElement("button", { disabled: !offset, onClick: () => {
+    return /* @__PURE__ */ import_react3.default.createElement("tr", { key: `${trial.id}-${trial.attempt}`, "data-selected": String(selected) === String(trialId) }, /* @__PURE__ */ import_react3.default.createElement("td", null, /* @__PURE__ */ import_react3.default.createElement("input", { type: "checkbox", "aria-label": `${t("selectTrial")} ${trialId}`, checked: checked.includes(trialId), onChange: (event) => setChecked((current) => event.target.checked ? [.../* @__PURE__ */ new Set([...current, trialId])] : current.filter((id) => id !== trialId)) }), trial.datasetOrder + 1), /* @__PURE__ */ import_react3.default.createElement("td", null, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-trial-name" }, /* @__PURE__ */ import_react3.default.createElement("button", { onClick: () => void choose(trialId) }, trial.displayName ?? trial.datasetTrial ?? trial.name), /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "hse-trial-ask", onClick: () => void askTrial(trialId) }, t("askAi")))), /* @__PURE__ */ import_react3.default.createElement("td", null, trial.status), /* @__PURE__ */ import_react3.default.createElement("td", null, trial.score?.valid ? format2(trial.score.value ?? trial.rewards?.reward) : "\u2014"), /* @__PURE__ */ import_react3.default.createElement("td", null, trial.attempt));
+  })))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-pager" }, /* @__PURE__ */ import_react3.default.createElement("span", null, page.total ? `${offset + 1}\u2013${Math.min(offset + (page.items?.length ?? 0), page.total)} / ${page.total}` : "0 / 0"), /* @__PURE__ */ import_react3.default.createElement("button", { disabled: !offset, onClick: () => {
     cancelPendingRestore();
     setOffset(Math.max(0, offset - 100));
-  } }, t("previous")), /* @__PURE__ */ import_react.default.createElement("button", { disabled: !page.hasMore, onClick: () => {
+  } }, t("previous")), /* @__PURE__ */ import_react3.default.createElement("button", { disabled: !page.hasMore, onClick: () => {
     cancelPendingRestore();
     setOffset(offset + 100);
-  } }, t("next")))) : null), /* @__PURE__ */ import_react.default.createElement(TrialDetail, { state: detailState, focused, onFocus: focus, onAsk: ask, retry: retryDetail, t }));
+  } }, t("next")))) : null), /* @__PURE__ */ import_react3.default.createElement(TrialDetail, { state: detailState, focused, onFocus: focus, onAsk: ask, retry: retryDetail, t }));
 }
 function DatasetPanel({ job, workspace, artifacts, t }) {
   const request = useHarborApi();
-  const [state, setState] = (0, import_react.useState)({ status: "loading" });
-  const [retry, setRetry] = (0, import_react.useState)(0);
-  (0, import_react.useEffect)(() => {
+  const [state, setState] = (0, import_react3.useState)({ status: "loading" });
+  const [retry, setRetry] = (0, import_react3.useState)(0);
+  (0, import_react3.useEffect)(() => {
     let alive = true;
     setState({ status: "loading" });
     void request("dataset", { workspace, job }).then(
@@ -2433,7 +3343,7 @@ function DatasetPanel({ job, workspace, artifacts, t }) {
   }, [request, workspace, job, retry]);
   const dataset = state.value ?? artifacts.datasetPreview ?? artifacts.dataset;
   const badcases = (dataset?.tasks ?? []).filter((task) => task.metadata?.badcase).length;
-  return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, "ID / version"), /* @__PURE__ */ import_react.default.createElement("b", null, artifacts.dataset?.dataset_id ?? "\u2014", " \xB7 ", artifacts.dataset?.version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, short(artifacts.dataset?.source_digest))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("population")), /* @__PURE__ */ import_react.default.createElement("b", null, artifacts.dataset?.task_count ?? dataset?.task_count ?? 0), /* @__PURE__ */ import_react.default.createElement("code", null, badcases, " ", t("badcase"), " \xB7 ", dataset?.source === "job-snapshot" ? t("snapshot") : dataset?.source === "historical-source-fallback" ? t("historicalFallback") : "\u2014")))), /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("datasetTasks")), state.error ? /* @__PURE__ */ import_react.default.createElement(HarborErrorState, { error: state.error, retry: () => setRetry((value) => value + 1), t }) : null, state.status === "loading" && !dataset ? /* @__PURE__ */ import_react.default.createElement(HarborSkeleton, { kind: "dataset", rows: 5, label: t("loading") }) : dataset ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-task-list" }, (dataset.tasks ?? []).map((task, index) => /* @__PURE__ */ import_react.default.createElement("details", { className: "hse-task", key: task.id ?? index, open: index === 0 }, /* @__PURE__ */ import_react.default.createElement("summary", null, index + 1, ". ", task.query || task.id || `task-${index + 1}`, /* @__PURE__ */ import_react.default.createElement("span", { className: task.metadata?.badcase ? "hse-badcase" : void 0 }, task.metadata?.badcase ? `${t("badcase")} \xB7 ${task.metadata?.case_type}` : task.metadata?.topic ?? task.id ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-task-body" }, /* @__PURE__ */ import_react.default.createElement("h4", null, t("taskInstruction")), task.instruction ? /* @__PURE__ */ import_react.default.createElement("pre", { className: "hse-instruction" }, task.instruction) : /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-capability" }, task.instruction_error ?? t("noData")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-inline-meta" }, /* @__PURE__ */ import_react.default.createElement("span", null, "ID: ", task.id ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("span", null, t("instructionFile"), ": ", task.instruction_file ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("span", null, t("datasetSource"), ": ", dataset.source === "job-snapshot" ? t("snapshot") : t("historicalFallback")), task.instruction_truncated ? /* @__PURE__ */ import_react.default.createElement("span", null, t("attention")) : null))))) : null));
+  return /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, "ID / version"), /* @__PURE__ */ import_react3.default.createElement("b", null, artifacts.dataset?.dataset_id ?? "\u2014", " \xB7 ", artifacts.dataset?.version ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("code", null, short(artifacts.dataset?.source_digest))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("population")), /* @__PURE__ */ import_react3.default.createElement("b", null, artifacts.dataset?.task_count ?? dataset?.task_count ?? 0), /* @__PURE__ */ import_react3.default.createElement("code", null, badcases, " ", t("badcase"), " \xB7 ", dataset?.source === "job-snapshot" ? t("snapshot") : dataset?.source === "historical-source-fallback" ? t("historicalFallback") : "\u2014")))), /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, t("datasetTasks")), state.error ? /* @__PURE__ */ import_react3.default.createElement(HarborErrorState, { error: state.error, retry: () => setRetry((value) => value + 1), t }) : null, state.status === "loading" && !dataset ? /* @__PURE__ */ import_react3.default.createElement(HarborSkeleton, { kind: "dataset", rows: 5, label: t("loading") }) : dataset ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-task-list" }, (dataset.tasks ?? []).map((task, index) => /* @__PURE__ */ import_react3.default.createElement("details", { className: "hse-task", key: task.id ?? index, open: index === 0 }, /* @__PURE__ */ import_react3.default.createElement("summary", null, index + 1, ". ", task.query || task.id || `task-${index + 1}`, /* @__PURE__ */ import_react3.default.createElement("span", { className: task.metadata?.badcase ? "hse-badcase" : void 0 }, task.metadata?.badcase ? `${t("badcase")} \xB7 ${task.metadata?.case_type}` : task.metadata?.topic ?? task.id ?? "\u2014")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-task-body" }, /* @__PURE__ */ import_react3.default.createElement("h4", null, t("taskInstruction")), task.instruction ? /* @__PURE__ */ import_react3.default.createElement("pre", { className: "hse-instruction" }, task.instruction) : /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-capability" }, task.instruction_error ?? t("noData")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-inline-meta" }, /* @__PURE__ */ import_react3.default.createElement("span", null, "ID: ", task.id ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("span", null, t("instructionFile"), ": ", task.instruction_file ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("span", null, t("datasetSource"), ": ", dataset.source === "job-snapshot" ? t("snapshot") : t("historicalFallback")), task.instruction_truncated ? /* @__PURE__ */ import_react3.default.createElement("span", null, t("attention")) : null))))) : null));
 }
 function metricLabelMap(artifacts) {
   return Object.fromEntries((artifacts.contract?.metrics ?? []).map((metric) => [metric.id, metric.label ?? metric.id]));
@@ -2444,7 +3354,7 @@ function CandidatePanel({ artifacts, t }) {
   const dataset = context.dataset ?? artifacts.dataset ?? {};
   const stack = context.evaluation_stack ?? artifacts.stack ?? {};
   const runtime = context.runtime ?? candidate.runtime ?? {};
-  return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("experimentIdentity")), /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-muted" }, t("experimentIdentityHint")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-identity-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("candidate")), /* @__PURE__ */ import_react.default.createElement("b", null, candidate.candidate_id ?? "\u2014", " \xB7 ", candidate.version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, short(candidate.digest))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("dataset")), /* @__PURE__ */ import_react.default.createElement("b", null, dataset.dataset_id ?? "\u2014", " \xB7 ", dataset.version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, dataset.task_count ?? "\u2014", " Tasks \xB7 ", short(dataset.source_digest))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("evaluationStack")), /* @__PURE__ */ import_react.default.createElement("b", null, stack.stack_id ?? "\u2014", " \xB7 ", stack.version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, short(stack.comparison_digest ?? stack.digest))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("runtime")), /* @__PURE__ */ import_react.default.createElement("b", null, "Harbor ", runtime.harbor_version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, candidate.runtime?.kind ?? "\u2014", " \xB7 ", candidate.runtime?.version ?? "\u2014", " \xB7 ", context.mode ?? "\u2014")))), /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("immutableCandidateFiles")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-table-wrap" }, /* @__PURE__ */ import_react.default.createElement("table", { className: "hse-evidence-table" }, /* @__PURE__ */ import_react.default.createElement("thead", null, /* @__PURE__ */ import_react.default.createElement("tr", null, /* @__PURE__ */ import_react.default.createElement("th", null, t("file")), /* @__PURE__ */ import_react.default.createElement("th", null, t("size")), /* @__PURE__ */ import_react.default.createElement("th", null, t("digest")))), /* @__PURE__ */ import_react.default.createElement("tbody", null, (candidate.files ?? []).map((file) => /* @__PURE__ */ import_react.default.createElement("tr", { key: file.path }, /* @__PURE__ */ import_react.default.createElement("td", null, file.path), /* @__PURE__ */ import_react.default.createElement("td", null, file.size), /* @__PURE__ */ import_react.default.createElement("td", null, /* @__PURE__ */ import_react.default.createElement("code", null, short(file.sha256))))))))));
+  return /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, t("experimentIdentity")), /* @__PURE__ */ import_react3.default.createElement("p", { className: "hse-muted" }, t("experimentIdentityHint")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-identity-grid" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("candidate")), /* @__PURE__ */ import_react3.default.createElement("b", null, candidate.candidate_id ?? "\u2014", " \xB7 ", candidate.version ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("code", null, short(candidate.digest))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("dataset")), /* @__PURE__ */ import_react3.default.createElement("b", null, dataset.dataset_id ?? "\u2014", " \xB7 ", dataset.version ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("code", null, dataset.task_count ?? "\u2014", " Tasks \xB7 ", short(dataset.source_digest))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("evaluationStack")), /* @__PURE__ */ import_react3.default.createElement("b", null, stack.stack_id ?? "\u2014", " \xB7 ", stack.version ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("code", null, short(stack.comparison_digest ?? stack.digest))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("runtime")), /* @__PURE__ */ import_react3.default.createElement("b", null, "Harbor ", runtime.harbor_version ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("code", null, candidate.runtime?.kind ?? "\u2014", " \xB7 ", candidate.runtime?.version ?? "\u2014", " \xB7 ", context.mode ?? "\u2014")))), /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, t("immutableCandidateFiles")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-table-wrap" }, /* @__PURE__ */ import_react3.default.createElement("table", { className: "hse-evidence-table" }, /* @__PURE__ */ import_react3.default.createElement("thead", null, /* @__PURE__ */ import_react3.default.createElement("tr", null, /* @__PURE__ */ import_react3.default.createElement("th", null, t("file")), /* @__PURE__ */ import_react3.default.createElement("th", null, t("size")), /* @__PURE__ */ import_react3.default.createElement("th", null, t("digest")))), /* @__PURE__ */ import_react3.default.createElement("tbody", null, (candidate.files ?? []).map((file) => /* @__PURE__ */ import_react3.default.createElement("tr", { key: file.path }, /* @__PURE__ */ import_react3.default.createElement("td", null, file.path), /* @__PURE__ */ import_react3.default.createElement("td", null, file.size), /* @__PURE__ */ import_react3.default.createElement("td", null, /* @__PURE__ */ import_react3.default.createElement("code", null, short(file.sha256))))))))));
 }
 function HistoricalTargetPanel({ detail, artifacts, t }) {
   const summary = artifacts.summary ?? {};
@@ -2454,43 +3364,43 @@ function HistoricalTargetPanel({ detail, artifacts, t }) {
   const population = detail?.generatorPopulation ?? target.generator_population;
   const coverage = detail?.coverage ?? summary.coverage ?? {};
   const adapter = context.execution_adapter ?? {};
-  return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("historicalTarget")), /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-muted" }, t("observationMode")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-identity-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("batch")), /* @__PURE__ */ import_react.default.createElement("b", null, target.batch_id ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, short(target.digest))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("generationRecords")), /* @__PURE__ */ import_react.default.createElement("b", null, target.record_count ?? coverage.total_trials ?? "\u2014", " Trials"), /* @__PURE__ */ import_react.default.createElement("code", null, target.kind ?? "\u2014", " \xB7 ", target.source_kind ?? source.kind ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("generationSource")), /* @__PURE__ */ import_react.default.createElement("b", null, source.kind ?? target.source_kind ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, source.adapter_id ?? adapter.adapter_id ?? adapter.id ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("executionMode")), /* @__PURE__ */ import_react.default.createElement("b", null, detail?.executionMode ?? summary.execution_mode ?? context.execution_mode ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, context.protocol ?? "\u2014")))), /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("generatorPopulation")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, population?.homogeneous === false ? t("mixedPopulation") : population?.homogeneous === true ? t("homogeneousPopulation") : t("generatorPopulation")), /* @__PURE__ */ import_react.default.createElement("b", null, generatorPopulationText(population, t)), /* @__PURE__ */ import_react.default.createElement("code", null, population ? short(population.digest) : "\u2014")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("coverage")), /* @__PURE__ */ import_react.default.createElement("b", null, coverage.scored_trials ?? "\u2014", " / ", coverage.total_trials ?? target.record_count ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, t("unscoredTrials"), ": ", coverage.unscored_trials ?? 0, " \xB7 completed-unscored")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, "Trial coverage"), /* @__PURE__ */ import_react.default.createElement("b", null, typeof coverage.trial_rate === "number" ? `${format(coverage.trial_rate * 100)}%` : "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, t("scoredTrials"))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, "Criterion coverage"), /* @__PURE__ */ import_react.default.createElement("b", null, coverage.criterion_scored ?? "\u2014", " / ", coverage.criterion_total ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, typeof coverage.criterion_rate === "number" ? `${format(coverage.criterion_rate * 100)}%` : "\u2014")))));
+  return /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, t("historicalTarget")), /* @__PURE__ */ import_react3.default.createElement("p", { className: "hse-muted" }, t("observationMode")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-identity-grid" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("batch")), /* @__PURE__ */ import_react3.default.createElement("b", null, target.batch_id ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("code", null, short(target.digest))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("generationRecords")), /* @__PURE__ */ import_react3.default.createElement("b", null, target.record_count ?? coverage.total_trials ?? "\u2014", " Trials"), /* @__PURE__ */ import_react3.default.createElement("code", null, target.kind ?? "\u2014", " \xB7 ", target.source_kind ?? source.kind ?? "\u2014")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("generationSource")), /* @__PURE__ */ import_react3.default.createElement("b", null, source.kind ?? target.source_kind ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("code", null, source.adapter_id ?? adapter.adapter_id ?? adapter.id ?? "\u2014")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("executionMode")), /* @__PURE__ */ import_react3.default.createElement("b", null, detail?.executionMode ?? summary.execution_mode ?? context.execution_mode ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("code", null, context.protocol ?? "\u2014")))), /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, t("generatorPopulation")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, population?.homogeneous === false ? t("mixedPopulation") : population?.homogeneous === true ? t("homogeneousPopulation") : t("generatorPopulation")), /* @__PURE__ */ import_react3.default.createElement("b", null, generatorPopulationText(population, t)), /* @__PURE__ */ import_react3.default.createElement("code", null, population ? short(population.digest) : "\u2014")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("coverage")), /* @__PURE__ */ import_react3.default.createElement("b", null, coverage.scored_trials ?? "\u2014", " / ", coverage.total_trials ?? target.record_count ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("code", null, t("unscoredTrials"), ": ", coverage.unscored_trials ?? 0, " \xB7 completed-unscored")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, "Trial coverage"), /* @__PURE__ */ import_react3.default.createElement("b", null, typeof coverage.trial_rate === "number" ? `${format2(coverage.trial_rate * 100)}%` : "\u2014"), /* @__PURE__ */ import_react3.default.createElement("code", null, t("scoredTrials"))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, "Criterion coverage"), /* @__PURE__ */ import_react3.default.createElement("b", null, coverage.criterion_scored ?? "\u2014", " / ", coverage.criterion_total ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("code", null, typeof coverage.criterion_rate === "number" ? `${format2(coverage.criterion_rate * 100)}%` : "\u2014")))));
 }
 function ContractPanel({ artifacts, component, t }) {
   const contract = artifacts.contract ?? {};
-  return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("integrationBoundary")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("integration")), /* @__PURE__ */ import_react.default.createElement("b", null, component?.id ?? "\u2014", " \xB7 ", component?.version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, short(component?.digest))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("scoringContract")), /* @__PURE__ */ import_react.default.createElement("b", null, contract.contract_id ?? "\u2014", " \xB7 ", contract.version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, t("primaryMetric"), ": ", contract.primary_metric ?? "\u2014")))), /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("hardRequirements")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-chip-list" }, (contract.hard_requirements ?? []).map((item) => /* @__PURE__ */ import_react.default.createElement("span", { key: item.id ?? item }, item.id ?? item)))));
+  return /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, t("integrationBoundary")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("integration")), /* @__PURE__ */ import_react3.default.createElement("b", null, component?.id ?? "\u2014", " \xB7 ", component?.version ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("code", null, short(component?.digest))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("scoringContract")), /* @__PURE__ */ import_react3.default.createElement("b", null, contract.contract_id ?? "\u2014", " \xB7 ", contract.version ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("code", null, t("primaryMetric"), ": ", contract.primary_metric ?? "\u2014")))), /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, t("hardRequirements")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-chip-list" }, (contract.hard_requirements ?? []).map((item) => /* @__PURE__ */ import_react3.default.createElement("span", { key: item.id ?? item }, item.id ?? item)))));
 }
 function ArtifactPreview({ detail, t }) {
   const preview = detail?.preview;
-  if (!preview) return /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-preview" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-preview-empty" }, t("noRenderableOutput")));
+  if (!preview) return /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-preview" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-preview-empty" }, t("noRenderableOutput")));
   const content = preview.content;
   const provenance = preview.provenance ?? [];
   let body;
-  if (preview.kind === "page" && preview.format === "url" && preview.url) body = /* @__PURE__ */ import_react.default.createElement("iframe", { className: "hse-page-frame", title: preview.title ?? t("pagePreview"), src: preview.url, sandbox: "", referrerPolicy: "no-referrer" });
-  else if (preview.kind === "page" && preview.format === "html" && typeof content === "string") body = /* @__PURE__ */ import_react.default.createElement("iframe", { className: "hse-page-frame", title: preview.title ?? t("pagePreview"), srcDoc: content, sandbox: "", referrerPolicy: "no-referrer" });
+  if (preview.kind === "page" && preview.format === "url" && preview.url) body = /* @__PURE__ */ import_react3.default.createElement("iframe", { className: "hse-page-frame", title: preview.title ?? t("pagePreview"), src: preview.url, sandbox: "", referrerPolicy: "no-referrer" });
+  else if (preview.kind === "page" && preview.format === "html" && typeof content === "string") body = /* @__PURE__ */ import_react3.default.createElement("iframe", { className: "hse-page-frame", title: preview.title ?? t("pagePreview"), srcDoc: content, sandbox: "", referrerPolicy: "no-referrer" });
   else if (preview.kind === "document") {
     const primary = typeof content === "string" ? content : content?.answer ?? content?.report ?? content?.markdown ?? content?.content ?? content?.text;
     const remainder = isRecord(content) ? Object.fromEntries(Object.entries(content).filter(([key]) => !["answer", "report", "markdown", "content", "text"].includes(key))) : void 0;
-    body = /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-document" }, /* @__PURE__ */ import_react.default.createElement("h4", null, t("documentPreview")), /* @__PURE__ */ import_react.default.createElement("pre", null, primary ?? pretty(content)), remainder && Object.keys(remainder).length ? /* @__PURE__ */ import_react.default.createElement("details", { className: "hse-source-details" }, /* @__PURE__ */ import_react.default.createElement("summary", null, t("rawOutput")), /* @__PURE__ */ import_react.default.createElement("pre", { className: "hse-output-structured" }, pretty(remainder))) : null);
-  } else body = /* @__PURE__ */ import_react.default.createElement("pre", { className: "hse-output-structured" }, pretty(content));
-  return /* @__PURE__ */ import_react.default.createElement("article", { className: "hse-preview" }, /* @__PURE__ */ import_react.default.createElement("header", { className: "hse-preview-head" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("b", null, preview.title ?? t("generatedOutput")), /* @__PURE__ */ import_react.default.createElement("span", null, preview.kind, " \xB7 ", preview.format)), /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("b", null, t("previewSource")), /* @__PURE__ */ import_react.default.createElement("span", null, provenance.map((item) => item.label ?? item.kind).join(" \xB7 ") || preview.source || "\u2014"))), body);
+    body = /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-document" }, /* @__PURE__ */ import_react3.default.createElement("h4", null, t("documentPreview")), /* @__PURE__ */ import_react3.default.createElement("pre", null, primary ?? pretty2(content)), remainder && Object.keys(remainder).length ? /* @__PURE__ */ import_react3.default.createElement("details", { className: "hse-source-details" }, /* @__PURE__ */ import_react3.default.createElement("summary", null, t("rawOutput")), /* @__PURE__ */ import_react3.default.createElement("pre", { className: "hse-output-structured" }, pretty2(remainder))) : null);
+  } else body = /* @__PURE__ */ import_react3.default.createElement("pre", { className: "hse-output-structured" }, pretty2(content));
+  return /* @__PURE__ */ import_react3.default.createElement("article", { className: "hse-preview" }, /* @__PURE__ */ import_react3.default.createElement("header", { className: "hse-preview-head" }, /* @__PURE__ */ import_react3.default.createElement("div", null, /* @__PURE__ */ import_react3.default.createElement("b", null, preview.title ?? t("generatedOutput")), /* @__PURE__ */ import_react3.default.createElement("span", null, preview.kind, " \xB7 ", preview.format)), /* @__PURE__ */ import_react3.default.createElement("div", null, /* @__PURE__ */ import_react3.default.createElement("b", null, t("previewSource")), /* @__PURE__ */ import_react3.default.createElement("span", null, provenance.map((item) => item.label ?? item.kind).join(" \xB7 ") || preview.source || "\u2014"))), body);
 }
 function RendererPanel({ job, workspace, active, component, contextFor, setContext, askContext, navigation, t }) {
   const request = useHarborApi();
-  const [listState, setListState] = (0, import_react.useState)({ status: "loading", stale: false });
-  const [listRetry, setListRetry] = (0, import_react.useState)(0);
-  const [selected, setSelected] = (0, import_react.useState)();
-  const [detail, setDetail] = (0, import_react.useState)();
-  const [detailError, setDetailError] = (0, import_react.useState)();
-  (0, import_react.useEffect)(() => {
+  const [listState, setListState] = (0, import_react3.useState)({ status: "loading", stale: false });
+  const [listRetry, setListRetry] = (0, import_react3.useState)(0);
+  const [selected, setSelected] = (0, import_react3.useState)();
+  const [detail, setDetail] = (0, import_react3.useState)();
+  const [detailError, setDetailError] = (0, import_react3.useState)();
+  (0, import_react3.useEffect)(() => {
     if (navigation?.target?.trial) setSelected(navigation.target.trial);
   }, [navigation?.actionId]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (selected) setContext?.(contextFor?.({ trial: selected, detail }));
   }, [contextFor, selected, detail, setContext]);
   const listRequestKey = `${workspace}\0${job}`;
   const page = listState.page;
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     let cancelled = false;
     let poll;
     setListState((current) => current.requestKey === listRequestKey ? { ...current, status: current.page ? "refreshing" : "loading" } : { requestKey: listRequestKey, status: "loading", page: void 0, stale: false, error: void 0 });
@@ -2514,7 +3424,7 @@ function RendererPanel({ job, workspace, active, component, contextFor, setConte
       if (poll) window.clearTimeout(poll);
     };
   }, [active, job, listRequestKey, listRetry, request, workspace]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     let alive = true;
     setDetail(void 0);
     setDetailError(void 0);
@@ -2533,17 +3443,17 @@ function RendererPanel({ job, workspace, active, component, contextFor, setConte
       alive = false;
     };
   }, [request, workspace, job, selected]);
-  return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("renderer")), /* @__PURE__ */ import_react.default.createElement("b", null, component?.id ?? "\u2014", " \xB7 ", component?.version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, short(component?.digest))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("generatedOutput")), /* @__PURE__ */ import_react.default.createElement("b", null, page?.items?.length ?? 0, " Trials"), /* @__PURE__ */ import_react.default.createElement("code", null, t("previewSource"), ": ", detail?.preview?.provenance?.map((item) => item.label ?? item.kind).join(" \xB7 ") || "\u2014")))), /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("generatedOutput")), listState.error ? /* @__PURE__ */ import_react.default.createElement(HarborErrorState, { error: listState.errorDetails ?? listState.error, title: listState.stale ? t("trialListStale") : t("trialListUnavailable"), retry: () => setListRetry((value) => value + 1), t }) : null, !page && listState.status === "loading" ? /* @__PURE__ */ import_react.default.createElement(HarborSkeleton, { kind: "renderer-list", rows: 5, label: t("loading") }) : /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-output-layout" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-output-list" }, (page?.items ?? []).map((trial, index) => /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-output-item", "data-active": String(selected) === String(trial.id ?? trial.datasetTrial), key: `${trial.id}-${trial.attempt}`, onClick: () => setSelected(trial.id ?? trial.datasetTrial) }, /* @__PURE__ */ import_react.default.createElement("b", null, index + 1, ". ", trial.displayName ?? trial.datasetTrial ?? trial.name), /* @__PURE__ */ import_react.default.createElement("span", null, trial.status, " \xB7 attempt ", trial.attempt)))), detailError ? /* @__PURE__ */ import_react.default.createElement(HarborErrorState, { error: detailError, t }) : /* @__PURE__ */ import_react.default.createElement(ArtifactPreview, { detail, t }))));
+  return /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("renderer")), /* @__PURE__ */ import_react3.default.createElement("b", null, component?.id ?? "\u2014", " \xB7 ", component?.version ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("code", null, short(component?.digest))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("generatedOutput")), /* @__PURE__ */ import_react3.default.createElement("b", null, page?.items?.length ?? 0, " Trials"), /* @__PURE__ */ import_react3.default.createElement("code", null, t("previewSource"), ": ", detail?.preview?.provenance?.map((item) => item.label ?? item.kind).join(" \xB7 ") || "\u2014")))), /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, t("generatedOutput")), listState.error ? /* @__PURE__ */ import_react3.default.createElement(HarborErrorState, { error: listState.errorDetails ?? listState.error, title: listState.stale ? t("trialListStale") : t("trialListUnavailable"), retry: () => setListRetry((value) => value + 1), t }) : null, !page && listState.status === "loading" ? /* @__PURE__ */ import_react3.default.createElement(HarborSkeleton, { kind: "renderer-list", rows: 5, label: t("loading") }) : /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-output-layout" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-output-list" }, (page?.items ?? []).map((trial, index) => /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "hse-output-item", "data-active": String(selected) === String(trial.id ?? trial.datasetTrial), key: `${trial.id}-${trial.attempt}`, onClick: () => setSelected(trial.id ?? trial.datasetTrial) }, /* @__PURE__ */ import_react3.default.createElement("b", null, index + 1, ". ", trial.displayName ?? trial.datasetTrial ?? trial.name), /* @__PURE__ */ import_react3.default.createElement("span", null, trial.status, " \xB7 attempt ", trial.attempt)))), detailError ? /* @__PURE__ */ import_react3.default.createElement(HarborErrorState, { error: detailError, t }) : /* @__PURE__ */ import_react3.default.createElement(ArtifactPreview, { detail, t }))));
 }
 function TrialAssessmentReport({ job, workspace, active, artifacts, historical = false, contextFor, setContext, askContext, navigation, restoreView, onViewStateChange, t }) {
   const request = useHarborApi();
-  const [offset, setOffset] = (0, import_react.useState)(0);
-  const [listState, setListState] = (0, import_react.useState)({ status: "loading", stale: false });
-  const [listRetry, setListRetry] = (0, import_react.useState)(0);
-  const [selected, setSelected] = (0, import_react.useState)();
-  const [detailState, setDetailState] = (0, import_react.useState)({ status: "idle" });
-  const [focused, setFocused] = (0, import_react.useState)({});
-  const contextForRef = (0, import_react.useRef)(contextFor);
+  const [offset, setOffset] = (0, import_react3.useState)(0);
+  const [listState, setListState] = (0, import_react3.useState)({ status: "loading", stale: false });
+  const [listRetry, setListRetry] = (0, import_react3.useState)(0);
+  const [selected, setSelected] = (0, import_react3.useState)();
+  const [detailState, setDetailState] = (0, import_react3.useState)({ status: "idle" });
+  const [focused, setFocused] = (0, import_react3.useState)({});
+  const contextForRef = (0, import_react3.useRef)(contextFor);
   contextForRef.current = contextFor;
   const choose = (trial, focus = {}) => {
     setSelected(trial);
@@ -2551,15 +3461,15 @@ function TrialAssessmentReport({ job, workspace, active, artifacts, historical =
     if (selected !== trial) setDetailState(trialDetailLoadingState(trial));
     setContext?.(contextForRef.current?.({ trial, detail: void 0, ...focus }));
   };
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     const target = navigation?.target;
     if (target?.trial) choose(target.trial, { criterion: target.criterion ?? target.localObject?.criterion, evidenceRef: target.evidenceRef, localObject: target.localObject });
   }, [navigation?.actionId]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (restoreView?.trialView?.trial) choose(restoreView.trialView.trial, restoreView.trialView.focus);
     if (Number.isInteger(restoreView?.trialView?.offset)) setOffset(restoreView.trialView.offset);
   }, [restoreView?.restoreId]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (!selected) return;
     const detail2 = detailState.status === "ready" ? detailState.value : void 0;
     setContext?.(contextForRef.current?.({ trial: selected, detail: detail2, ...focused }));
@@ -2571,7 +3481,7 @@ function TrialAssessmentReport({ job, workspace, active, artifacts, historical =
   };
   const listRequestKey = `${workspace}\0${job}\0${offset}`;
   const page = listState.page;
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     let cancelled = false;
     let poll;
     setListState((current) => current.requestKey === listRequestKey ? { ...current, status: current.page ? "refreshing" : "loading" } : { requestKey: listRequestKey, status: "loading", page: void 0, stale: false, error: void 0 });
@@ -2595,10 +3505,10 @@ function TrialAssessmentReport({ job, workspace, active, artifacts, historical =
       if (poll) window.clearTimeout(poll);
     };
   }, [active, job, listRequestKey, listRetry, offset, request, workspace]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (!restoreView?.restoreId) setOffset(0);
   }, [job]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (!selected) {
       setDetailState({ status: "idle" });
       return void 0;
@@ -2619,9 +3529,9 @@ function TrialAssessmentReport({ job, workspace, active, artifacts, historical =
   const assessment = detail?.assessment;
   const score = assessment?.score;
   const artifactTitle = assessment?.output?.title ?? detail?.preview?.title ?? "\u2014";
-  return /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("trialAssessments")), /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-muted" }, t("trialAssessmentsHint")), listState.error ? /* @__PURE__ */ import_react.default.createElement(HarborErrorState, { error: listState.errorDetails ?? listState.error, title: listState.stale ? t("trialListStale") : t("trialListUnavailable"), retry: () => setListRetry((value) => value + 1), t }) : null, !page && listState.status === "loading" ? /* @__PURE__ */ import_react.default.createElement(HarborSkeleton, { kind: "report-trial-list", rows: 5, label: t("loading") }) : page ? /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-table-wrap" }, /* @__PURE__ */ import_react.default.createElement("table", { className: "hse-evidence-table hse-report-table" }, /* @__PURE__ */ import_react.default.createElement("thead", null, /* @__PURE__ */ import_react.default.createElement("tr", null, /* @__PURE__ */ import_react.default.createElement("th", null, "#"), /* @__PURE__ */ import_react.default.createElement("th", null, t("queryTrial")), /* @__PURE__ */ import_react.default.createElement("th", null, t("overallScore")), metricIds.map((id) => /* @__PURE__ */ import_react.default.createElement("th", { key: id }, labels[id] ?? id)))), /* @__PURE__ */ import_react.default.createElement("tbody", null, (page.items ?? []).map((trial) => /* @__PURE__ */ import_react.default.createElement("tr", { key: `${trial.id}-${trial.attempt}`, "data-selected": String(selected) === String(trial.id ?? trial.datasetTrial) }, /* @__PURE__ */ import_react.default.createElement("td", null, trial.datasetOrder + 1), /* @__PURE__ */ import_react.default.createElement("td", null, /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => choose(trial.id ?? trial.datasetTrial) }, trial.displayName ?? trial.datasetTrial ?? trial.name), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-inline-ask", onClick: () => void ask(trial.id ?? trial.datasetTrial) }, t("askAi"))), /* @__PURE__ */ import_react.default.createElement("td", null, /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-report-score", "data-valid": trial.scoringStatus === "unscored" ? void 0 : trial.score?.valid }, trial.scoringStatus === "unscored" ? "completed-unscored" : trial.score?.valid ? format(trial.score.value ?? trial.rewards?.[primary]) : "\u2014")), metricIds.map((id) => /* @__PURE__ */ import_react.default.createElement("td", { key: id }, format(trial.rewards?.[id])))))))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-pager" }, /* @__PURE__ */ import_react.default.createElement("span", null, page.total ? `${offset + 1}\u2013${Math.min(offset + (page.items?.length ?? 0), page.total)} / ${page.total}` : "0 / 0"), /* @__PURE__ */ import_react.default.createElement("button", { disabled: !offset, onClick: () => setOffset(Math.max(0, offset - REPORT_PAGE_SIZE)) }, t("previous")), /* @__PURE__ */ import_react.default.createElement("button", { disabled: !page.hasMore, onClick: () => setOffset(offset + REPORT_PAGE_SIZE) }, t("next")))) : null, detailState.status === "loading" ? /* @__PURE__ */ import_react.default.createElement(HarborSkeleton, { kind: "report-trial-detail", rows: 6, label: t("loading") }) : detailState.status === "error" ? /* @__PURE__ */ import_react.default.createElement(HarborErrorState, { error: detailState.error, t }) : assessment ? /* @__PURE__ */ import_react.default.createElement("article", { className: "hse-report-detail" }, /* @__PURE__ */ import_react.default.createElement("header", { className: "hse-report-detail-head" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("h4", null, selectedTrial?.displayName ?? assessment.query ?? assessment.trial_name), /* @__PURE__ */ import_react.default.createElement("span", null, t("artifact"), ": ", artifactTitle), /* @__PURE__ */ import_react.default.createElement("code", null, assessment.dataset_trial ?? selectedTrial?.datasetTrial)), /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("span", null, t("overallScore")), /* @__PURE__ */ import_react.default.createElement("b", { className: selectedTrial?.scoringStatus === "unscored" ? "hse-muted" : score?.valid ? "hse-valid" : "hse-invalid" }, selectedTrial?.scoringStatus === "unscored" ? "completed-unscored" : score?.valid ? format(score.value) : "\u2014"))), !score?.valid ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-capability" }, selectedTrial?.scoringStatus === "unscored" && historical ? `${t("unscoredTrials")} \xB7 ` : "", (score?.invalid_reasons ?? []).join(" \xB7 ")) : null, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-report-compare" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-report-criteria" }, (assessment.criteria ?? []).map((criterion) => /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-report-criterion", key: criterion.id, "data-highlight": String(focused.criterion === criterion.id), ref: (node) => {
+  return /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, t("trialAssessments")), /* @__PURE__ */ import_react3.default.createElement("p", { className: "hse-muted" }, t("trialAssessmentsHint")), listState.error ? /* @__PURE__ */ import_react3.default.createElement(HarborErrorState, { error: listState.errorDetails ?? listState.error, title: listState.stale ? t("trialListStale") : t("trialListUnavailable"), retry: () => setListRetry((value) => value + 1), t }) : null, !page && listState.status === "loading" ? /* @__PURE__ */ import_react3.default.createElement(HarborSkeleton, { kind: "report-trial-list", rows: 5, label: t("loading") }) : page ? /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-table-wrap" }, /* @__PURE__ */ import_react3.default.createElement("table", { className: "hse-evidence-table hse-report-table" }, /* @__PURE__ */ import_react3.default.createElement("thead", null, /* @__PURE__ */ import_react3.default.createElement("tr", null, /* @__PURE__ */ import_react3.default.createElement("th", null, "#"), /* @__PURE__ */ import_react3.default.createElement("th", null, t("queryTrial")), /* @__PURE__ */ import_react3.default.createElement("th", null, t("overallScore")), metricIds.map((id) => /* @__PURE__ */ import_react3.default.createElement("th", { key: id }, labels[id] ?? id)))), /* @__PURE__ */ import_react3.default.createElement("tbody", null, (page.items ?? []).map((trial) => /* @__PURE__ */ import_react3.default.createElement("tr", { key: `${trial.id}-${trial.attempt}`, "data-selected": String(selected) === String(trial.id ?? trial.datasetTrial) }, /* @__PURE__ */ import_react3.default.createElement("td", null, trial.datasetOrder + 1), /* @__PURE__ */ import_react3.default.createElement("td", null, /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", onClick: () => choose(trial.id ?? trial.datasetTrial) }, trial.displayName ?? trial.datasetTrial ?? trial.name), /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "hse-inline-ask", onClick: () => void ask(trial.id ?? trial.datasetTrial) }, t("askAi"))), /* @__PURE__ */ import_react3.default.createElement("td", null, /* @__PURE__ */ import_react3.default.createElement("span", { className: "hse-report-score", "data-valid": trial.scoringStatus === "unscored" ? void 0 : trial.score?.valid }, trial.scoringStatus === "unscored" ? "completed-unscored" : trial.score?.valid ? format2(trial.score.value ?? trial.rewards?.[primary]) : "\u2014")), metricIds.map((id) => /* @__PURE__ */ import_react3.default.createElement("td", { key: id }, format2(trial.rewards?.[id])))))))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-pager" }, /* @__PURE__ */ import_react3.default.createElement("span", null, page.total ? `${offset + 1}\u2013${Math.min(offset + (page.items?.length ?? 0), page.total)} / ${page.total}` : "0 / 0"), /* @__PURE__ */ import_react3.default.createElement("button", { disabled: !offset, onClick: () => setOffset(Math.max(0, offset - REPORT_PAGE_SIZE)) }, t("previous")), /* @__PURE__ */ import_react3.default.createElement("button", { disabled: !page.hasMore, onClick: () => setOffset(offset + REPORT_PAGE_SIZE) }, t("next")))) : null, detailState.status === "loading" ? /* @__PURE__ */ import_react3.default.createElement(HarborSkeleton, { kind: "report-trial-detail", rows: 6, label: t("loading") }) : detailState.status === "error" ? /* @__PURE__ */ import_react3.default.createElement(HarborErrorState, { error: detailState.error, t }) : assessment ? /* @__PURE__ */ import_react3.default.createElement("article", { className: "hse-report-detail" }, /* @__PURE__ */ import_react3.default.createElement("header", { className: "hse-report-detail-head" }, /* @__PURE__ */ import_react3.default.createElement("div", null, /* @__PURE__ */ import_react3.default.createElement("h4", null, selectedTrial?.displayName ?? assessment.query ?? assessment.trial_name), /* @__PURE__ */ import_react3.default.createElement("span", null, t("artifact"), ": ", artifactTitle), /* @__PURE__ */ import_react3.default.createElement("code", null, assessment.dataset_trial ?? selectedTrial?.datasetTrial)), /* @__PURE__ */ import_react3.default.createElement("div", null, /* @__PURE__ */ import_react3.default.createElement("span", null, t("overallScore")), /* @__PURE__ */ import_react3.default.createElement("b", { className: selectedTrial?.scoringStatus === "unscored" ? "hse-muted" : score?.valid ? "hse-valid" : "hse-invalid" }, selectedTrial?.scoringStatus === "unscored" ? "completed-unscored" : score?.valid ? format2(score.value) : "\u2014"))), !score?.valid ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-capability" }, selectedTrial?.scoringStatus === "unscored" && historical ? `${t("unscoredTrials")} \xB7 ` : "", (score?.invalid_reasons ?? []).join(" \xB7 ")) : null, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-report-compare" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-report-criteria" }, (assessment.criteria ?? []).map((criterion) => /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-report-criterion", key: criterion.id, "data-highlight": String(focused.criterion === criterion.id), ref: (node) => {
     if (node && focused.criterion === criterion.id && navigation?.actionId) node.scrollIntoView?.({ block: "center" });
-  } }, /* @__PURE__ */ import_react.default.createElement("header", null, /* @__PURE__ */ import_react.default.createElement("b", null, criterion.label ?? labels[criterion.id] ?? criterion.id), /* @__PURE__ */ import_react.default.createElement("b", null, format(criterion.score)), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-inline-ask", onClick: () => void ask(selected, { criterion: criterion.id }) }, t("askAboutThis"))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-chip-list" }, (criterion.evidence_refs ?? []).map((ref) => /* @__PURE__ */ import_react.default.createElement("button", { key: ref, type: "button", "data-highlight": String(focused.evidenceRef === ref && focused.criterion === criterion.id), onClick: () => void ask(selected, { criterion: criterion.id, evidenceRef: ref }, t("suggestedQuestion3")) }, t("evidence"), " \xB7 ", short(ref)))), /* @__PURE__ */ import_react.default.createElement("dl", null, /* @__PURE__ */ import_react.default.createElement("dt", null, t("assessmentReason")), /* @__PURE__ */ import_react.default.createElement("dd", null, criterion.reason || t("noAssessmentReason")), /* @__PURE__ */ import_react.default.createElement("dt", null, t("assessmentRecommendation")), /* @__PURE__ */ import_react.default.createElement("dd", { className: "hse-report-recommendation" }, criterion.recommendation || t("noAssessmentRecommendation")))))), /* @__PURE__ */ import_react.default.createElement(ArtifactPreview, { detail, t }))) : null);
+  } }, /* @__PURE__ */ import_react3.default.createElement("header", null, /* @__PURE__ */ import_react3.default.createElement("b", null, criterion.label ?? labels[criterion.id] ?? criterion.id), /* @__PURE__ */ import_react3.default.createElement("b", null, format2(criterion.score)), /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "hse-inline-ask", onClick: () => void ask(selected, { criterion: criterion.id }) }, t("askAboutThis"))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-chip-list" }, (criterion.evidence_refs ?? []).map((ref) => /* @__PURE__ */ import_react3.default.createElement("button", { key: ref, type: "button", "data-highlight": String(focused.evidenceRef === ref && focused.criterion === criterion.id), onClick: () => void ask(selected, { criterion: criterion.id, evidenceRef: ref }, t("suggestedQuestion3")) }, t("evidence"), " \xB7 ", short(ref)))), /* @__PURE__ */ import_react3.default.createElement("dl", null, /* @__PURE__ */ import_react3.default.createElement("dt", null, t("assessmentReason")), /* @__PURE__ */ import_react3.default.createElement("dd", null, criterion.reason || t("noAssessmentReason")), /* @__PURE__ */ import_react3.default.createElement("dt", null, t("assessmentRecommendation")), /* @__PURE__ */ import_react3.default.createElement("dd", { className: "hse-report-recommendation" }, criterion.recommendation || t("noAssessmentRecommendation")))))), /* @__PURE__ */ import_react3.default.createElement(ArtifactPreview, { detail, t }))) : null);
 }
 function ReporterPanel({ job, workspace, active, artifacts, jobKind, interaction, t }) {
   const summary = artifacts.summary ?? {};
@@ -2636,13 +3546,13 @@ function ReporterPanel({ job, workspace, active, artifacts, jobKind, interaction
   const rawGroups = population.groups ?? (historical ? summary.status_counts : {});
   const groups = Array.isArray(rawGroups) ? rawGroups : Object.entries(rawGroups ?? {}).map(([id, count]) => ({ id, count }));
   const configured = population.hook?.configured_component;
-  return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("populationEvidence")), configured ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-hook-state", "data-executed": Boolean(configured.executed) }, /* @__PURE__ */ import_react.default.createElement("b", null, t("hookExecution"), ": ", configured.id ?? "\u2014", " \xB7 ", configured.version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("br", null), configured.executed ? t("configuredHookRun") : t("configuredHookNotRun")) : null, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpis" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("trials")), /* @__PURE__ */ import_react.default.createElement("b", null, total)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, historical ? t("scoredTrials") : t("valid")), /* @__PURE__ */ import_react.default.createElement("b", { className: "hse-valid" }, valid ?? "\u2014")), historical ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("unscoredTrials")), /* @__PURE__ */ import_react.default.createElement("b", null, unscored)) : /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("invalid")), /* @__PURE__ */ import_react.default.createElement("b", { className: "hse-invalid" }, summary.n_invalid_scores ?? population.invalid_population_size ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("exceptions")), /* @__PURE__ */ import_react.default.createElement("b", null, summary.n_exceptions ?? 0)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("coverage")), /* @__PURE__ */ import_react.default.createElement("b", null, historical && typeof coverage.trial_rate === "number" ? `${format(coverage.trial_rate * 100)}%` : summary.artifact_validation?.valid ? "VALID" : "CHECK")))), /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-table-wrap" }, /* @__PURE__ */ import_react.default.createElement("table", { className: "hse-evidence-table" }, /* @__PURE__ */ import_react.default.createElement("thead", null, /* @__PURE__ */ import_react.default.createElement("tr", null, /* @__PURE__ */ import_react.default.createElement("th", null, t("metric")), /* @__PURE__ */ import_react.default.createElement("th", null, t("aggregate")), /* @__PURE__ */ import_react.default.createElement("th", null, t("coverage")))), /* @__PURE__ */ import_react.default.createElement("tbody", null, Object.entries(metrics).map(([id, value]) => /* @__PURE__ */ import_react.default.createElement("tr", { key: id }, /* @__PURE__ */ import_react.default.createElement("td", null, /* @__PURE__ */ import_react.default.createElement("b", null, labels[id] ?? id), /* @__PURE__ */ import_react.default.createElement("br", null), /* @__PURE__ */ import_react.default.createElement("code", null, id)), /* @__PURE__ */ import_react.default.createElement("td", null, format(value)), /* @__PURE__ */ import_react.default.createElement("td", null, valid ?? "\u2014", " / ", total))))))), /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("trialGroups")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-chip-list" }, groups.map((group) => /* @__PURE__ */ import_react.default.createElement("span", { key: group.id }, group.id, ": ", group.count)))), /* @__PURE__ */ import_react.default.createElement(TrialAssessmentReport, { job, workspace, active, artifacts, historical, ...interaction, t }));
+  return /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, t("populationEvidence")), configured ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-hook-state", "data-executed": Boolean(configured.executed) }, /* @__PURE__ */ import_react3.default.createElement("b", null, t("hookExecution"), ": ", configured.id ?? "\u2014", " \xB7 ", configured.version ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("br", null), configured.executed ? t("configuredHookRun") : t("configuredHookNotRun")) : null, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-kpis" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("trials")), /* @__PURE__ */ import_react3.default.createElement("b", null, total)), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react3.default.createElement("span", null, historical ? t("scoredTrials") : t("valid")), /* @__PURE__ */ import_react3.default.createElement("b", { className: "hse-valid" }, valid ?? "\u2014")), historical ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("unscoredTrials")), /* @__PURE__ */ import_react3.default.createElement("b", null, unscored)) : /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("invalid")), /* @__PURE__ */ import_react3.default.createElement("b", { className: "hse-invalid" }, summary.n_invalid_scores ?? population.invalid_population_size ?? "\u2014")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("exceptions")), /* @__PURE__ */ import_react3.default.createElement("b", null, summary.n_exceptions ?? 0)), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("coverage")), /* @__PURE__ */ import_react3.default.createElement("b", null, historical && typeof coverage.trial_rate === "number" ? `${format2(coverage.trial_rate * 100)}%` : summary.artifact_validation?.valid ? "VALID" : "CHECK")))), /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-table-wrap" }, /* @__PURE__ */ import_react3.default.createElement("table", { className: "hse-evidence-table" }, /* @__PURE__ */ import_react3.default.createElement("thead", null, /* @__PURE__ */ import_react3.default.createElement("tr", null, /* @__PURE__ */ import_react3.default.createElement("th", null, t("metric")), /* @__PURE__ */ import_react3.default.createElement("th", null, t("aggregate")), /* @__PURE__ */ import_react3.default.createElement("th", null, t("coverage")))), /* @__PURE__ */ import_react3.default.createElement("tbody", null, Object.entries(metrics).map(([id, value]) => /* @__PURE__ */ import_react3.default.createElement("tr", { key: id }, /* @__PURE__ */ import_react3.default.createElement("td", null, /* @__PURE__ */ import_react3.default.createElement("b", null, labels[id] ?? id), /* @__PURE__ */ import_react3.default.createElement("br", null), /* @__PURE__ */ import_react3.default.createElement("code", null, id)), /* @__PURE__ */ import_react3.default.createElement("td", null, format2(value)), /* @__PURE__ */ import_react3.default.createElement("td", null, valid ?? "\u2014", " / ", total))))))), /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, t("trialGroups")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-chip-list" }, groups.map((group) => /* @__PURE__ */ import_react3.default.createElement("span", { key: group.id }, group.id, ": ", group.count)))), /* @__PURE__ */ import_react3.default.createElement(TrialAssessmentReport, { job, workspace, active, artifacts, historical, ...interaction, t }));
 }
 function TrialDeltaTable({ title, items }) {
-  return /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, title, " \xB7 ", items?.length ?? 0), items?.length ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-table-wrap" }, /* @__PURE__ */ import_react.default.createElement("table", { className: "hse-evidence-table" }, /* @__PURE__ */ import_react.default.createElement("thead", null, /* @__PURE__ */ import_react.default.createElement("tr", null, /* @__PURE__ */ import_react.default.createElement("th", null, "Trial"), /* @__PURE__ */ import_react.default.createElement("th", null, "Baseline"), /* @__PURE__ */ import_react.default.createElement("th", null, "Candidate"), /* @__PURE__ */ import_react.default.createElement("th", null, "Delta"))), /* @__PURE__ */ import_react.default.createElement("tbody", null, items.map((item) => /* @__PURE__ */ import_react.default.createElement("tr", { key: item.trial }, /* @__PURE__ */ import_react.default.createElement("td", null, item.trial), /* @__PURE__ */ import_react.default.createElement("td", null, format(item.baseline)), /* @__PURE__ */ import_react.default.createElement("td", null, format(item.candidate)), /* @__PURE__ */ import_react.default.createElement("td", { className: "hse-delta", "data-positive": (item.delta ?? 0) >= 0 }, item.delta >= 0 ? "+" : "", format(item.delta))))))) : /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-muted" }, "0"));
+  return /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, title, " \xB7 ", items?.length ?? 0), items?.length ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-table-wrap" }, /* @__PURE__ */ import_react3.default.createElement("table", { className: "hse-evidence-table" }, /* @__PURE__ */ import_react3.default.createElement("thead", null, /* @__PURE__ */ import_react3.default.createElement("tr", null, /* @__PURE__ */ import_react3.default.createElement("th", null, "Trial"), /* @__PURE__ */ import_react3.default.createElement("th", null, "Baseline"), /* @__PURE__ */ import_react3.default.createElement("th", null, "Candidate"), /* @__PURE__ */ import_react3.default.createElement("th", null, "Delta"))), /* @__PURE__ */ import_react3.default.createElement("tbody", null, items.map((item) => /* @__PURE__ */ import_react3.default.createElement("tr", { key: item.trial }, /* @__PURE__ */ import_react3.default.createElement("td", null, item.trial), /* @__PURE__ */ import_react3.default.createElement("td", null, format2(item.baseline)), /* @__PURE__ */ import_react3.default.createElement("td", null, format2(item.candidate)), /* @__PURE__ */ import_react3.default.createElement("td", { className: "hse-delta", "data-positive": (item.delta ?? 0) >= 0 }, item.delta >= 0 ? "+" : "", format2(item.delta))))))) : /* @__PURE__ */ import_react3.default.createElement("span", { className: "hse-muted" }, "0"));
 }
 function TrialIssueTable({ title, items }) {
-  return /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, title, " \xB7 ", items?.length ?? 0), items?.length ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-table-wrap" }, /* @__PURE__ */ import_react.default.createElement("table", { className: "hse-evidence-table" }, /* @__PURE__ */ import_react.default.createElement("thead", null, /* @__PURE__ */ import_react.default.createElement("tr", null, /* @__PURE__ */ import_react.default.createElement("th", null, "Trial"), /* @__PURE__ */ import_react.default.createElement("th", null, "Baseline"), /* @__PURE__ */ import_react.default.createElement("th", null, "Candidate"), /* @__PURE__ */ import_react.default.createElement("th", null, "Reason"))), /* @__PURE__ */ import_react.default.createElement("tbody", null, items.map((item) => /* @__PURE__ */ import_react.default.createElement("tr", { key: item.trial }, /* @__PURE__ */ import_react.default.createElement("td", null, item.trial), /* @__PURE__ */ import_react.default.createElement("td", null, item.baselineStatus ?? (item.baselineValid === true ? "valid" : item.baselineValid === false ? "invalid" : "\u2014")), /* @__PURE__ */ import_react.default.createElement("td", null, item.candidateStatus ?? (item.candidateValid === true ? "valid" : item.candidateValid === false ? "invalid" : "\u2014")), /* @__PURE__ */ import_react.default.createElement("td", null, item.invalidReasons?.join(" \xB7 ") || item.exception?.message || item.exception?.code || "\u2014")))))) : /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-muted" }, "0"));
+  return /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, title, " \xB7 ", items?.length ?? 0), items?.length ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-table-wrap" }, /* @__PURE__ */ import_react3.default.createElement("table", { className: "hse-evidence-table" }, /* @__PURE__ */ import_react3.default.createElement("thead", null, /* @__PURE__ */ import_react3.default.createElement("tr", null, /* @__PURE__ */ import_react3.default.createElement("th", null, "Trial"), /* @__PURE__ */ import_react3.default.createElement("th", null, "Baseline"), /* @__PURE__ */ import_react3.default.createElement("th", null, "Candidate"), /* @__PURE__ */ import_react3.default.createElement("th", null, "Reason"))), /* @__PURE__ */ import_react3.default.createElement("tbody", null, items.map((item) => /* @__PURE__ */ import_react3.default.createElement("tr", { key: item.trial }, /* @__PURE__ */ import_react3.default.createElement("td", null, item.trial), /* @__PURE__ */ import_react3.default.createElement("td", null, item.baselineStatus ?? (item.baselineValid === true ? "valid" : item.baselineValid === false ? "invalid" : "\u2014")), /* @__PURE__ */ import_react3.default.createElement("td", null, item.candidateStatus ?? (item.candidateValid === true ? "valid" : item.candidateValid === false ? "invalid" : "\u2014")), /* @__PURE__ */ import_react3.default.createElement("td", null, item.invalidReasons?.join(" \xB7 ") || item.exception?.message || item.exception?.code || "\u2014")))))) : /* @__PURE__ */ import_react3.default.createElement("span", { className: "hse-muted" }, "0"));
 }
 function comparisonCandidates(job, jobs, requestedBaseline) {
   const current = (Array.isArray(jobs) ? jobs : []).find((item) => item.name === job);
@@ -2659,31 +3569,31 @@ function ComparePanel({ job, workspace, jobs, artifacts, gate, navigation, resto
   const navigationBaseline = navigation?.target?.candidate === job ? navigation.target.baseline : void 0;
   const requestedBaseline = navigationBaseline ?? restoreView?.compareBaseline;
   const candidates = comparisonCandidates(job, jobs, requestedBaseline);
-  const [baseline, setBaseline] = (0, import_react.useState)(() => candidates.some((item) => item.name === restoreView?.compareBaseline) ? restoreView.compareBaseline : candidates[0]?.name ?? "");
-  const handledRestore = (0, import_react.useRef)();
+  const [baseline, setBaseline] = (0, import_react3.useState)(() => candidates.some((item) => item.name === restoreView?.compareBaseline) ? restoreView.compareBaseline : candidates[0]?.name ?? "");
+  const handledRestore = (0, import_react3.useRef)();
   const candidateKey = candidates.map((item) => item.name).join("\0");
   const effectiveBaseline = candidates.some((item) => item.name === baseline) ? baseline : candidates[0]?.name ?? "";
   const comparisonKey = JSON.stringify([workspace, effectiveBaseline, job]);
-  const [state, setState] = (0, import_react.useState)();
-  const [retry, setRetry] = (0, import_react.useState)(0);
-  const contextForRef = (0, import_react.useRef)(contextFor);
+  const [state, setState] = (0, import_react3.useState)();
+  const [retry, setRetry] = (0, import_react3.useState)(0);
+  const contextForRef = (0, import_react3.useRef)(contextFor);
   contextForRef.current = contextFor;
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (baseline !== effectiveBaseline) setBaseline(effectiveBaseline);
   }, [baseline, candidateKey, effectiveBaseline, job, workspace]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     const requested = navigation?.target?.candidate === job ? navigation.target.baseline : void 0;
     if (requested && candidates.some((item) => item.name === requested)) setBaseline(requested);
   }, [candidateKey, job, navigation?.actionId, navigation?.target?.baseline, navigation?.target?.candidate]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (!restoreView?.restoreId || handledRestore.current === restoreView.restoreId) return;
     handledRestore.current = restoreView.restoreId;
     if (candidates.some((item) => item.name === restoreView.compareBaseline)) setBaseline(restoreView.compareBaseline);
   }, [candidateKey, restoreView?.compareBaseline, restoreView?.restoreId]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     onViewStateChange?.(effectiveBaseline);
   }, [effectiveBaseline, onViewStateChange]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     setContext(contextForRef.current({ comparison: void 0 }));
     if (!effectiveBaseline) {
       setState(void 0);
@@ -2705,25 +3615,25 @@ function ComparePanel({ job, workspace, jobs, artifacts, gate, navigation, resto
   }, [comparisonKey, effectiveBaseline, job, request, retry, setContext, workspace]);
   const currentState = state?.requestKey === comparisonKey ? state : void 0;
   const comparison = currentState?.value;
-  const compareContext = (0, import_react.useMemo)(() => comparison ? contextFor({ comparison, gate: void 0 }) : void 0, [comparison, contextFor]);
+  const compareContext = (0, import_react3.useMemo)(() => comparison ? contextFor({ comparison, gate: void 0 }) : void 0, [comparison, contextFor]);
   const compareIsTarget = navigation?.target?.route === "harbor.compare" || restoreView?.gateRoute === "harbor.compare";
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (compareContext && (!gate || compareIsTarget)) setContext(compareContext);
   }, [compareContext, compareIsTarget, gate, setContext]);
   const labels = metricLabelMap(artifacts);
-  return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-gate-head" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("compare")), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-inline-ask", disabled: !compareContext, onClick: () => compareContext && void askContext(compareContext, t("suggestedQuestion4")) }, t("askAi"))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-compare-select" }, /* @__PURE__ */ import_react.default.createElement("select", { className: "hse-select", value: effectiveBaseline, onChange: (event) => setBaseline(event.target.value) }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, t("baseline")), candidates.map((item) => /* @__PURE__ */ import_react.default.createElement("option", { key: item.name, value: item.name }, item.name)))), currentState?.error ? /* @__PURE__ */ import_react.default.createElement(HarborErrorState, { error: currentState.error, retry: () => setRetry((value) => value + 1), t }) : comparison ? /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("div", { className: comparison.comparable ? "hse-valid" : "hse-invalid" }, comparison.comparable ? `\u2713 ${t("comparable")}` : `\xD7 ${t("notComparable")}`), /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-muted" }, comparison.note), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-grid" }, Object.entries(comparison.metrics ?? {}).map(([metric, values]) => /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card", key: metric }, /* @__PURE__ */ import_react.default.createElement("span", null, labels[metric] ?? metric, " \xB7 ", values.direction), /* @__PURE__ */ import_react.default.createElement("b", null, format(values.baseline), " \u2192 ", format(values.candidate)), /* @__PURE__ */ import_react.default.createElement("code", { className: "hse-delta", "data-positive": (values.improvement ?? values.delta ?? 0) >= 0 }, typeof values.delta === "number" ? `${values.delta >= 0 ? "+" : ""}${format(values.delta)}` : "\u2014"))))) : /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-muted" }, currentState?.status === "loading" ? t("loading") : t("noData"))), comparison ? /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(TrialDeltaTable, { title: t("improved"), items: comparison.improvedTrials }), /* @__PURE__ */ import_react.default.createElement(TrialDeltaTable, { title: t("regressed"), items: comparison.regressedTrials }), /* @__PURE__ */ import_react.default.createElement(TrialIssueTable, { title: t("invalidTrials"), items: comparison.invalidTrials }), /* @__PURE__ */ import_react.default.createElement(TrialIssueTable, { title: t("newInfrastructureExceptions"), items: comparison.newInfrastructureExceptions })) : null, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-capability" }, t("explicitGate")));
+  return /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-gate-head" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, t("compare")), /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "hse-inline-ask", disabled: !compareContext, onClick: () => compareContext && void askContext(compareContext, t("suggestedQuestion4")) }, t("askAi"))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-compare-select" }, /* @__PURE__ */ import_react3.default.createElement("select", { className: "hse-select", value: effectiveBaseline, onChange: (event) => setBaseline(event.target.value) }, /* @__PURE__ */ import_react3.default.createElement("option", { value: "" }, t("baseline")), candidates.map((item) => /* @__PURE__ */ import_react3.default.createElement("option", { key: item.name, value: item.name }, item.name)))), currentState?.error ? /* @__PURE__ */ import_react3.default.createElement(HarborErrorState, { error: currentState.error, retry: () => setRetry((value) => value + 1), t }) : comparison ? /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement("div", { className: comparison.comparable ? "hse-valid" : "hse-invalid" }, comparison.comparable ? `\u2713 ${t("comparable")}` : `\xD7 ${t("notComparable")}`), /* @__PURE__ */ import_react3.default.createElement("p", { className: "hse-muted" }, comparison.note), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-grid" }, Object.entries(comparison.metrics ?? {}).map(([metric, values]) => /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card", key: metric }, /* @__PURE__ */ import_react3.default.createElement("span", null, labels[metric] ?? metric, " \xB7 ", values.direction), /* @__PURE__ */ import_react3.default.createElement("b", null, format2(values.baseline), " \u2192 ", format2(values.candidate)), /* @__PURE__ */ import_react3.default.createElement("code", { className: "hse-delta", "data-positive": (values.improvement ?? values.delta ?? 0) >= 0 }, typeof values.delta === "number" ? `${values.delta >= 0 ? "+" : ""}${format2(values.delta)}` : "\u2014"))))) : /* @__PURE__ */ import_react3.default.createElement("span", { className: "hse-muted" }, currentState?.status === "loading" ? t("loading") : t("noData"))), comparison ? /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement(TrialDeltaTable, { title: t("improved"), items: comparison.improvedTrials }), /* @__PURE__ */ import_react3.default.createElement(TrialDeltaTable, { title: t("regressed"), items: comparison.regressedTrials }), /* @__PURE__ */ import_react3.default.createElement(TrialIssueTable, { title: t("invalidTrials"), items: comparison.invalidTrials }), /* @__PURE__ */ import_react3.default.createElement(TrialIssueTable, { title: t("newInfrastructureExceptions"), items: comparison.newInfrastructureExceptions })) : null, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-capability" }, t("explicitGate")));
 }
 function LocalObjectActions({ object, contextFor, setContext, askContext, prompt, navigation, t }) {
-  const root = (0, import_react.useRef)();
+  const root = (0, import_react3.useRef)();
   const selected = Boolean(object && navigation?.target?.localObject?.id === object.id);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (!selected || !contextFor) return;
     setContext?.(contextFor({ localObject: object }));
     root.current?.scrollIntoView({ block: "center" });
   }, [selected, object?.id, contextFor, setContext]);
   if (!object || !contextFor) return null;
   const context = () => contextFor({ localObject: object });
-  return /* @__PURE__ */ import_react.default.createElement("div", { ref: root, className: "hse-local-actions", "data-highlight": String(selected) }, /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => setContext?.(context()) }, t("selectObject")), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-inline-ask", onClick: () => void askContext(context(), prompt) }, t("askAboutThis")), /* @__PURE__ */ import_react.default.createElement("code", null, short(object.sourceDigest)));
+  return /* @__PURE__ */ import_react3.default.createElement("div", { ref: root, className: "hse-local-actions", "data-highlight": String(selected) }, /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", onClick: () => setContext?.(context()) }, t("selectObject")), /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "hse-inline-ask", onClick: () => void askContext(context(), prompt) }, t("askAboutThis")), /* @__PURE__ */ import_react3.default.createElement("code", null, short(object.sourceDigest)));
 }
 function OptimizerPanel({ artifacts, interactionObjects = [], contextFor, setContext, askContext, navigation, t }) {
   const diagnosis = artifacts.diagnosis ?? {};
@@ -2731,18 +3641,18 @@ function OptimizerPanel({ artifacts, interactionObjects = [], contextFor, setCon
   const hypotheses = optimization.hypotheses ?? [];
   const diagnoses = diagnosis.diagnoses ?? [];
   const configured = optimization.hook?.configured_component;
-  return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("controlledHypotheses")), configured ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-hook-state", "data-executed": Boolean(configured.executed) }, /* @__PURE__ */ import_react.default.createElement("b", null, t("hookExecution"), ": ", configured.id ?? "\u2014", " \xB7 ", configured.version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("br", null), configured.executed ? t("configuredHookRun") : t("configuredHookNotRun")) : null, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, "Diagnoser"), /* @__PURE__ */ import_react.default.createElement("b", null, diagnosis.hook?.id ?? "\u2014", " \xB7 ", diagnosis.hook?.version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, diagnoses.length, " diagnoses \xB7 non-reward-affecting")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("pluginFallback")), /* @__PURE__ */ import_react.default.createElement("b", null, optimization.hook?.id ?? "\u2014", " \xB7 ", optimization.hook?.version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, hypotheses.length, " hypotheses \xB7 non-reward-affecting")))), diagnoses.length ? /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, "Diagnoses"), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-findings" }, diagnoses.map((item, index) => /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-finding", key: item.id ?? index }, item.message ?? item.root_cause ?? pretty(item))))) : null, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-hypotheses" }, hypotheses.length ? hypotheses.map((item, index) => /* @__PURE__ */ import_react.default.createElement("article", { className: "hse-hypothesis", key: item.id }, /* @__PURE__ */ import_react.default.createElement("h4", null, item.id), /* @__PURE__ */ import_react.default.createElement(LocalObjectActions, { object: interactionObjects.filter((ref) => ref.kind === "hypothesis")[index], contextFor, setContext, askContext, prompt: t("askHypothesis"), navigation, t }), /* @__PURE__ */ import_react.default.createElement("dl", null, /* @__PURE__ */ import_react.default.createElement("dt", null, t("rootCause")), /* @__PURE__ */ import_react.default.createElement("dd", null, item.root_cause ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("dt", null, t("affectedTrials")), /* @__PURE__ */ import_react.default.createElement("dd", null, item.affected_trials?.length ?? 0), /* @__PURE__ */ import_react.default.createElement("dt", null, t("expectedEffect")), /* @__PURE__ */ import_react.default.createElement("dd", null, item.expected_metric_effect ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("dt", null, t("mutationSurface")), /* @__PURE__ */ import_react.default.createElement("dd", null, Array.isArray(item.mutation_surface) ? item.mutation_surface.join(" \xB7 ") : item.mutation_surface || "\u2014"), /* @__PURE__ */ import_react.default.createElement("dt", null, t("forbiddenSurface")), /* @__PURE__ */ import_react.default.createElement("dd", null, Array.isArray(item.forbidden_surface) ? item.forbidden_surface.join(" \xB7 ") : item.forbidden_surface || "\u2014"), /* @__PURE__ */ import_react.default.createElement("dt", null, t("guardrails")), /* @__PURE__ */ import_react.default.createElement("dd", null, Array.isArray(item.guardrails) ? item.guardrails.join(" \xB7 ") : item.guardrails || "\u2014"), /* @__PURE__ */ import_react.default.createElement("dt", null, t("rollback")), /* @__PURE__ */ import_react.default.createElement("dd", null, item.rollback_condition ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("dt", null, t("nextExperiment")), /* @__PURE__ */ import_react.default.createElement("dd", null, item.next_experiment ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("details", { className: "hse-source-details" }, /* @__PURE__ */ import_react.default.createElement("summary", null, t("provenance"), " \xB7 ", item.evidence_refs?.length ?? 0), /* @__PURE__ */ import_react.default.createElement("pre", { className: "hse-source" }, pretty(item.evidence_refs))))) : /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-empty" }, t("noHypotheses")))));
+  return /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, t("controlledHypotheses")), configured ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-hook-state", "data-executed": Boolean(configured.executed) }, /* @__PURE__ */ import_react3.default.createElement("b", null, t("hookExecution"), ": ", configured.id ?? "\u2014", " \xB7 ", configured.version ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("br", null), configured.executed ? t("configuredHookRun") : t("configuredHookNotRun")) : null, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, "Diagnoser"), /* @__PURE__ */ import_react3.default.createElement("b", null, diagnosis.hook?.id ?? "\u2014", " \xB7 ", diagnosis.hook?.version ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("code", null, diagnoses.length, " diagnoses \xB7 non-reward-affecting")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("pluginFallback")), /* @__PURE__ */ import_react3.default.createElement("b", null, optimization.hook?.id ?? "\u2014", " \xB7 ", optimization.hook?.version ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("code", null, hypotheses.length, " hypotheses \xB7 non-reward-affecting")))), diagnoses.length ? /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, "Diagnoses"), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-findings" }, diagnoses.map((item, index) => /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-finding", key: item.id ?? index }, item.message ?? item.root_cause ?? pretty2(item))))) : null, /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-hypotheses" }, hypotheses.length ? hypotheses.map((item, index) => /* @__PURE__ */ import_react3.default.createElement("article", { className: "hse-hypothesis", key: item.id }, /* @__PURE__ */ import_react3.default.createElement("h4", null, item.id), /* @__PURE__ */ import_react3.default.createElement(LocalObjectActions, { object: interactionObjects.filter((ref) => ref.kind === "hypothesis")[index], contextFor, setContext, askContext, prompt: t("askHypothesis"), navigation, t }), /* @__PURE__ */ import_react3.default.createElement("dl", null, /* @__PURE__ */ import_react3.default.createElement("dt", null, t("rootCause")), /* @__PURE__ */ import_react3.default.createElement("dd", null, item.root_cause ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("dt", null, t("affectedTrials")), /* @__PURE__ */ import_react3.default.createElement("dd", null, item.affected_trials?.length ?? 0), /* @__PURE__ */ import_react3.default.createElement("dt", null, t("expectedEffect")), /* @__PURE__ */ import_react3.default.createElement("dd", null, item.expected_metric_effect ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("dt", null, t("mutationSurface")), /* @__PURE__ */ import_react3.default.createElement("dd", null, Array.isArray(item.mutation_surface) ? item.mutation_surface.join(" \xB7 ") : item.mutation_surface || "\u2014"), /* @__PURE__ */ import_react3.default.createElement("dt", null, t("forbiddenSurface")), /* @__PURE__ */ import_react3.default.createElement("dd", null, Array.isArray(item.forbidden_surface) ? item.forbidden_surface.join(" \xB7 ") : item.forbidden_surface || "\u2014"), /* @__PURE__ */ import_react3.default.createElement("dt", null, t("guardrails")), /* @__PURE__ */ import_react3.default.createElement("dd", null, Array.isArray(item.guardrails) ? item.guardrails.join(" \xB7 ") : item.guardrails || "\u2014"), /* @__PURE__ */ import_react3.default.createElement("dt", null, t("rollback")), /* @__PURE__ */ import_react3.default.createElement("dd", null, item.rollback_condition ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("dt", null, t("nextExperiment")), /* @__PURE__ */ import_react3.default.createElement("dd", null, item.next_experiment ?? "\u2014")), /* @__PURE__ */ import_react3.default.createElement("details", { className: "hse-source-details" }, /* @__PURE__ */ import_react3.default.createElement("summary", null, t("provenance"), " \xB7 ", item.evidence_refs?.length ?? 0), /* @__PURE__ */ import_react3.default.createElement("pre", { className: "hse-source" }, pretty2(item.evidence_refs))))) : /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-empty" }, t("noHypotheses")))));
 }
 function GateEvidencePanel({ artifacts, interactionObjects = [], contextFor, setContext, askContext, navigation, t }) {
   const report = artifacts.promotion;
-  if (!report) return /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("gateEvidence")), /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-muted" }, t("noData")));
+  if (!report) return /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, t("gateEvidence")), /* @__PURE__ */ import_react3.default.createElement("span", { className: "hse-muted" }, t("noData")));
   const labels = metricLabelMap(artifacts);
   const pass = report.decision === "PROMOTE";
   const population = report.population ?? {};
-  return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-gate-head" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("h3", null, t("gateEvidence")), /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-muted" }, report.baseline_job ?? "\u2014", " \u2192 ", report.candidate_job ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-decision", "data-pass": pass }, report.decision ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("comparable")), /* @__PURE__ */ import_react.default.createElement("b", { className: report.comparable ? "hse-valid" : "hse-invalid" }, report.comparable ? "\u2713 TRUE" : "\xD7 FALSE"), /* @__PURE__ */ import_react.default.createElement("code", null, short(report.baseline_evaluation_context?.digest), " = ", short(report.candidate_evaluation_context?.digest))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, report.gate_eligible ? t("eligible") : t("notEligible")), /* @__PURE__ */ import_react.default.createElement("b", { className: report.gate_eligible ? "hse-valid" : "hse-invalid" }, population.baseline_valid ?? "\u2014", " / ", population.baseline ?? "\u2014", " \u2192 ", population.candidate_valid ?? "\u2014", " / ", population.candidate ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, t("policy"), ": ", report.policy?.policy_id ?? "\u2014", " \xB7 ", report.policy?.version ?? "\u2014")))), /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("metricDeltas")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-table-wrap" }, /* @__PURE__ */ import_react.default.createElement("table", { className: "hse-evidence-table" }, /* @__PURE__ */ import_react.default.createElement("thead", null, /* @__PURE__ */ import_react.default.createElement("tr", null, /* @__PURE__ */ import_react.default.createElement("th", null, t("metric")), /* @__PURE__ */ import_react.default.createElement("th", null, "Baseline"), /* @__PURE__ */ import_react.default.createElement("th", null, "Candidate"), /* @__PURE__ */ import_react.default.createElement("th", null, "Delta"))), /* @__PURE__ */ import_react.default.createElement("tbody", null, Object.entries(report.metric_deltas ?? {}).map(([id, delta]) => /* @__PURE__ */ import_react.default.createElement("tr", { key: id }, /* @__PURE__ */ import_react.default.createElement("td", null, labels[id] ?? id), /* @__PURE__ */ import_react.default.createElement("td", null, format(report.baseline_metrics?.[id])), /* @__PURE__ */ import_react.default.createElement("td", null, format(report.candidate_metrics?.[id])), /* @__PURE__ */ import_react.default.createElement("td", { className: "hse-delta", "data-positive": delta >= 0 }, delta >= 0 ? "+" : "", format(delta)))))))), /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpis" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("improved")), /* @__PURE__ */ import_react.default.createElement("b", null, report.improved_trials?.length ?? 0)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("regressed")), /* @__PURE__ */ import_react.default.createElement("b", null, report.regressed_trials?.length ?? 0)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("newExceptions")), /* @__PURE__ */ import_react.default.createElement("b", null, report.new_exceptions?.length ?? 0)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("artifactRegressions")), /* @__PURE__ */ import_react.default.createElement("b", null, report.artifact_regressions?.length ?? 0)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("reasons")), /* @__PURE__ */ import_react.default.createElement("b", null, report.reasons?.length ?? 0))), report.reasons?.length ? /* @__PURE__ */ import_react.default.createElement("ul", null, report.reasons.map((reason, index) => /* @__PURE__ */ import_react.default.createElement("li", { key: `${gateReasonText(reason)}-${index}` }, gateReasonText(reason), /* @__PURE__ */ import_react.default.createElement(LocalObjectActions, { object: interactionObjects.filter((ref) => ref.kind === "gate-reason")[index], contextFor, setContext, askContext, prompt: t("askGateReason"), navigation, t })))) : null));
+  return /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-gate-head" }, /* @__PURE__ */ import_react3.default.createElement("div", null, /* @__PURE__ */ import_react3.default.createElement("h3", null, t("gateEvidence")), /* @__PURE__ */ import_react3.default.createElement("p", { className: "hse-muted" }, report.baseline_job ?? "\u2014", " \u2192 ", report.candidate_job ?? "\u2014")), /* @__PURE__ */ import_react3.default.createElement("span", { className: "hse-decision", "data-pass": pass }, report.decision ?? "\u2014")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("comparable")), /* @__PURE__ */ import_react3.default.createElement("b", { className: report.comparable ? "hse-valid" : "hse-invalid" }, report.comparable ? "\u2713 TRUE" : "\xD7 FALSE"), /* @__PURE__ */ import_react3.default.createElement("code", null, short(report.baseline_evaluation_context?.digest), " = ", short(report.candidate_evaluation_context?.digest))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, report.gate_eligible ? t("eligible") : t("notEligible")), /* @__PURE__ */ import_react3.default.createElement("b", { className: report.gate_eligible ? "hse-valid" : "hse-invalid" }, population.baseline_valid ?? "\u2014", " / ", population.baseline ?? "\u2014", " \u2192 ", population.candidate_valid ?? "\u2014", " / ", population.candidate ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("code", null, t("policy"), ": ", report.policy?.policy_id ?? "\u2014", " \xB7 ", report.policy?.version ?? "\u2014")))), /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, t("metricDeltas")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-table-wrap" }, /* @__PURE__ */ import_react3.default.createElement("table", { className: "hse-evidence-table" }, /* @__PURE__ */ import_react3.default.createElement("thead", null, /* @__PURE__ */ import_react3.default.createElement("tr", null, /* @__PURE__ */ import_react3.default.createElement("th", null, t("metric")), /* @__PURE__ */ import_react3.default.createElement("th", null, "Baseline"), /* @__PURE__ */ import_react3.default.createElement("th", null, "Candidate"), /* @__PURE__ */ import_react3.default.createElement("th", null, "Delta"))), /* @__PURE__ */ import_react3.default.createElement("tbody", null, Object.entries(report.metric_deltas ?? {}).map(([id, delta]) => /* @__PURE__ */ import_react3.default.createElement("tr", { key: id }, /* @__PURE__ */ import_react3.default.createElement("td", null, labels[id] ?? id), /* @__PURE__ */ import_react3.default.createElement("td", null, format2(report.baseline_metrics?.[id])), /* @__PURE__ */ import_react3.default.createElement("td", null, format2(report.candidate_metrics?.[id])), /* @__PURE__ */ import_react3.default.createElement("td", { className: "hse-delta", "data-positive": delta >= 0 }, delta >= 0 ? "+" : "", format2(delta)))))))), /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-kpis" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("improved")), /* @__PURE__ */ import_react3.default.createElement("b", null, report.improved_trials?.length ?? 0)), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("regressed")), /* @__PURE__ */ import_react3.default.createElement("b", null, report.regressed_trials?.length ?? 0)), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("newExceptions")), /* @__PURE__ */ import_react3.default.createElement("b", null, report.new_exceptions?.length ?? 0)), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("artifactRegressions")), /* @__PURE__ */ import_react3.default.createElement("b", null, report.artifact_regressions?.length ?? 0)), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("reasons")), /* @__PURE__ */ import_react3.default.createElement("b", null, report.reasons?.length ?? 0))), report.reasons?.length ? /* @__PURE__ */ import_react3.default.createElement("ul", null, report.reasons.map((reason, index) => /* @__PURE__ */ import_react3.default.createElement("li", { key: `${gateReasonText(reason)}-${index}` }, gateReasonText(reason), /* @__PURE__ */ import_react3.default.createElement(LocalObjectActions, { object: interactionObjects.filter((ref) => ref.kind === "gate-reason")[index], contextFor, setContext, askContext, prompt: t("askGateReason"), navigation, t })))) : null));
 }
 function HistoricalGatePanel({ t }) {
-  return /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-gate-head" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("h3", null, t("gateEvidence")), /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-muted" }, t("gateNotApplicableHint"))), /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-decision" }, t("gateNotApplicable"))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-capability" }, /* @__PURE__ */ import_react.default.createElement("b", null, "UNSUPPORTED_JOB_KIND_FOR_PROMOTION"), /* @__PURE__ */ import_react.default.createElement("br", null), "historical-generation-evaluation \xB7 diagnostic \xB7 observe-existing"));
+  return /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-gate-head" }, /* @__PURE__ */ import_react3.default.createElement("div", null, /* @__PURE__ */ import_react3.default.createElement("h3", null, t("gateEvidence")), /* @__PURE__ */ import_react3.default.createElement("p", { className: "hse-muted" }, t("gateNotApplicableHint"))), /* @__PURE__ */ import_react3.default.createElement("span", { className: "hse-decision" }, t("gateNotApplicable"))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-capability" }, /* @__PURE__ */ import_react3.default.createElement("b", null, "UNSUPPORTED_JOB_KIND_FOR_PROMOTION"), /* @__PURE__ */ import_react3.default.createElement("br", null), "historical-generation-evaluation \xB7 diagnostic \xB7 observe-existing"));
 }
 function governanceRequestKey(workspace, job) {
   return JSON.stringify([String(workspace ?? ""), String(job ?? "")]);
@@ -2761,71 +3671,10 @@ function applySourceProposal(text, sourceRef, proposal) {
   if (!Number.isInteger(start) || start < 0 || end > lines.length || lines.slice(start, end).join("\n") !== proposal.before || typeof proposal.replacement !== "string") throw new Error("HARBOR_DRAFT_SOURCE_CONFLICT: Saved fragment changed; review a new draft.");
   return [...lines.slice(0, start), proposal.replacement, ...lines.slice(end)].join("\n");
 }
-function EvaluatorEditor({ value, workspace, bindingKey, bindingIsCurrent, reload, onSaved, proposal, t }) {
+function EvaluatorEditor(props) {
   const update = useHarborMutation();
-  const active = value.evaluatorInterface;
-  const evaluator = active?.evaluator;
-  const files = evaluator?.editable_files ?? [];
-  const [selectedPath, setSelectedPath] = (0, import_react.useState)(files[0]?.path ?? "");
-  const selected = files.find((item) => item.path === selectedPath) ?? files[0];
-  const [draft, setDraft] = (0, import_react.useState)(selected?.text ?? "");
-  const [evaluatorVersion, setEvaluatorVersion] = (0, import_react.useState)(nextVersion(evaluator?.version));
-  const [stackVersion, setStackVersion] = (0, import_react.useState)(nextVersion(active?.stack?.version));
-  const [saveState, setSaveState] = (0, import_react.useState)({ status: "idle" });
-  const [reviewed, setReviewed] = (0, import_react.useState)("");
-  const reviewIdentity = JSON.stringify([bindingKey, selected?.path, selected?.digest, draft, evaluatorVersion, stackVersion]);
-  const sourceProposal = proposal?.proposal;
-  const sourceRef = value.interactionObjects?.find((ref) => ref.id === sourceProposal?.sourceRef?.id);
-  const applyProposal = () => {
-    try {
-      if (!bindingIsCurrent(bindingKey)) throw new Error("HARBOR_DRAFT_SOURCE_CONFLICT: Reload the saved source before applying this draft.");
-      setDraft(applySourceProposal(selected?.text, sourceRef, sourceProposal));
-      setReviewed("");
-      setSaveState({ status: "idle" });
-    } catch (error) {
-      setSaveState({ status: "error", error: normalizeHarborUiError(error) });
-    }
-  };
-  (0, import_react.useEffect)(() => {
-    const first = files[0];
-    setSelectedPath((current) => files.some((item) => item.path === current) ? current : first?.path ?? "");
-    setEvaluatorVersion(nextVersion(evaluator?.version));
-    setStackVersion(nextVersion(active?.stack?.version));
-  }, [evaluator?.digest]);
-  (0, import_react.useEffect)(() => {
-    setDraft(selected?.text ?? "");
-    setSaveState({ status: "idle" });
-  }, [selected?.path, selected?.digest]);
-  if (active?.error || !evaluator) return /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("evaluatorImplementation")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-capability" }, active?.error ?? t("noEvaluatorInterface")));
-  const changed = selected && draft !== selected.text;
-  const currentBinding = bindingIsCurrent(bindingKey);
-  const save = async () => {
-    if (reviewed !== reviewIdentity) return;
-    if (!bindingIsCurrent(bindingKey)) {
-      setSaveState({ status: "error", error: normalizeHarborUiError({ code: "HARBOR_EVALUATOR_BINDING_STALE", message: t("reloadBeforeSave") }) });
-      return;
-    }
-    setSaveState({ status: "saving" });
-    try {
-      const receipt = await update("evaluator", {
-        workspace,
-        stackPath: active.stack.path,
-        filePath: selected.path,
-        content: draft,
-        expectedDigest: selected.digest,
-        newEvaluatorVersion: evaluatorVersion,
-        newStackVersion: stackVersion
-      });
-      if (bindingIsCurrent(bindingKey)) {
-        onSaved?.(receipt);
-        setSaveState({ status: "saved" });
-        await reload();
-      }
-    } catch (error) {
-      if (bindingIsCurrent(bindingKey)) setSaveState({ status: "error", error: normalizeHarborUiError(error) });
-    }
-  };
-  return /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-editor-head" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("h3", null, t("evaluatorImplementation")), /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-muted" }, evaluator.evaluator_id, " \xB7 ", evaluator.version)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("evaluatorKind")), /* @__PURE__ */ import_react.default.createElement("b", null, evaluator.kind), /* @__PURE__ */ import_react.default.createElement("code", null, evaluator.interface))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("evaluatorProtocol")), /* @__PURE__ */ import_react.default.createElement("b", null, evaluator.protocol?.input, " \u2192 ", evaluator.protocol?.output), /* @__PURE__ */ import_react.default.createElement("code", null, evaluator.implementation?.language, " \xB7 ", evaluator.implementation?.callable)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("criteria")), /* @__PURE__ */ import_react.default.createElement("b", null, (evaluator.criteria ?? []).map((item) => item.label).join(" \xB7 ")), /* @__PURE__ */ import_react.default.createElement("code", null, "0 \xB7 0.5 \xB7 1"))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-editor-tabs", "aria-label": t("editableFiles") }, files.map((file) => /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-editor-tab", "data-active": file.path === selected?.path, key: file.path, onClick: () => setSelectedPath(file.path) }, /* @__PURE__ */ import_react.default.createElement("b", null, t("openFile"), " ", file.path.split("/").at(-1)), /* @__PURE__ */ import_react.default.createElement("span", null, file.role, " \xB7 ", file.path)))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-editor-current" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("editingFile")), /* @__PURE__ */ import_react.default.createElement("b", null, selected?.path.split("/").at(-1)), /* @__PURE__ */ import_react.default.createElement("code", null, selected?.path)), /* @__PURE__ */ import_react.default.createElement("textarea", { className: "hse-editor", "aria-label": t("editSource"), spellCheck: "false", value: draft, onChange: (event) => setDraft(event.target.value) }), sourceProposal ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-action-preview" }, /* @__PURE__ */ import_react.default.createElement("b", null, sourceProposal.summary), /* @__PURE__ */ import_react.default.createElement("p", null, t("draftNotApplied")), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-button", disabled: !sourceRef || selected?.text !== value.components?.[sourceRef?.sourceRole]?.source?.text, onClick: applyProposal }, t("applyToDraft"))) : null, changed ? /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-diff-review" }, /* @__PURE__ */ import_react.default.createElement("h4", null, t("reviewDiff")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-report-compare" }, /* @__PURE__ */ import_react.default.createElement("pre", { "aria-label": t("beforeChange") }, selected.text), /* @__PURE__ */ import_react.default.createElement("pre", { "aria-label": t("afterChange") }, draft)), /* @__PURE__ */ import_react.default.createElement("label", null, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: reviewed === reviewIdentity, onChange: (event) => setReviewed(event.target.checked ? reviewIdentity : "") }), t("confirmDiff"))) : null, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-editor-versions" }, /* @__PURE__ */ import_react.default.createElement("label", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("evaluatorVersion")), /* @__PURE__ */ import_react.default.createElement("input", { className: "hse-input", value: evaluatorVersion, onChange: (event) => setEvaluatorVersion(event.target.value) })), /* @__PURE__ */ import_react.default.createElement("label", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("stackVersion")), /* @__PURE__ */ import_react.default.createElement("input", { className: "hse-input", value: stackVersion, onChange: (event) => setStackVersion(event.target.value) }))), saveState.status === "error" ? /* @__PURE__ */ import_react.default.createElement(HarborErrorState, { error: saveState.error, retry: () => void save(), t }) : null, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-editor-actions" }, /* @__PURE__ */ import_react.default.createElement("p", { className: saveState.status === "saved" ? "hse-editor-success" : "hse-muted" }, saveState.status === "saved" ? t("saved") : t("editWarning")), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-button", disabled: !currentBinding || !changed || reviewed !== reviewIdentity || !evaluatorVersion || !stackVersion || saveState.status === "saving", onClick: () => void save() }, saveState.status === "saving" ? t("saving") : t("saveEvaluator"))));
+  const sessionId = (0, import_react3.useContext)(HarborSessionContext);
+  return /* @__PURE__ */ import_react3.default.createElement(EvaluatorEditorView, { ...props, sessionId: String(sessionId), update, ErrorState: HarborErrorState, applySourceProposal, nextVersion });
 }
 function selectedSourceLines(text, start, end) {
   const lines = String(text).split("\n");
@@ -2835,12 +3684,12 @@ function selectedSourceLines(text, start, end) {
 }
 function SavedSourceFragment({ component, object, contextFor, setContext, askContext, navigation, t }) {
   const source = component?.source?.text;
-  const [range, setRange] = (0, import_react.useState)({ startLine: 1, endLine: Math.min(String(source ?? "").split("\n").length, 200) });
-  const input = (0, import_react.useRef)();
-  (0, import_react.useEffect)(() => {
+  const [range, setRange] = (0, import_react3.useState)({ startLine: 1, endLine: Math.min(String(source ?? "").split("\n").length, 200) });
+  const input = (0, import_react3.useRef)();
+  (0, import_react3.useEffect)(() => {
     setRange({ startLine: 1, endLine: Math.min(String(source ?? "").split("\n").length, 200) });
   }, [source]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     const target = navigation?.target?.localObject;
     if (!object || target?.id !== object.id) return;
     setRange({ startLine: target.startLine ?? 1, endLine: target.endLine ?? 1 });
@@ -2860,18 +3709,18 @@ function SavedSourceFragment({ component, object, contextFor, setContext, askCon
     setRange(next);
     setContext(context(next));
   };
-  return /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section hse-saved-source" }, /* @__PURE__ */ import_react.default.createElement("h3", null, component.id, " \xB7 ", t("sourceSelection")), /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-muted" }, t("sourceSaved")), /* @__PURE__ */ import_react.default.createElement("textarea", { ref: input, className: "hse-editor", readOnly: true, value: source, "aria-label": `${t("sourceSelection")} ${object.sourceRole}`, onSelect: select }), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-local-actions" }, /* @__PURE__ */ import_react.default.createElement("span", null, "L", range.startLine, "\u2013", range.endLine), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-inline-ask", onClick: () => void askContext(context(range), t("askSource")) }, t("askAboutThis"))));
+  return /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section hse-saved-source" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, component.id, " \xB7 ", t("sourceSelection")), /* @__PURE__ */ import_react3.default.createElement("p", { className: "hse-muted" }, t("sourceSaved")), /* @__PURE__ */ import_react3.default.createElement("textarea", { ref: input, className: "hse-editor", readOnly: true, value: source, "aria-label": `${t("sourceSelection")} ${object.sourceRole}`, onSelect: select }), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-local-actions" }, /* @__PURE__ */ import_react3.default.createElement("span", null, "L", range.startLine, "\u2013", range.endLine), /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "hse-inline-ask", onClick: () => void askContext(context(range), t("askSource")) }, t("askSourceLabel")), /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "hse-inline-ask", onClick: () => void askContext(context(range), t("askSourceChange")) }, t("askSourceChangeLabel"))));
 }
 function GovernancePanel({ job, workspace, contextFor, setContext, askContext, navigation, proposal, t }) {
   const request = useHarborApi();
   const requestKey = governanceRequestKey(workspace, job);
-  const activeGovernanceKey = (0, import_react.useRef)(requestKey);
+  const activeGovernanceKey = (0, import_react3.useRef)(requestKey);
   activeGovernanceKey.current = requestKey;
-  const requestSequence = (0, import_react.useRef)(0);
-  const [state, setState] = (0, import_react.useState)({ requestKey, status: "loading" });
-  const [copied, setCopied] = (0, import_react.useState)(false);
-  const [saveReceipt, setSaveReceipt] = (0, import_react.useState)();
-  const load = (0, import_react.useCallback)(async () => {
+  const requestSequence = (0, import_react3.useRef)(0);
+  const [state, setState] = (0, import_react3.useState)({ requestKey, status: "loading" });
+  const [copied, setCopied] = (0, import_react3.useState)(false);
+  const [saveReceipt, setSaveReceipt] = (0, import_react3.useState)();
+  const load = (0, import_react3.useCallback)(async () => {
     if (activeGovernanceKey.current !== requestKey) return void 0;
     const sequence = ++requestSequence.current;
     setState({ requestKey, status: "loading" });
@@ -2887,22 +3736,22 @@ function GovernancePanel({ job, workspace, contextFor, setContext, askContext, n
       return void 0;
     }
   }, [request, requestKey, workspace, job]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     void load();
     return () => {
       requestSequence.current += 1;
     };
   }, [load]);
-  const bindingIsCurrent = (0, import_react.useCallback)((loadedKey) => ownsGovernanceBinding(activeGovernanceKey.current, loadedKey), []);
+  const bindingIsCurrent = (0, import_react3.useCallback)((loadedKey) => ownsGovernanceBinding(activeGovernanceKey.current, loadedKey), []);
   const currentState = state.requestKey === requestKey ? state : { requestKey, status: "loading" };
-  if (currentState.status === "loading") return /* @__PURE__ */ import_react.default.createElement(HarborSkeleton, { kind: "governance", rows: 6, label: t("loading") });
-  if (currentState.status === "error") return /* @__PURE__ */ import_react.default.createElement(HarborErrorState, { error: currentState.error, retry: () => void load(), t });
+  if (currentState.status === "loading") return /* @__PURE__ */ import_react3.default.createElement(HarborSkeleton, { kind: "governance", rows: 6, label: t("loading") });
+  if (currentState.status === "error") return /* @__PURE__ */ import_react3.default.createElement(HarborErrorState, { error: currentState.error, retry: () => void load(), t });
   const value = currentState.value;
   const evaluator = value.components?.evaluator;
   const rubric = value.components?.rubric;
   const workflow = value.upgradeWorkflow ?? {};
   const prompt = t("evaluatorPrompt");
-  const copy = async () => {
+  const copy2 = async () => {
     try {
       await navigator.clipboard.writeText(prompt);
       setCopied(true);
@@ -2911,16 +3760,16 @@ function GovernancePanel({ job, workspace, contextFor, setContext, askContext, n
       setCopied(false);
     }
   };
-  return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, saveReceipt?.requestKey === requestKey ? /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section hse-save-receipt", role: "status" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("saved")), /* @__PURE__ */ import_react.default.createElement("p", null, "Evaluator ", saveReceipt.value.evaluator?.version, " \xB7 Stack ", saveReceipt.value.stack?.version), /* @__PURE__ */ import_react.default.createElement("b", null, t("freshBaseline")), /* @__PURE__ */ import_react.default.createElement("p", null, t("editWarning"))) : null, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("currentEvaluator")), /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-muted" }, t("governanceHint")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-governance-id" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("evaluator")), /* @__PURE__ */ import_react.default.createElement("b", null, evaluator?.id ?? "\u2014", " \xB7 ", evaluator?.version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, evaluator?.entry ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("rubric")), /* @__PURE__ */ import_react.default.createElement("b", null, rubric?.id ?? "\u2014", " \xB7 ", rubric?.version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, rubric?.entry ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, "Judge"), /* @__PURE__ */ import_react.default.createElement("b", null, value.judge?.provider ?? "\u2014", " / ", value.judge?.model ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, judgeIdentityDetails(value.judge))))), /* @__PURE__ */ import_react.default.createElement(EvaluatorEditor, { proposal, value, workspace, bindingKey: currentState.requestKey, bindingIsCurrent, reload: load, onSaved: (value2) => setSaveReceipt({ requestKey, value: value2 }), t }), ["evaluator", "rubric"].map((role) => /* @__PURE__ */ import_react.default.createElement(SavedSourceFragment, { key: role, component: value.components?.[role], object: value.interactionObjects?.find((ref) => ref.sourceRole === role), contextFor, setContext, askContext, navigation, t })), [["evaluator", evaluator], ["rubric", rubric]].map(([role, component]) => /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section", key: role }, /* @__PURE__ */ import_react.default.createElement("h3", null, role === "evaluator" ? t("evaluator") : t("rubric"), " \xB7 ", component?.id ?? "\u2014", " \xB7 ", component?.version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("sourceCode")), /* @__PURE__ */ import_react.default.createElement("b", null, component?.entry ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, short(component?.digest))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, "Reward semantics"), /* @__PURE__ */ import_react.default.createElement("b", null, component?.reward_affecting ? "reward-affecting" : "non-reward"), /* @__PURE__ */ import_react.default.createElement("code", null, component?.source?.error ?? "read-only"))), component?.source?.text ? /* @__PURE__ */ import_react.default.createElement("details", { className: "hse-source-details" }, /* @__PURE__ */ import_react.default.createElement("summary", null, t("sourceCode")), /* @__PURE__ */ import_react.default.createElement("pre", { className: "hse-source" }, component.source.text)) : /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-capability" }, component?.source?.error))), /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section hse-upgrade" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("upgradeEvaluator")), /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-muted" }, t("upgradeHint")), /* @__PURE__ */ import_react.default.createElement("ol", null, [1, 2, 3, 4, 5].map((index) => /* @__PURE__ */ import_react.default.createElement("li", { key: index }, t(`upgradeStep${index}`)))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("freshBaseline")), /* @__PURE__ */ import_react.default.createElement("b", null, "Evaluator / Rubric / Judge identity"), /* @__PURE__ */ import_react.default.createElement("code", null, (workflow.freshBaselineRequiredWhen ?? []).join(" \xB7 "))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("metaEvaluation")), /* @__PURE__ */ import_react.default.createElement("b", null, "Independent GT \xB7 ESF \xB7 SCE \xB7 RCR"), /* @__PURE__ */ import_react.default.createElement("code", null, "No automatic evaluation or Gate"))), /* @__PURE__ */ import_react.default.createElement("pre", { className: "hse-prompt" }, prompt), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-prompt-actions" }, /* @__PURE__ */ import_react.default.createElement("button", { className: "hse-button", type: "button", onClick: () => void copy() }, copied ? t("copied") : t("copyPrompt")))));
+  return /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, saveReceipt?.requestKey === requestKey ? /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section hse-save-receipt", role: "status" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, t("saved")), /* @__PURE__ */ import_react3.default.createElement("p", null, "Evaluator ", saveReceipt.value.evaluator?.version, " \xB7 Stack ", saveReceipt.value.stack?.version), /* @__PURE__ */ import_react3.default.createElement("b", null, t("freshBaseline")), /* @__PURE__ */ import_react3.default.createElement("p", null, t("editWarning"))) : null, /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, t("currentEvaluator")), /* @__PURE__ */ import_react3.default.createElement("p", { className: "hse-muted" }, t("governanceHint")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-governance-id" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("evaluator")), /* @__PURE__ */ import_react3.default.createElement("b", null, evaluator?.id ?? "\u2014", " \xB7 ", evaluator?.version ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("code", null, evaluator?.entry ?? "\u2014")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("rubric")), /* @__PURE__ */ import_react3.default.createElement("b", null, rubric?.id ?? "\u2014", " \xB7 ", rubric?.version ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("code", null, rubric?.entry ?? "\u2014")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, "Judge"), /* @__PURE__ */ import_react3.default.createElement("b", null, value.judge?.provider ?? "\u2014", " / ", value.judge?.model ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("code", null, judgeIdentityDetails(value.judge))))), /* @__PURE__ */ import_react3.default.createElement(EvaluatorEditor, { proposal, job, value, workspace, bindingKey: currentState.requestKey, bindingIsCurrent, reload: load, onSaved: (value2) => setSaveReceipt({ requestKey, value: value2 }), t }), ["evaluator", "rubric"].map((role) => /* @__PURE__ */ import_react3.default.createElement(SavedSourceFragment, { key: role, component: value.components?.[role], object: value.interactionObjects?.find((ref) => ref.sourceRole === role), contextFor, setContext, askContext, navigation, t })), [["evaluator", evaluator], ["rubric", rubric]].map(([role, component]) => /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section", key: role }, /* @__PURE__ */ import_react3.default.createElement("h3", null, role === "evaluator" ? t("evaluator") : t("rubric"), " \xB7 ", component?.id ?? "\u2014", " \xB7 ", component?.version ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("sourceCode")), /* @__PURE__ */ import_react3.default.createElement("b", null, component?.entry ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("code", null, short(component?.digest))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, "Reward semantics"), /* @__PURE__ */ import_react3.default.createElement("b", null, component?.reward_affecting ? "reward-affecting" : "non-reward"), /* @__PURE__ */ import_react3.default.createElement("code", null, component?.source?.error ?? "read-only"))), component?.source?.text ? /* @__PURE__ */ import_react3.default.createElement("details", { className: "hse-source-details" }, /* @__PURE__ */ import_react3.default.createElement("summary", null, t("sourceCode")), /* @__PURE__ */ import_react3.default.createElement("pre", { className: "hse-source" }, component.source.text)) : /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-capability" }, component?.source?.error))), /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section hse-upgrade" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, t("upgradeEvaluator")), /* @__PURE__ */ import_react3.default.createElement("p", { className: "hse-muted" }, t("upgradeHint")), /* @__PURE__ */ import_react3.default.createElement("ol", null, [1, 2, 3, 4, 5].map((index) => /* @__PURE__ */ import_react3.default.createElement("li", { key: index }, t(`upgradeStep${index}`)))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("freshBaseline")), /* @__PURE__ */ import_react3.default.createElement("b", null, "Evaluator / Rubric / Judge identity"), /* @__PURE__ */ import_react3.default.createElement("code", null, (workflow.freshBaselineRequiredWhen ?? []).join(" \xB7 "))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("metaEvaluation")), /* @__PURE__ */ import_react3.default.createElement("b", null, "Independent GT \xB7 ESF \xB7 SCE \xB7 RCR"), /* @__PURE__ */ import_react3.default.createElement("code", null, "No automatic evaluation or Gate"))), /* @__PURE__ */ import_react3.default.createElement("pre", { className: "hse-prompt" }, prompt), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-prompt-actions" }, /* @__PURE__ */ import_react3.default.createElement("button", { className: "hse-button", type: "button", onClick: () => void copy2() }, copied ? t("copied") : t("copyPrompt")))));
 }
 function MetaEvaluationPanel({ job, workspace, t }) {
   const request = useHarborApi();
-  const [offset, setOffset] = (0, import_react.useState)(0);
-  const [retry, setRetry] = (0, import_react.useState)(0);
+  const [offset, setOffset] = (0, import_react3.useState)(0);
+  const [retry, setRetry] = (0, import_react3.useState)(0);
   const requestKey = `${workspace}\0${job}`;
-  const [state, setState] = (0, import_react.useState)({ requestKey, status: "loading" });
+  const [state, setState] = (0, import_react3.useState)({ requestKey, status: "loading" });
   const pageSize = 20;
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     let alive = true;
     setState((current) => current.requestKey === requestKey ? { ...current, status: current.value ? "refreshing" : "loading", error: void 0 } : { requestKey, status: "loading" });
     void request("meta", { workspace, job, offset, limit: pageSize }).then(
@@ -2931,25 +3780,25 @@ function MetaEvaluationPanel({ job, workspace, t }) {
       alive = false;
     };
   }, [request, workspace, job, offset, requestKey, retry]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     setOffset(0);
   }, [workspace, job]);
   const currentState = state.requestKey === requestKey ? state : { requestKey, status: "loading" };
-  if (currentState.status === "loading" && !currentState.value) return /* @__PURE__ */ import_react.default.createElement(HarborSkeleton, { kind: "meta", rows: 7, label: t("loading") });
-  if (currentState.status === "error" && !currentState.value) return /* @__PURE__ */ import_react.default.createElement(HarborErrorState, { error: currentState.error, retry: () => setRetry((value2) => value2 + 1), t });
+  if (currentState.status === "loading" && !currentState.value) return /* @__PURE__ */ import_react3.default.createElement(HarborSkeleton, { kind: "meta", rows: 7, label: t("loading") });
+  if (currentState.status === "error" && !currentState.value) return /* @__PURE__ */ import_react3.default.createElement(HarborErrorState, { error: currentState.error, retry: () => setRetry((value2) => value2 + 1), t });
   const value = currentState.value ?? {};
   const groundTruth = value.groundTruth;
   const report = value.report;
   const metrics = report?.metrics ?? {};
   const pagination = value.disagreementPagination ?? {};
   const loadedOffset = currentState.loadedOffset ?? offset;
-  return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, currentState.error ? /* @__PURE__ */ import_react.default.createElement(HarborErrorState, { error: currentState.error, retry: () => setRetry((value2) => value2 + 1), t }) : null, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("metaWorkflow")), /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-muted" }, t("metaWorkflowHint")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-meta-flow" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("b", null, "1. Evaluator Candidate"), /* @__PURE__ */ import_react.default.createElement("br", null), value.workflow?.candidate), /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("b", null, "2. Fixed artifacts + GT"), /* @__PURE__ */ import_react.default.createElement("br", null), value.workflow?.dataset), /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("b", null, "3. Repeated observations"), /* @__PURE__ */ import_react.default.createElement("br", null), value.workflow?.output), /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("b", null, "4. ESF / SCE / RCR"), /* @__PURE__ */ import_react.default.createElement("br", null), value.workflow?.verifier))), /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("groundTruth")), groundTruth ? /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, "ID / version"), /* @__PURE__ */ import_react.default.createElement("b", null, groundTruth.id, " \xB7 ", groundTruth.version), /* @__PURE__ */ import_react.default.createElement("code", null, groundTruth.path)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("gtSource")), /* @__PURE__ */ import_react.default.createElement("b", null, groundTruth.source?.kind), /* @__PURE__ */ import_react.default.createElement("code", null, groundTruth.source?.description)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("gtCases")), /* @__PURE__ */ import_react.default.createElement("b", null, groundTruth.caseCount), /* @__PURE__ */ import_react.default.createElement("code", null, groundTruth.criteria?.map((item) => item.label ?? item.id).join(" \xB7 "))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("gtBadcases")), /* @__PURE__ */ import_react.default.createElement("b", null, groundTruth.badcaseCount), /* @__PURE__ */ import_react.default.createElement("code", null, t("gtProvenance"), ": ", groundTruth.source?.provenance)))) : /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-capability" }, /* @__PURE__ */ import_react.default.createElement("b", null, t("groundTruthRequired")), /* @__PURE__ */ import_react.default.createElement("br", null), t("gtKinds")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-hook-state", "data-executed": Boolean(report) }, /* @__PURE__ */ import_react.default.createElement("b", null, t("metaNext")), /* @__PURE__ */ import_react.default.createElement("br", null), value.workflow?.nextAction)), report ? /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, "Evaluator \xB7 ", report.evaluator?.id, " \xB7 ", report.evaluator?.version), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpis" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, "ESF \u2191"), /* @__PURE__ */ import_react.default.createElement("b", null, format(metrics.esf))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, "SCE \u2193"), /* @__PURE__ */ import_react.default.createElement("b", null, format(metrics.sce))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, "RCR \u2191"), /* @__PURE__ */ import_react.default.createElement("b", null, format(metrics.rcr))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("coverage")), /* @__PURE__ */ import_react.default.createElement("b", null, format(report.coverage?.rate))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("disagreements")), /* @__PURE__ */ import_react.default.createElement("b", null, pagination.total ?? report.disagreements?.length ?? 0)))), pagination.total ? /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("disagreements")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-table-wrap" }, /* @__PURE__ */ import_react.default.createElement("table", { className: "hse-evidence-table" }, /* @__PURE__ */ import_react.default.createElement("thead", null, /* @__PURE__ */ import_react.default.createElement("tr", null, /* @__PURE__ */ import_react.default.createElement("th", null, "Case"), /* @__PURE__ */ import_react.default.createElement("th", null, "Criterion"), /* @__PURE__ */ import_react.default.createElement("th", null, "GT"), /* @__PURE__ */ import_react.default.createElement("th", null, "Observed"))), /* @__PURE__ */ import_react.default.createElement("tbody", null, (report.disagreements ?? []).map((item, index) => /* @__PURE__ */ import_react.default.createElement("tr", { key: `${item.case_id}-${item.repeat}-${item.criterion_id}-${index}` }, /* @__PURE__ */ import_react.default.createElement("td", null, item.case_id), /* @__PURE__ */ import_react.default.createElement("td", null, item.criterion_id), /* @__PURE__ */ import_react.default.createElement("td", null, format(item.ground_truth)), /* @__PURE__ */ import_react.default.createElement("td", null, format(item.observed))))))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-pager" }, /* @__PURE__ */ import_react.default.createElement("span", null, pagination.total ? `${loadedOffset + 1}\u2013${Math.min(loadedOffset + (report.disagreements?.length ?? 0), pagination.total)} / ${pagination.total}` : "0 / 0"), /* @__PURE__ */ import_react.default.createElement("button", { disabled: !loadedOffset, onClick: () => setOffset(Math.max(0, loadedOffset - pageSize)) }, t("previous")), /* @__PURE__ */ import_react.default.createElement("button", { disabled: !pagination.hasMore, onClick: () => setOffset(loadedOffset + pageSize) }, t("next")))) : null) : null);
+  return /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, currentState.error ? /* @__PURE__ */ import_react3.default.createElement(HarborErrorState, { error: currentState.error, retry: () => setRetry((value2) => value2 + 1), t }) : null, /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, t("metaWorkflow")), /* @__PURE__ */ import_react3.default.createElement("p", { className: "hse-muted" }, t("metaWorkflowHint")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-meta-flow" }, /* @__PURE__ */ import_react3.default.createElement("div", null, /* @__PURE__ */ import_react3.default.createElement("b", null, "1. Evaluator Candidate"), /* @__PURE__ */ import_react3.default.createElement("br", null), value.workflow?.candidate), /* @__PURE__ */ import_react3.default.createElement("div", null, /* @__PURE__ */ import_react3.default.createElement("b", null, "2. Fixed artifacts + GT"), /* @__PURE__ */ import_react3.default.createElement("br", null), value.workflow?.dataset), /* @__PURE__ */ import_react3.default.createElement("div", null, /* @__PURE__ */ import_react3.default.createElement("b", null, "3. Repeated observations"), /* @__PURE__ */ import_react3.default.createElement("br", null), value.workflow?.output), /* @__PURE__ */ import_react3.default.createElement("div", null, /* @__PURE__ */ import_react3.default.createElement("b", null, "4. ESF / SCE / RCR"), /* @__PURE__ */ import_react3.default.createElement("br", null), value.workflow?.verifier))), /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, t("groundTruth")), groundTruth ? /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, "ID / version"), /* @__PURE__ */ import_react3.default.createElement("b", null, groundTruth.id, " \xB7 ", groundTruth.version), /* @__PURE__ */ import_react3.default.createElement("code", null, groundTruth.path)), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("gtSource")), /* @__PURE__ */ import_react3.default.createElement("b", null, groundTruth.source?.kind), /* @__PURE__ */ import_react3.default.createElement("code", null, groundTruth.source?.description)), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("gtCases")), /* @__PURE__ */ import_react3.default.createElement("b", null, groundTruth.caseCount), /* @__PURE__ */ import_react3.default.createElement("code", null, groundTruth.criteria?.map((item) => item.label ?? item.id).join(" \xB7 "))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("gtBadcases")), /* @__PURE__ */ import_react3.default.createElement("b", null, groundTruth.badcaseCount), /* @__PURE__ */ import_react3.default.createElement("code", null, t("gtProvenance"), ": ", groundTruth.source?.provenance)))) : /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-capability" }, /* @__PURE__ */ import_react3.default.createElement("b", null, t("groundTruthRequired")), /* @__PURE__ */ import_react3.default.createElement("br", null), t("gtKinds")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-hook-state", "data-executed": Boolean(report) }, /* @__PURE__ */ import_react3.default.createElement("b", null, t("metaNext")), /* @__PURE__ */ import_react3.default.createElement("br", null), value.workflow?.nextAction)), report ? /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, "Evaluator \xB7 ", report.evaluator?.id, " \xB7 ", report.evaluator?.version), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-kpis" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react3.default.createElement("span", null, "ESF \u2191"), /* @__PURE__ */ import_react3.default.createElement("b", null, format2(metrics.esf))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react3.default.createElement("span", null, "SCE \u2193"), /* @__PURE__ */ import_react3.default.createElement("b", null, format2(metrics.sce))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react3.default.createElement("span", null, "RCR \u2191"), /* @__PURE__ */ import_react3.default.createElement("b", null, format2(metrics.rcr))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("coverage")), /* @__PURE__ */ import_react3.default.createElement("b", null, format2(report.coverage?.rate))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-kpi" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("disagreements")), /* @__PURE__ */ import_react3.default.createElement("b", null, pagination.total ?? report.disagreements?.length ?? 0)))), pagination.total ? /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, t("disagreements")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-table-wrap" }, /* @__PURE__ */ import_react3.default.createElement("table", { className: "hse-evidence-table" }, /* @__PURE__ */ import_react3.default.createElement("thead", null, /* @__PURE__ */ import_react3.default.createElement("tr", null, /* @__PURE__ */ import_react3.default.createElement("th", null, "Case"), /* @__PURE__ */ import_react3.default.createElement("th", null, "Criterion"), /* @__PURE__ */ import_react3.default.createElement("th", null, "GT"), /* @__PURE__ */ import_react3.default.createElement("th", null, "Observed"))), /* @__PURE__ */ import_react3.default.createElement("tbody", null, (report.disagreements ?? []).map((item, index) => /* @__PURE__ */ import_react3.default.createElement("tr", { key: `${item.case_id}-${item.repeat}-${item.criterion_id}-${index}` }, /* @__PURE__ */ import_react3.default.createElement("td", null, item.case_id), /* @__PURE__ */ import_react3.default.createElement("td", null, item.criterion_id), /* @__PURE__ */ import_react3.default.createElement("td", null, format2(item.ground_truth)), /* @__PURE__ */ import_react3.default.createElement("td", null, format2(item.observed))))))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-pager" }, /* @__PURE__ */ import_react3.default.createElement("span", null, pagination.total ? `${loadedOffset + 1}\u2013${Math.min(loadedOffset + (report.disagreements?.length ?? 0), pagination.total)} / ${pagination.total}` : "0 / 0"), /* @__PURE__ */ import_react3.default.createElement("button", { disabled: !loadedOffset, onClick: () => setOffset(Math.max(0, loadedOffset - pageSize)) }, t("previous")), /* @__PURE__ */ import_react3.default.createElement("button", { disabled: !pagination.hasMore, onClick: () => setOffset(loadedOffset + pageSize) }, t("next")))) : null) : null);
 }
 function HistoricalMetaEvaluationPanel({ detail, artifacts, t }) {
   const context = artifacts.context ?? {};
   const metaEvaluation = context.downstream_analysis?.evaluator_meta_evaluation ?? detail?.evaluatorMetaEvaluation ?? artifacts.summary?.evaluator_meta_evaluation ?? { status: "not-run", validation_report_ref: null };
   const notRun = metaEvaluation.status === "not-run";
-  return /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("meta")), /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-muted" }, t("metaNotRunHint")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("currentStatus")), /* @__PURE__ */ import_react.default.createElement("b", null, notRun ? t("metaNotRun") : metaEvaluation.status ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, context.protocol ?? "historical-generation-evaluation-context/v1")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, "Validation report"), /* @__PURE__ */ import_react.default.createElement("b", null, metaEvaluation.validation_report_ref ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, notRun ? "Evaluator reliability remains unvalidated" : short(metaEvaluation.digest)))));
+  return /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, t("meta")), /* @__PURE__ */ import_react3.default.createElement("p", { className: "hse-muted" }, t("metaNotRunHint")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-grid" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("currentStatus")), /* @__PURE__ */ import_react3.default.createElement("b", null, notRun ? t("metaNotRun") : metaEvaluation.status ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("code", null, context.protocol ?? "historical-generation-evaluation-context/v1")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, "Validation report"), /* @__PURE__ */ import_react3.default.createElement("b", null, metaEvaluation.validation_report_ref ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("code", null, notRun ? "Evaluator reliability remains unvalidated" : short(metaEvaluation.digest)))));
 }
 function sectionForNavigation(target = {}) {
   if (target.route === "harbor.evaluator" || target.localObject?.kind === "evaluator-source") return "evaluator";
@@ -2961,43 +3810,43 @@ function sectionForNavigation(target = {}) {
   return "summary";
 }
 function JobIdentityHeader({ context, summary, t }) {
-  return /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-job-identities" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-identity-tags" }, ["candidate", "dataset", "context", "stack"].map((role) => {
+  return /* @__PURE__ */ import_react3.default.createElement("details", { className: "hse-job-identities" }, /* @__PURE__ */ import_react3.default.createElement("summary", null, t("identityDetails"), " \xB7 ", t("progress"), ": ", summary?.progress?.completed ?? 0, "/", summary?.progress?.total ?? summary?.nTrials ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-identity-tags" }, ["candidate", "dataset", "context", "stack"].map((role) => {
     const value = context?.identities?.[role];
-    return /* @__PURE__ */ import_react.default.createElement("span", { key: role }, /* @__PURE__ */ import_react.default.createElement("small", null, role), /* @__PURE__ */ import_react.default.createElement("b", { title: value?.digest }, value?.id ?? "\u2014", value?.version ? ` @ ${value.version}` : ""), /* @__PURE__ */ import_react.default.createElement("code", null, short(value?.digest)));
-  })), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-identity-flags" }, /* @__PURE__ */ import_react.default.createElement(ContextFlags, { context, t }), /* @__PURE__ */ import_react.default.createElement("span", null, t("mode"), ": ", summary?.mode ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("span", null, t("validity"), ": ", summary?.nValidScores ?? "\u2014", " / ", summary?.nTrials ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("span", null, t("progress"), ": ", summary?.progress?.completed ?? 0, "/", summary?.progress?.total ?? summary?.nTrials ?? "\u2014")));
+    return /* @__PURE__ */ import_react3.default.createElement("span", { key: role }, /* @__PURE__ */ import_react3.default.createElement("small", null, role), /* @__PURE__ */ import_react3.default.createElement("b", { title: value?.digest }, value?.id ?? "\u2014", value?.version ? ` @ ${value.version}` : ""), /* @__PURE__ */ import_react3.default.createElement("code", null, short(value?.digest)));
+  })), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-identity-flags" }, /* @__PURE__ */ import_react3.default.createElement(ContextFlags, { context, t }), /* @__PURE__ */ import_react3.default.createElement("span", null, t("mode"), ": ", summary?.mode ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("span", null, t("validity"), ": ", summary?.nValidScores ?? "\u2014", " / ", summary?.nTrials ?? "\u2014")));
 }
 function JobSummaryPanel({ detail, summary, contextFor, setContext, askContext, navigation, openSection, t }) {
   const attention = summary ? jobAttention(summary) : void 0;
   const metrics = Object.entries(detail?.artifacts?.summary?.metrics ?? {}).slice(0, 100).filter(([, value]) => typeof value === "number" && Number.isFinite(value));
   const objects = detail?.interactionObjects ?? [];
-  return /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section hse-job-summary" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-summary-status" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("h3", null, t("health"), ": ", attention ? t(`health_${attention.kind}`) : t("unavailable")), /* @__PURE__ */ import_react.default.createElement("p", null, t("askHealth"))), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-ask", onClick: () => void askContext(contextFor({}), t("askHealth")) }, t("askAi"))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-summary-metrics" }, metrics.length ? metrics.map(([name2, value], index) => /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-summary-metric", key: name2 }, /* @__PURE__ */ import_react.default.createElement("span", null, name2), /* @__PURE__ */ import_react.default.createElement("strong", null, format(value)), /* @__PURE__ */ import_react.default.createElement(LocalObjectActions, { object: objects.filter((ref) => ref.kind === "metric")[index], contextFor, setContext, askContext, navigation, prompt: t("askMetric"), t }))) : /* @__PURE__ */ import_react.default.createElement("p", null, t("noMetric"))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-summary-links" }, ["trials", "optimization", "compare", "evaluator"].map((section) => /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-button", key: section, onClick: () => openSection(section) }, t(`jobSection_${section}`), " \u2192"))));
+  return /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section hse-job-summary" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-summary-status" }, /* @__PURE__ */ import_react3.default.createElement("div", null, /* @__PURE__ */ import_react3.default.createElement("h3", null, t("health"), ": ", attention ? t(`health_${attention.kind}`) : t("unavailable")), /* @__PURE__ */ import_react3.default.createElement("p", null, t("askHealth"))), /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "hse-ask", onClick: () => void askContext(contextFor({}), t("askHealth")) }, t("askAi"))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-summary-metrics" }, metrics.length ? metrics.map(([name2, value], index) => /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-summary-metric", key: name2 }, /* @__PURE__ */ import_react3.default.createElement("span", null, name2), /* @__PURE__ */ import_react3.default.createElement("strong", null, format2(value)), /* @__PURE__ */ import_react3.default.createElement(LocalObjectActions, { object: objects.filter((ref) => ref.kind === "metric")[index], contextFor, setContext, askContext, navigation, prompt: t("askMetric"), t }))) : /* @__PURE__ */ import_react3.default.createElement("p", null, t("noMetric"))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-summary-links" }, ["trials", "optimization", "compare", "evaluator"].map((section) => /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "hse-button", key: section, onClick: () => openSection(section) }, t(`jobSection_${section}`), " \u2192"))));
 }
 function Workbench({ job, workspace, jobs, close, navigation, consumeNavigation, restoreView, hasHistory, scrollContainerRef, onViewStateChange, sessionId, pageSessionId, bridge, askContext, t }) {
   const interaction = useHarborUi(bridge, sessionId);
   const request = useHarborApi();
-  const [state, setState] = (0, import_react.useState)({ status: "loading" });
-  const [stage, setStage] = (0, import_react.useState)(() => STAGES.includes(restoreView?.stage) ? restoreView.stage : "candidate");
-  const [section, setSection] = (0, import_react.useState)(() => JOB_SECTIONS.includes(restoreView?.section) ? restoreView.section : sectionForNavigation(navigation?.target));
+  const [state, setState] = (0, import_react3.useState)({ status: "loading" });
+  const [stage, setStage] = (0, import_react3.useState)(() => STAGES.includes(restoreView?.stage) ? restoreView.stage : "candidate");
+  const [section, setSection] = (0, import_react3.useState)(() => JOB_SECTIONS.includes(restoreView?.section) ? restoreView.section : sectionForNavigation(navigation?.target));
   const openSection = (value) => {
     setSection(value);
     setStage(value === "trials" || value === "evaluator" ? "judge" : value === "optimization" ? "optimizer" : value === "compare" ? "gate" : "candidate");
   };
-  const childContext = (0, import_react.useRef)(false);
-  const requestSequence = (0, import_react.useRef)(0);
-  const handledRestore = (0, import_react.useRef)();
-  const restoredScroll = (0, import_react.useRef)();
-  const restoreFrames = (0, import_react.useRef)([]);
-  const restoreObserver = (0, import_react.useRef)();
-  const restoreTimer = (0, import_react.useRef)();
-  const activeRestoreId = (0, import_react.useRef)(restoreView?.restoreId);
+  const childContext = (0, import_react3.useRef)(false);
+  const requestSequence = (0, import_react3.useRef)(0);
+  const handledRestore = (0, import_react3.useRef)();
+  const restoredScroll = (0, import_react3.useRef)();
+  const restoreFrames = (0, import_react3.useRef)([]);
+  const restoreObserver = (0, import_react3.useRef)();
+  const restoreTimer = (0, import_react3.useRef)();
+  const activeRestoreId = (0, import_react3.useRef)(restoreView?.restoreId);
   activeRestoreId.current = restoreView?.restoreId;
-  const trialViewState = (0, import_react.useRef)(restoreView?.trialView);
-  const compareBaselineState = (0, import_react.useRef)(restoreView?.compareBaseline);
-  const gateRouteState = (0, import_react.useRef)(
+  const trialViewState = (0, import_react3.useRef)(restoreView?.trialView);
+  const compareBaselineState = (0, import_react3.useRef)(restoreView?.compareBaseline);
+  const gateRouteState = (0, import_react3.useRef)(
     restoreView?.gateRoute === "harbor.compare" || restoreView?.gateRoute === "harbor.gate" ? restoreView.gateRoute : navigation?.target?.route === "harbor.compare" || navigation?.target?.route === "harbor.gate" ? navigation.target.route : void 0
   );
   const activeJob = jobs.find((item) => item.name === job);
-  const load = (0, import_react.useCallback)(async () => {
+  const load = (0, import_react3.useCallback)(async () => {
     const sequence = ++requestSequence.current;
     try {
       const value = await request("job", { workspace, job });
@@ -3006,31 +3855,31 @@ function Workbench({ job, workspace, jobs, close, navigation, consumeNavigation,
       if (sequence === requestSequence.current) setState((current) => workbenchFailureState(current, error));
     }
   }, [request, workspace, job]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     setState({ status: "loading" });
     void load();
     return () => {
       requestSequence.current += 1;
     };
   }, [load]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (!activeJob?.progress?.active) return void 0;
     const timer = window.setInterval(() => void load(), 2500);
     return () => window.clearInterval(timer);
   }, [activeJob?.progress?.active, load]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     const escape = (event) => event.key === "Escape" && close();
     window.addEventListener("keydown", escape);
     return () => window.removeEventListener("keydown", escape);
   }, [close]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (!navigation?.actionId) return;
     const targetStage = navigation?.target?.stage ?? (navigation?.target?.trial ? "judge" : void 0);
     gateRouteState.current = navigation?.target?.route === "harbor.compare" || navigation?.target?.route === "harbor.gate" ? navigation.target.route : void 0;
     if (targetStage && STAGES.includes(targetStage)) setStage(targetStage);
     setSection(sectionForNavigation(navigation.target));
   }, [navigation?.actionId]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (!restoreView?.restoreId || handledRestore.current === restoreView.restoreId) return;
     handledRestore.current = restoreView.restoreId;
     trialViewState.current = restoreView.trialView;
@@ -3039,7 +3888,7 @@ function Workbench({ job, workspace, jobs, close, navigation, consumeNavigation,
     if (STAGES.includes(restoreView.stage)) setStage(restoreView.stage);
     if (JOB_SECTIONS.includes(restoreView.section)) setSection(restoreView.section);
   }, [restoreView?.restoreId]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     onViewStateChange?.({
       stage,
       section,
@@ -3048,7 +3897,7 @@ function Workbench({ job, workspace, jobs, close, navigation, consumeNavigation,
       ...stage === "gate" && gateRouteState.current ? { gateRoute: gateRouteState.current } : {}
     });
   }, [onViewStateChange, stage, section]);
-  const stopRestoredScroll = (0, import_react.useCallback)(() => {
+  const stopRestoredScroll = (0, import_react3.useCallback)(() => {
     for (const frame of restoreFrames.current) window.cancelAnimationFrame(frame);
     restoreFrames.current = [];
     restoreObserver.current?.disconnect();
@@ -3056,7 +3905,7 @@ function Workbench({ job, workspace, jobs, close, navigation, consumeNavigation,
     if (restoreTimer.current) window.clearTimeout(restoreTimer.current);
     restoreTimer.current = void 0;
   }, []);
-  const applyRestoredScroll = (0, import_react.useCallback)((restoreId) => {
+  const applyRestoredScroll = (0, import_react3.useCallback)((restoreId) => {
     if (!restoreId || restoreId !== activeRestoreId.current || restoredScroll.current === restoreId) return;
     stopRestoredScroll();
     const firstFrame = window.requestAnimationFrame(() => {
@@ -3095,14 +3944,14 @@ function Workbench({ job, workspace, jobs, close, navigation, consumeNavigation,
     });
     restoreFrames.current = [firstFrame];
   }, [restoreView?.restoreId, restoreView?.scrollTop, scrollContainerRef, stopRestoredScroll]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     stopRestoredScroll();
     if (!restoreView?.restoreId) restoredScroll.current = void 0;
   }, [navigation?.actionId, restoreView?.restoreId, stopRestoredScroll]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (state.status === "ready" && restoreView?.stage !== "judge") applyRestoredScroll(restoreView?.restoreId);
   }, [applyRestoredScroll, restoreView?.restoreId, restoreView?.stage, state.status]);
-  (0, import_react.useEffect)(() => stopRestoredScroll, [stopRestoredScroll]);
+  (0, import_react3.useEffect)(() => stopRestoredScroll, [stopRestoredScroll]);
   const detail = state.value?.job === job ? state.value : void 0;
   const artifacts = detail?.artifacts ?? {};
   const historical = isHistoricalJob(detail) || isHistoricalJob(activeJob);
@@ -3110,7 +3959,7 @@ function Workbench({ job, workspace, jobs, close, navigation, consumeNavigation,
   const contextSupported = detail?.capabilities?.contextSupported ?? detail?.capabilities?.contextV2;
   const component = artifacts.stack?.components?.[stage];
   const gateIdentity = detail?.interactionIdentities?.gate;
-  const contextFor = (0, import_react.useCallback)((selection) => buildUiContext({
+  const contextFor = (0, import_react3.useCallback)((selection) => buildUiContext({
     sessionId,
     pageSessionId,
     workspace,
@@ -3122,47 +3971,47 @@ function Workbench({ job, workspace, jobs, close, navigation, consumeNavigation,
     gate: gateIdentity,
     ...selection
   }), [activeJob, detail, gateIdentity, job, pageSessionId, sessionId, stage, workspace]);
-  const publishContext = (0, import_react.useCallback)((context) => {
+  const publishContext = (0, import_react3.useCallback)((context) => {
     if (!context) return;
     childContext.current = context.object?.kind === "trial" || context.object?.kind === "compare" || Boolean(context.selection?.length);
     bridge.setCurrent(sessionId, context);
   }, [bridge, sessionId]);
-  const jobContext = (0, import_react.useMemo)(() => contextFor({}), [contextFor]);
-  const resetChildContext = (0, import_react.useCallback)(() => {
+  const jobContext = (0, import_react3.useMemo)(() => contextFor({}), [contextFor]);
+  const resetChildContext = (0, import_react3.useCallback)(() => {
     childContext.current = false;
     bridge.setCurrent(sessionId, jobContext);
   }, [bridge, jobContext, sessionId]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     childContext.current = false;
     bridge.setCurrent(sessionId, jobContext);
   }, [bridge, job, section, sessionId, stage, workspace]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (!childContext.current) bridge.setCurrent(sessionId, jobContext);
   }, [bridge, jobContext, sessionId]);
   let content;
-  if (section === "summary") content = /* @__PURE__ */ import_react.default.createElement(JobSummaryPanel, { detail, summary: activeJob, contextFor, setContext: publishContext, askContext, navigation, openSection, t });
-  else if (section === "evaluator") content = /* @__PURE__ */ import_react.default.createElement(GovernancePanel, { job, workspace, contextFor, setContext: publishContext, askContext, navigation, proposal: interaction.evaluatorProposal, t });
-  else if (section === "artifacts") content = /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("artifacts")), /* @__PURE__ */ import_react.default.createElement(ArtifactPreview, { detail: { preview: artifacts.registry ? { kind: "structured", format: "json", title: t("artifacts"), content: artifacts.registry } : void 0 }, t }), /* @__PURE__ */ import_react.default.createElement(JsonSection, { title: t("artifacts"), value: artifacts.registry }));
-  else if (section === "audit") content = /* @__PURE__ */ import_react.default.createElement(JsonSection, { title: t("audit"), value: { validation: detail?.validation, context: artifacts.context, doctor: artifacts.doctor, registry: artifacts.registry } });
-  else if (stage === "candidate") content = historical ? /* @__PURE__ */ import_react.default.createElement(HistoricalTargetPanel, { detail, artifacts, t }) : /* @__PURE__ */ import_react.default.createElement(CandidatePanel, { artifacts, t });
-  else if (stage === "dataset") content = /* @__PURE__ */ import_react.default.createElement(DatasetPanel, { job, workspace, artifacts, t });
-  else if (stage === "renderer") content = /* @__PURE__ */ import_react.default.createElement(RendererPanel, { job, workspace, active: Boolean(activeJob?.progress?.active), component, contextFor, setContext: publishContext, askContext, navigation, t });
-  else if (stage === "judge") content = /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("trials"), " / ", t("evidence")), /* @__PURE__ */ import_react.default.createElement(TrialExplorer, { job, workspace, active: Boolean(activeJob?.progress?.active), navigation, restoreView, onViewStateChange: (value) => {
+  if (section === "summary") content = /* @__PURE__ */ import_react3.default.createElement(JobSummaryPanel, { detail, summary: activeJob, contextFor, setContext: publishContext, askContext, navigation, openSection, t });
+  else if (section === "evaluator") content = /* @__PURE__ */ import_react3.default.createElement(GovernancePanel, { job, workspace, contextFor, setContext: publishContext, askContext, navigation, proposal: interaction.evaluatorProposal, t });
+  else if (section === "artifacts") content = /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, t("artifacts")), /* @__PURE__ */ import_react3.default.createElement(ArtifactPreview, { detail: { preview: artifacts.registry ? { kind: "structured", format: "json", title: t("artifacts"), content: artifacts.registry } : void 0 }, t }), /* @__PURE__ */ import_react3.default.createElement(JsonSection, { title: t("artifacts"), value: artifacts.registry }));
+  else if (section === "audit") content = /* @__PURE__ */ import_react3.default.createElement(JsonSection, { title: t("audit"), value: { validation: detail?.validation, context: artifacts.context, doctor: artifacts.doctor, registry: artifacts.registry } });
+  else if (stage === "candidate") content = historical ? /* @__PURE__ */ import_react3.default.createElement(HistoricalTargetPanel, { detail, artifacts, t }) : /* @__PURE__ */ import_react3.default.createElement(CandidatePanel, { artifacts, t });
+  else if (stage === "dataset") content = /* @__PURE__ */ import_react3.default.createElement(DatasetPanel, { job, workspace, artifacts, t });
+  else if (stage === "renderer") content = /* @__PURE__ */ import_react3.default.createElement(RendererPanel, { job, workspace, active: Boolean(activeJob?.progress?.active), component, contextFor, setContext: publishContext, askContext, navigation, t });
+  else if (stage === "judge") content = /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, t("trials"), " / ", t("evidence")), /* @__PURE__ */ import_react3.default.createElement(TrialExplorer, { job, workspace, active: Boolean(activeJob?.progress?.active), navigation, restoreView, onViewStateChange: (value) => {
     trialViewState.current = value;
     onViewStateChange?.({ stage, section, trialView: value, ...compareBaselineState.current ? { compareBaseline: compareBaselineState.current } : {} });
   }, onRestoreReady: applyRestoredScroll, onRestoreCancel: stopRestoredScroll, contextFor, setContext: publishContext, resetContext: resetChildContext, askContext, t })));
-  else if (stage === "meta") content = historical ? /* @__PURE__ */ import_react.default.createElement(HistoricalMetaEvaluationPanel, { detail, artifacts, t }) : /* @__PURE__ */ import_react.default.createElement(MetaEvaluationPanel, { job, workspace, t });
-  else if (stage === "reporter") content = /* @__PURE__ */ import_react.default.createElement(ReporterPanel, { job, workspace, active: Boolean(activeJob?.progress?.active), artifacts, jobKind: detail?.jobKind ?? activeJob?.jobKind, interaction: { contextFor, setContext: publishContext, askContext, navigation, restoreView, onViewStateChange: (value) => {
+  else if (stage === "meta") content = historical ? /* @__PURE__ */ import_react3.default.createElement(HistoricalMetaEvaluationPanel, { detail, artifacts, t }) : /* @__PURE__ */ import_react3.default.createElement(MetaEvaluationPanel, { job, workspace, t });
+  else if (stage === "reporter") content = /* @__PURE__ */ import_react3.default.createElement(ReporterPanel, { job, workspace, active: Boolean(activeJob?.progress?.active), artifacts, jobKind: detail?.jobKind ?? activeJob?.jobKind, interaction: { contextFor, setContext: publishContext, askContext, navigation, restoreView, onViewStateChange: (value) => {
     trialViewState.current = value;
     onViewStateChange?.({ stage, section, trialView: value });
   } }, t });
-  else if (stage === "optimizer") content = /* @__PURE__ */ import_react.default.createElement(OptimizerPanel, { artifacts, interactionObjects: detail?.interactionObjects, contextFor, setContext: publishContext, askContext, navigation, t });
-  else if (stage === "gate") content = historical ? /* @__PURE__ */ import_react.default.createElement(HistoricalGatePanel, { t }) : /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(ComparePanel, { job, workspace, jobs, artifacts, gate: gateIdentity, navigation, restoreView, onViewStateChange: (value) => {
+  else if (stage === "optimizer") content = /* @__PURE__ */ import_react3.default.createElement(OptimizerPanel, { artifacts, interactionObjects: detail?.interactionObjects, contextFor, setContext: publishContext, askContext, navigation, t });
+  else if (stage === "gate") content = historical ? /* @__PURE__ */ import_react3.default.createElement(HistoricalGatePanel, { t }) : /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement(ComparePanel, { job, workspace, jobs, artifacts, gate: gateIdentity, navigation, restoreView, onViewStateChange: (value) => {
     compareBaselineState.current = value;
     onViewStateChange?.({ stage, section, compareBaseline: value, ...gateRouteState.current ? { gateRoute: gateRouteState.current } : {}, ...trialViewState.current ? { trialView: trialViewState.current } : {} });
-  }, contextFor, setContext: publishContext, askContext, t }), /* @__PURE__ */ import_react.default.createElement(GateEvidencePanel, { artifacts, interactionObjects: detail?.interactionObjects, contextFor, setContext: publishContext, askContext, navigation, t }));
-  else content = stage === "integration" ? /* @__PURE__ */ import_react.default.createElement(ContractPanel, { artifacts, component, t }) : /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-components" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-component" }, /* @__PURE__ */ import_react.default.createElement("span", null, stage, component?.reward_affecting ? " \xB7 reward-affecting" : ""), /* @__PURE__ */ import_react.default.createElement("b", null, component?.id ?? "\u2014", " \xB7 ", component?.version ?? "\u2014"), /* @__PURE__ */ import_react.default.createElement("code", null, short(component?.digest)))));
-  return /* @__PURE__ */ import_react.default.createElement("aside", { className: "hse-drawer", "aria-label": job, onClickCapture: () => consumeNavigation?.(navigation), onPointerDown: stopRestoredScroll, onWheel: stopRestoredScroll, onKeyDown: stopRestoredScroll }, /* @__PURE__ */ import_react.default.createElement("header", { className: "hse-drawer-head" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("h2", null, job), /* @__PURE__ */ import_react.default.createElement("p", null, historical ? `${t("historicalTarget")} \xB7 ${target.source_kind ?? activeJob?.generationSource?.kind ?? "\u2014"} \xB7 ${target.record_count ?? activeJob?.nTrials ?? 0} ${t("generationRecords")}` : `${activeJob?.candidate?.candidate_id ?? "\u2014"} \xB7 ${activeJob?.candidate?.version ?? "\u2014"}`, " \xB7 ", activeJob?.mode ?? "\u2014", " \xB7 ", activeJob?.progress?.completed ?? 0, "/", activeJob?.progress?.total ?? 0)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-drawer-actions" }, /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-ask", disabled: !jobContext, onClick: () => void askContext(jobContext, t("suggestedQuestion4")) }, t("askAi")), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-close", onClick: close }, hasHistory ? t("back") : t("backToJobs")))), /* @__PURE__ */ import_react.default.createElement(JobIdentityHeader, { context: jobContext, summary: activeJob, t }), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-workbench" }, /* @__PURE__ */ import_react.default.createElement("nav", { className: "hse-object-nav", "aria-label": t("mainIdentity") }, JOB_SECTIONS.map((item) => /* @__PURE__ */ import_react.default.createElement("button", { type: "button", key: item, "aria-current": section === item ? "page" : void 0, onClick: () => openSection(item) }, t(`jobSection_${item}`)))), section === "pipeline" ? /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-muted" }, t("pipelineHint")), /* @__PURE__ */ import_react.default.createElement("nav", { className: "hse-stage-nav", "aria-label": t("stageNav") }, STAGES.map((item) => /* @__PURE__ */ import_react.default.createElement("button", { type: "button", key: item, "data-active": stage === item, "aria-current": stage === item ? "step" : void 0, onClick: () => setStage(item) }, STAGES.indexOf(item) + 1, ". ", historical && item === "candidate" ? t("historicalTarget") : historical && item === "dataset" ? t("generationRecords") : t(item))))) : null, state.status === "loading" ? /* @__PURE__ */ import_react.default.createElement(HarborSkeleton, { kind: "workbench", rows: 7, label: t("loading") }) : state.status === "error" ? /* @__PURE__ */ import_react.default.createElement(HarborErrorState, { error: state.error, retry: () => void load(), t }) : /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, state.error ? /* @__PURE__ */ import_react.default.createElement(HarborErrorState, { error: state.error, title: state.stale ? t("workbenchStale") : void 0, retry: () => void load(), t }) : null, !contextSupported ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-capability" }, t("capabilityUnavailable")) : null, content, /* @__PURE__ */ import_react.default.createElement("details", { className: "hse-section hse-audit" }, /* @__PURE__ */ import_react.default.createElement("summary", null, t("audit"), " / ", t("artifacts")), /* @__PURE__ */ import_react.default.createElement("pre", null, pretty({ validation: detail.validation, registry: artifacts.registry, context: artifacts.context, doctor: artifacts.doctor }))))));
+  }, contextFor, setContext: publishContext, askContext, t }), /* @__PURE__ */ import_react3.default.createElement(GateEvidencePanel, { artifacts, interactionObjects: detail?.interactionObjects, contextFor, setContext: publishContext, askContext, navigation, t }));
+  else content = stage === "integration" ? /* @__PURE__ */ import_react3.default.createElement(ContractPanel, { artifacts, component, t }) : /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-section" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-components" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-component" }, /* @__PURE__ */ import_react3.default.createElement("span", null, stage, component?.reward_affecting ? " \xB7 reward-affecting" : ""), /* @__PURE__ */ import_react3.default.createElement("b", null, component?.id ?? "\u2014", " \xB7 ", component?.version ?? "\u2014"), /* @__PURE__ */ import_react3.default.createElement("code", null, short(component?.digest)))));
+  return /* @__PURE__ */ import_react3.default.createElement("aside", { className: "hse-drawer", "aria-label": job, onClickCapture: () => consumeNavigation?.(navigation), onPointerDown: stopRestoredScroll, onWheel: stopRestoredScroll, onKeyDown: stopRestoredScroll }, /* @__PURE__ */ import_react3.default.createElement("header", { className: "hse-drawer-head" }, /* @__PURE__ */ import_react3.default.createElement("div", null, /* @__PURE__ */ import_react3.default.createElement("h2", null, job), /* @__PURE__ */ import_react3.default.createElement("p", null, historical ? `${t("historicalTarget")} \xB7 ${target.source_kind ?? activeJob?.generationSource?.kind ?? "\u2014"} \xB7 ${target.record_count ?? activeJob?.nTrials ?? 0} ${t("generationRecords")}` : `${activeJob?.candidate?.candidate_id ?? "\u2014"} \xB7 ${activeJob?.candidate?.version ?? "\u2014"}`, " \xB7 ", activeJob?.mode ?? "\u2014", " \xB7 ", activeJob?.progress?.completed ?? 0, "/", activeJob?.progress?.total ?? 0)), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-drawer-actions" }, /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "hse-ask", disabled: !jobContext, onClick: () => void askContext(jobContext, t("suggestedQuestion4")) }, t("askAi")), /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "hse-close", onClick: close }, hasHistory ? t("back") : t("backToJobs")))), /* @__PURE__ */ import_react3.default.createElement(JobIdentityHeader, { context: jobContext, summary: activeJob, t }), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-workbench" }, /* @__PURE__ */ import_react3.default.createElement("nav", { className: "hse-object-nav", "aria-label": t("mainIdentity") }, JOB_SECTIONS.map((item) => /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", key: item, "aria-current": section === item ? "page" : void 0, onClick: () => openSection(item) }, t(`jobSection_${item}`)))), section === "pipeline" ? /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement("p", { className: "hse-muted" }, t("pipelineHint")), /* @__PURE__ */ import_react3.default.createElement("nav", { className: "hse-stage-nav", "aria-label": t("stageNav") }, STAGES.map((item) => /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", key: item, "data-active": stage === item, "aria-current": stage === item ? "step" : void 0, onClick: () => setStage(item) }, STAGES.indexOf(item) + 1, ". ", historical && item === "candidate" ? t("historicalTarget") : historical && item === "dataset" ? t("generationRecords") : t(item))))) : null, state.status === "loading" ? /* @__PURE__ */ import_react3.default.createElement(HarborSkeleton, { kind: "workbench", rows: 7, label: t("loading") }) : state.status === "error" ? /* @__PURE__ */ import_react3.default.createElement(HarborErrorState, { error: state.error, retry: () => void load(), t }) : /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, state.error ? /* @__PURE__ */ import_react3.default.createElement(HarborErrorState, { error: state.error, title: state.stale ? t("workbenchStale") : void 0, retry: () => void load(), t }) : null, !contextSupported ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-capability" }, t("capabilityUnavailable")) : null, content, /* @__PURE__ */ import_react3.default.createElement("details", { className: "hse-section hse-audit" }, /* @__PURE__ */ import_react3.default.createElement("summary", null, t("audit"), " / ", t("artifacts")), /* @__PURE__ */ import_react3.default.createElement("pre", null, pretty2({ validation: detail.validation, registry: artifacts.registry, context: artifacts.context, doctor: artifacts.doctor }))))));
 }
 function historicalError(value) {
   const message = value?.message ?? String(value ?? "");
@@ -3178,11 +4027,11 @@ function historicalErrorHint(code, t) {
 function HistoricalLauncher({ snapshot, reload, onCompleted, t }) {
   const request = useHarborApi();
   const update = useHarborMutation();
-  const [state, setState] = (0, import_react.useState)({ status: "idle" });
-  const [open, setOpen] = (0, import_react.useState)(false);
+  const [state, setState] = (0, import_react3.useState)({ status: "idle" });
+  const [open, setOpen] = (0, import_react3.useState)(false);
   const workspace = snapshot?.workspace?.id;
   const operationId = state.operation?.operationId;
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     let alive = true;
     setState({ status: "idle" });
     setOpen(false);
@@ -3199,7 +4048,7 @@ function HistoricalLauncher({ snapshot, reload, onCompleted, t }) {
       alive = false;
     };
   }, [request, workspace]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (!workspace || !operationId || !["queued", "running"].includes(state.operation?.status)) return void 0;
     let alive = true;
     let timer;
@@ -3230,7 +4079,7 @@ function HistoricalLauncher({ snapshot, reload, onCompleted, t }) {
       window.clearTimeout(timer);
     };
   }, [request, workspace, operationId, state.operation?.status, reload, onCompleted]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (!open) return void 0;
     const escape = (event) => {
       if (event.key !== "Escape") return;
@@ -3286,10 +4135,10 @@ function HistoricalLauncher({ snapshot, reload, onCompleted, t }) {
   const active = ["running", "starting"].includes(state.status);
   const buttonLabel = active ? t("historicalActive") : state.status === "previewing" ? t("historicalPreparing") : t("historicalLaunch");
   const buttonShort = active ? t("historicalActiveShort") : state.status === "previewing" ? t("historicalPreparingShort") : t("historicalLaunchShort");
-  return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-launch-card", "aria-live": "polite" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-launch-mark", "aria-hidden": "true" }, "\u2726"), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-launch-copy" }, /* @__PURE__ */ import_react.default.createElement("b", null, active ? t("historicalRunning") : t("historicalLaunch")), /* @__PURE__ */ import_react.default.createElement("span", null, active ? t("historicalRunningHint") : t("historicalLaunchBody")), /* @__PURE__ */ import_react.default.createElement("small", null, active ? `${state.operation?.selectedCount ?? "\u2014"} Trials` : t("historicalLaunchHint"))), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-launch-button", disabled: !workspace || state.status === "previewing", onClick: () => active ? setOpen(true) : void preview() }, /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-launch-button-full" }, buttonLabel), /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-launch-button-short" }, buttonShort))), open ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-launch-overlay", role: "presentation", onMouseDown: (event) => event.target === event.currentTarget && close() }, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-launch-dialog", role: "dialog", "aria-modal": "true", "aria-labelledby": "hse-historical-title" }, /* @__PURE__ */ import_react.default.createElement("header", { className: "hse-launch-head" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("span", null, t("historicalLaunchHint")), /* @__PURE__ */ import_react.default.createElement("h2", { id: "hse-historical-title" }, state.status === "running" ? t("historicalRunning") : t("historicalPreviewTitle")), /* @__PURE__ */ import_react.default.createElement("p", null, state.status === "running" ? t("historicalRunningHint") : t("historicalPreviewHint"))), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-dialog-close", "aria-label": t("close"), onClick: close }, "\xD7")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-launch-body" }, state.status === "previewing" ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-empty" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-spin" }), t("historicalPreparing")) : null, state.status === "starting" ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-empty" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-spin" }), t("historicalStarting")) : null, state.status === "running" ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-run-state" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-spin" }), /* @__PURE__ */ import_react.default.createElement("b", null, t("historicalRunning")), /* @__PURE__ */ import_react.default.createElement("span", null, state.operation?.selectedCount ?? "\u2014", " Trials \xB7 ", snapshot.workspace.label), /* @__PURE__ */ import_react.default.createElement("p", null, t("historicalRunningHint"))) : null, state.status === "completed" ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-run-state" }, /* @__PURE__ */ import_react.default.createElement("b", null, "\u2713 ", t("historicalCompleted"))) : null, state.status === "error" ? /* @__PURE__ */ import_react.default.createElement(HarborErrorState, { error: { ...state.error, nextStep: historicalErrorHint(state.error.code, t) }, t }) : null, state.status === "ready" && previewValue ? /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-launch-summary" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("span", null, t("selectedSessions")), /* @__PURE__ */ import_react.default.createElement("b", null, previewValue.selected.length)), /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("span", null, t("requestEstimate")), /* @__PURE__ */ import_react.default.createElement("b", null, previewValue.estimatedJudgeRequests)), /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("span", null, t("tokenExpiry")), /* @__PURE__ */ import_react.default.createElement("b", null, new Date(previewValue.expiresAt).toLocaleTimeString())), /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("span", null, t("workspace")), /* @__PURE__ */ import_react.default.createElement("b", null, snapshot.workspace.label))), /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-launch-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("recentSessions")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-session-list" }, previewValue.selected.map((session) => /* @__PURE__ */ import_react.default.createElement("article", { key: session.trialId }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("b", null, session.title), /* @__PURE__ */ import_react.default.createElement("span", null, session.lastActivityAt ? new Date(session.lastActivityAt).toLocaleString() : "\u2014")), /* @__PURE__ */ import_react.default.createElement("p", null, t("turnCounts"), " ", session.turnCount ?? 0, " \xB7 ", t("toolCounts"), " ", session.toolCallCount ?? 0, " \xB7 ", t("feedbackCounts"), " +", session.feedback?.positive ?? 0, " / -", session.feedback?.negative ?? 0), /* @__PURE__ */ import_react.default.createElement("code", null, (session.modelRoutes ?? []).map((route) => `${route.provider}/${route.model}`).join(" \xB7 ") || session.agentPreset || "\u2014"))))), /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-launch-section" }, /* @__PURE__ */ import_react.default.createElement("h3", null, t("historicalBoundaries")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-launch-grid" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("span", null, t("generatorRole")), /* @__PURE__ */ import_react.default.createElement("b", null, t("generatorRoleValue"))), /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("span", null, t("evaluatorIdentity")), /* @__PURE__ */ import_react.default.createElement("b", null, evaluator?.id ?? "\u2014", " \xB7 ", evaluator?.version ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("span", null, t("judgeIdentity")), /* @__PURE__ */ import_react.default.createElement("b", null, judge?.provider ?? "\u2014", " / ", judge?.model ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("span", null, t("coupling")), /* @__PURE__ */ import_react.default.createElement("b", null, previewValue.evaluation?.coupling ?? "\u2014")), /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("span", null, t("evidenceRetention")), /* @__PURE__ */ import_react.default.createElement("b", null, previewValue.retention?.privateEvidence, " \xB7 ", previewValue.retention?.jobEvidence))), /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-boundary-note" }, t("historicalBoundaryDetail")))) : null), /* @__PURE__ */ import_react.default.createElement("footer", { className: "hse-launch-actions" }, state.status === "ready" ? /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: close }, t("cancel")), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-confirm", onClick: () => void confirm() }, t("historicalConfirm"))) : null, state.status === "error" ? /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: close }, t("close")), state.error.code === "SESSION_SELECTION_TOO_EXPENSIVE" ? /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => void preview(30) }, t("recent30Days")) : /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => void preview() }, t("previewAgain"))) : null, state.status === "running" ? /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: close }, t("close")) : null))) : null);
+  return /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-launch-card", "aria-live": "polite" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-launch-mark", "aria-hidden": "true" }, "\u2726"), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-launch-copy" }, /* @__PURE__ */ import_react3.default.createElement("b", null, active ? t("historicalRunning") : t("historicalLaunch")), /* @__PURE__ */ import_react3.default.createElement("span", null, active ? t("historicalRunningHint") : t("historicalLaunchBody")), /* @__PURE__ */ import_react3.default.createElement("small", null, active ? `${state.operation?.selectedCount ?? "\u2014"} Trials` : t("historicalLaunchHint"))), /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "hse-launch-button", disabled: !workspace || state.status === "previewing", onClick: () => active ? setOpen(true) : void preview() }, /* @__PURE__ */ import_react3.default.createElement("span", { className: "hse-launch-button-full" }, buttonLabel), /* @__PURE__ */ import_react3.default.createElement("span", { className: "hse-launch-button-short" }, buttonShort))), open ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-launch-overlay", role: "presentation", onMouseDown: (event) => event.target === event.currentTarget && close() }, /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-launch-dialog", role: "dialog", "aria-modal": "true", "aria-labelledby": "hse-historical-title" }, /* @__PURE__ */ import_react3.default.createElement("header", { className: "hse-launch-head" }, /* @__PURE__ */ import_react3.default.createElement("div", null, /* @__PURE__ */ import_react3.default.createElement("span", null, t("historicalLaunchHint")), /* @__PURE__ */ import_react3.default.createElement("h2", { id: "hse-historical-title" }, state.status === "running" ? t("historicalRunning") : t("historicalPreviewTitle")), /* @__PURE__ */ import_react3.default.createElement("p", null, state.status === "running" ? t("historicalRunningHint") : t("historicalPreviewHint"))), /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "hse-dialog-close", "aria-label": t("close"), onClick: close }, "\xD7")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-launch-body" }, state.status === "previewing" ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-empty" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-spin" }), t("historicalPreparing")) : null, state.status === "starting" ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-empty" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-spin" }), t("historicalStarting")) : null, state.status === "running" ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-run-state" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-spin" }), /* @__PURE__ */ import_react3.default.createElement("b", null, t("historicalRunning")), /* @__PURE__ */ import_react3.default.createElement("span", null, state.operation?.selectedCount ?? "\u2014", " Trials \xB7 ", snapshot.workspace.label), /* @__PURE__ */ import_react3.default.createElement("p", null, t("historicalRunningHint"))) : null, state.status === "completed" ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-run-state" }, /* @__PURE__ */ import_react3.default.createElement("b", null, "\u2713 ", t("historicalCompleted"))) : null, state.status === "error" ? /* @__PURE__ */ import_react3.default.createElement(HarborErrorState, { error: { ...state.error, nextStep: historicalErrorHint(state.error.code, t) }, t }) : null, state.status === "ready" && previewValue ? /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-launch-summary" }, /* @__PURE__ */ import_react3.default.createElement("div", null, /* @__PURE__ */ import_react3.default.createElement("span", null, t("selectedSessions")), /* @__PURE__ */ import_react3.default.createElement("b", null, previewValue.selected.length)), /* @__PURE__ */ import_react3.default.createElement("div", null, /* @__PURE__ */ import_react3.default.createElement("span", null, t("requestEstimate")), /* @__PURE__ */ import_react3.default.createElement("b", null, previewValue.estimatedJudgeRequests)), /* @__PURE__ */ import_react3.default.createElement("div", null, /* @__PURE__ */ import_react3.default.createElement("span", null, t("tokenExpiry")), /* @__PURE__ */ import_react3.default.createElement("b", null, new Date(previewValue.expiresAt).toLocaleTimeString())), /* @__PURE__ */ import_react3.default.createElement("div", null, /* @__PURE__ */ import_react3.default.createElement("span", null, t("workspace")), /* @__PURE__ */ import_react3.default.createElement("b", null, snapshot.workspace.label))), /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-launch-section" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, t("recentSessions")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-session-list" }, previewValue.selected.map((session) => /* @__PURE__ */ import_react3.default.createElement("article", { key: session.trialId }, /* @__PURE__ */ import_react3.default.createElement("div", null, /* @__PURE__ */ import_react3.default.createElement("b", null, session.title), /* @__PURE__ */ import_react3.default.createElement("span", null, session.lastActivityAt ? new Date(session.lastActivityAt).toLocaleString() : "\u2014")), /* @__PURE__ */ import_react3.default.createElement("p", null, t("turnCounts"), " ", session.turnCount ?? 0, " \xB7 ", t("toolCounts"), " ", session.toolCallCount ?? 0, " \xB7 ", t("feedbackCounts"), " +", session.feedback?.positive ?? 0, " / -", session.feedback?.negative ?? 0), /* @__PURE__ */ import_react3.default.createElement("code", null, (session.modelRoutes ?? []).map((route) => `${route.provider}/${route.model}`).join(" \xB7 ") || session.agentPreset || "\u2014"))))), /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-launch-section" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, t("historicalBoundaries")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-launch-grid" }, /* @__PURE__ */ import_react3.default.createElement("div", null, /* @__PURE__ */ import_react3.default.createElement("span", null, t("generatorRole")), /* @__PURE__ */ import_react3.default.createElement("b", null, t("generatorRoleValue"))), /* @__PURE__ */ import_react3.default.createElement("div", null, /* @__PURE__ */ import_react3.default.createElement("span", null, t("evaluatorIdentity")), /* @__PURE__ */ import_react3.default.createElement("b", null, evaluator?.id ?? "\u2014", " \xB7 ", evaluator?.version ?? "\u2014")), /* @__PURE__ */ import_react3.default.createElement("div", null, /* @__PURE__ */ import_react3.default.createElement("span", null, t("judgeIdentity")), /* @__PURE__ */ import_react3.default.createElement("b", null, judge?.provider ?? "\u2014", " / ", judge?.model ?? "\u2014")), /* @__PURE__ */ import_react3.default.createElement("div", null, /* @__PURE__ */ import_react3.default.createElement("span", null, t("coupling")), /* @__PURE__ */ import_react3.default.createElement("b", null, previewValue.evaluation?.coupling ?? "\u2014")), /* @__PURE__ */ import_react3.default.createElement("div", null, /* @__PURE__ */ import_react3.default.createElement("span", null, t("evidenceRetention")), /* @__PURE__ */ import_react3.default.createElement("b", null, previewValue.retention?.privateEvidence, " \xB7 ", previewValue.retention?.jobEvidence))), /* @__PURE__ */ import_react3.default.createElement("p", { className: "hse-boundary-note" }, t("historicalBoundaryDetail")))) : null), /* @__PURE__ */ import_react3.default.createElement("footer", { className: "hse-launch-actions" }, state.status === "ready" ? /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", onClick: close }, t("cancel")), /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "hse-confirm", onClick: () => void confirm() }, t("historicalConfirm"))) : null, state.status === "error" ? /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", onClick: close }, t("close")), state.error.code === "SESSION_SELECTION_TOO_EXPENSIVE" ? /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", onClick: () => void preview(30) }, t("recent30Days")) : /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", onClick: () => void preview() }, t("previewAgain"))) : null, state.status === "running" ? /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", onClick: close }, t("close")) : null))) : null);
 }
 function DashboardView(props) {
-  return /* @__PURE__ */ import_react.default.createElement(DashboardSessionView, { key: String(props.sessionId), ...props });
+  return /* @__PURE__ */ import_react3.default.createElement(DashboardSessionView, { key: String(props.sessionId), ...props });
 }
 function nearestScrollPort(element) {
   for (let node = element; node; node = node.parentElement) {
@@ -3297,43 +4146,47 @@ function nearestScrollPort(element) {
   }
   return element;
 }
+function GettingStarted({ jobs, openJob, t }) {
+  return /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-journey", "aria-label": t("journeyTitle") }, /* @__PURE__ */ import_react3.default.createElement("h2", null, t("journeyTitle")), /* @__PURE__ */ import_react3.default.createElement("p", null, t("journeyIntro")), /* @__PURE__ */ import_react3.default.createElement("ol", null, [1, 2, 3].map((step) => /* @__PURE__ */ import_react3.default.createElement("li", { key: step }, t(`journeyStep${step}`)))), jobs?.length ? /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "hse-button", onClick: () => openJob(jobs[0].name) }, t("journeyOpen")) : /* @__PURE__ */ import_react3.default.createElement("p", null, t("journeyEmpty")));
+}
 function DashboardSessionView({ t, bridge, stop, sessionId, useSession, useInput, inputActions, replaceHarborReference }) {
-  const [workspace, setWorkspace] = (0, import_react.useState)("");
-  const [offset, setOffset] = (0, import_react.useState)(0);
-  const [attentionFilter, setAttentionFilter] = (0, import_react.useState)("all");
+  const [workspace, setWorkspace] = (0, import_react3.useState)("");
+  const [offset, setOffset] = (0, import_react3.useState)(0);
+  const [attentionFilter, setAttentionFilter] = (0, import_react3.useState)("all");
   const state = useDashboard(true, workspace, offset, sessionId, attentionFilter);
-  const [selected, setSelected] = (0, import_react.useState)();
-  const [historyDepth, setHistoryDepth] = (0, import_react.useState)(0);
-  const rootNode = (0, import_react.useRef)();
-  const scrollNode = (0, import_react.useRef)();
-  (0, import_react.useEffect)(() => {
+  const [selected, setSelected] = (0, import_react3.useState)();
+  const [historyDepth, setHistoryDepth] = (0, import_react3.useState)(0);
+  const rootNode = (0, import_react3.useRef)();
+  const scrollNode = (0, import_react3.useRef)();
+  (0, import_react3.useEffect)(() => {
     scrollNode.current = nearestScrollPort(rootNode.current);
   }, []);
-  const navigationHistory = (0, import_react.useRef)([]);
-  const activeWorkbenchView = (0, import_react.useRef)();
-  const handledNavigation = (0, import_react.useRef)();
-  const restoreSequence = (0, import_react.useRef)(0);
-  const pendingDashboardRestore = (0, import_react.useRef)();
-  const [pageSessionId] = (0, import_react.useState)(pageSessionIdentity);
+  const navigationHistory = (0, import_react3.useRef)([]);
+  const activeWorkbenchView = (0, import_react3.useRef)();
+  const handledNavigation = (0, import_react3.useRef)();
+  const restoreSequence = (0, import_react3.useRef)(0);
+  const pendingDashboardRestore = (0, import_react3.useRef)();
+  const [pageSessionId] = (0, import_react3.useState)(pageSessionIdentity);
   const phase = useInput((input) => input?.phase ?? "plain");
-  const phaseRef = (0, import_react.useRef)(phase);
+  const phaseRef = (0, import_react3.useRef)(phase);
   phaseRef.current = phase;
   const ui = useHarborUi(bridge, sessionId);
   const snapshot = state.value && (!workspace || state.value.workspace?.id === workspace) ? state.value : void 0;
   const pagination = snapshot?.jobPagination ?? {};
-  const askContext = (0, import_react.useCallback)(async (context, prompt = "") => {
-    if (!context || !inputActions) return;
+  const askContext = (0, import_react3.useCallback)(async (context, prompt = "") => {
+    if (!context || !inputActions) return false;
     try {
       const issued = await bridge.issue(sessionId, context, { forceNew: true });
-      commitIssuedDraft(bridge, sessionId, issued, replaceHarborReference, prompt, phaseRef.current, true);
+      return commitIssuedDraft(bridge, sessionId, issued, replaceHarborReference, prompt, phaseRef.current, true);
     } catch {
+      return false;
     }
   }, [bridge, inputActions, replaceHarborReference, sessionId]);
-  const resolveLatest = (0, import_react.useCallback)((token, requestedSessionId) => {
+  const resolveLatest = (0, import_react3.useCallback)((token, requestedSessionId) => {
     if (!token || String(requestedSessionId) !== String(sessionId)) throw new Error("Harbor context resolution requires the active Session");
     return mutate("session-context-resolve", { sessionId, contextSnapshotId: token });
   }, [sessionId]);
-  const reanalyzeLatest = (0, import_react.useCallback)(async (context) => {
+  const reanalyzeLatest = (0, import_react3.useCallback)(async (context) => {
     if (!context || !inputActions) return;
     try {
       const issued = await bridge.issue(sessionId, context, { forceNew: true });
@@ -3341,11 +4194,11 @@ function DashboardSessionView({ t, bridge, stop, sessionId, useSession, useInput
     } catch {
     }
   }, [bridge, inputActions, replaceHarborReference, sessionId, t]);
-  const dockCallbacks = (0, import_react.useRef)();
-  dockCallbacks.current = { resolveLatest, reanalyzeLatest };
-  (0, import_react.useEffect)(() => {
+  const dockCallbacks = (0, import_react3.useRef)();
+  dockCallbacks.current = { resolveLatest, reanalyzeLatest, prepareQuestion: askContext };
+  (0, import_react3.useEffect)(() => {
     let previous;
-    const callbacks = { resolveLatest: (...args) => dockCallbacks.current.resolveLatest(...args), reanalyzeLatest: (...args) => dockCallbacks.current.reanalyzeLatest(...args) };
+    const callbacks = { resolveLatest: (...args) => dockCallbacks.current.resolveLatest(...args), reanalyzeLatest: (...args) => dockCallbacks.current.reanalyzeLatest(...args), prepareQuestion: (...args) => dockCallbacks.current.prepareQuestion(...args) };
     const publish = (width) => {
       const narrow = width <= 1050;
       if (previous === narrow) return;
@@ -3377,7 +4230,7 @@ function DashboardSessionView({ t, bridge, stop, sessionId, useSession, useInput
     setWorkspace(snapshot.workspace.id);
     setSelected({ job, workspace: snapshot.workspace.id });
   };
-  const completedHistorical = (0, import_react.useCallback)((operation) => {
+  const completedHistorical = (0, import_react3.useCallback)((operation) => {
     navigationHistory.current = [];
     setHistoryDepth(0);
     activeWorkbenchView.current = void 0;
@@ -3385,7 +4238,7 @@ function DashboardSessionView({ t, bridge, stop, sessionId, useSession, useInput
     setWorkspace(operation.workspace);
     setSelected({ job: operation.jobName, workspace: operation.workspace });
   }, []);
-  const closeWorkbench = (0, import_react.useCallback)(() => {
+  const closeWorkbench = (0, import_react3.useCallback)(() => {
     const previous = navigationHistory.current.pop();
     if (!ownsNavigationHistoryEntry(previous, sessionId)) {
       navigationHistory.current = [];
@@ -3412,7 +4265,7 @@ function DashboardSessionView({ t, bridge, stop, sessionId, useSession, useInput
       setSelected(void 0);
     }
   }, [sessionId]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     const pending = pendingDashboardRestore.current;
     if (!pending || selected || pending.workspace && snapshot?.workspace?.id !== pending.workspace) return void 0;
     pendingDashboardRestore.current = void 0;
@@ -3427,14 +4280,14 @@ function DashboardSessionView({ t, bridge, stop, sessionId, useSession, useInput
       if (secondFrame) window.cancelAnimationFrame(secondFrame);
     };
   }, [selected, snapshot?.workspace?.id]);
-  const consumeNavigation = (0, import_react.useCallback)((navigation) => {
+  const consumeNavigation = (0, import_react3.useCallback)((navigation) => {
     if (navigation) setSelected((current) => clearConsumedNavigation(current, navigation));
   }, []);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (!snapshot?.workspace?.id || selected) return;
     bridge.setCurrent(sessionId, buildUiContext({ sessionId, pageSessionId, workspace: snapshot.workspace.id }));
   }, [bridge, pageSessionId, selected, sessionId, snapshot?.workspace?.id]);
-  (0, import_react.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     const action = ui.navigation;
     const actionKey = action?.actionId ? `${sessionId}\0${action.actionId}` : void 0;
     if (!actionKey) {
@@ -3469,23 +4322,23 @@ function DashboardSessionView({ t, bridge, stop, sessionId, useSession, useInput
     bridge.acknowledgeNavigation(sessionId, action.actionId);
   }, [bridge, offset, selected, sessionId, snapshot?.workspace?.id, ui.navigation, workspace]);
   const askJob = (jobSummary) => askContext(buildUiContext({ sessionId, pageSessionId, workspace: snapshot.workspace.id, job: jobSummary.name, detail: void 0, jobSummary }), t("suggestedQuestion2"));
-  return /* @__PURE__ */ import_react.default.createElement(HarborSessionContext.Provider, { value: sessionId }, /* @__PURE__ */ import_react.default.createElement("main", { ref: rootNode, className: "hse-root" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-page hse-layout" }, !ui.workbenchDock?.narrow ? /* @__PURE__ */ import_react.default.createElement(CopilotDock, { bridge, sessionId, useSession, stop, resolveLatest, reanalyzeLatest, t }) : null, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-main-panel" }, selected ? /* @__PURE__ */ import_react.default.createElement(Workbench, { key: `${selected.workspace}\0${selected.job}`, job: selected.job, workspace: selected.workspace, jobs: snapshot?.jobs ?? [], close: closeWorkbench, navigation: selected.navigation, consumeNavigation, restoreView: selected.restoreView, hasHistory: selected.fromNavigation, scrollContainerRef: scrollNode, onViewStateChange: (value) => {
+  return /* @__PURE__ */ import_react3.default.createElement(HarborSessionContext.Provider, { value: sessionId }, /* @__PURE__ */ import_react3.default.createElement("main", { ref: rootNode, className: "hse-root" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-page hse-layout" }, !ui.workbenchDock?.narrow ? /* @__PURE__ */ import_react3.default.createElement(CopilotDock, { bridge, sessionId, useSession, stop, resolveLatest, reanalyzeLatest, prepareQuestion: askContext, t }) : null, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-main-panel" }, selected ? /* @__PURE__ */ import_react3.default.createElement(Workbench, { key: `${selected.workspace}\0${selected.job}`, job: selected.job, workspace: selected.workspace, jobs: snapshot?.jobs ?? [], close: closeWorkbench, navigation: selected.navigation, consumeNavigation, restoreView: selected.restoreView, hasHistory: selected.fromNavigation, scrollContainerRef: scrollNode, onViewStateChange: (value) => {
     activeWorkbenchView.current = value;
-  }, sessionId, pageSessionId, bridge, askContext, t }) : /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, historyDepth ? /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-button hse-dashboard-back", onClick: closeWorkbench }, t("back")) : null, /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-health-summary" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-head" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("small", null, "Harbor \xB7 ", t("eyebrow")), /* @__PURE__ */ import_react.default.createElement("h1", null, t("health"), ": ", t((snapshot?.overview?.attention?.blocked ?? 0) > 0 ? "health_blocked" : ["blocked", "stalled", "infrastructure", "invalid", "regressed", "gate", "fresh-baseline"].some((key) => (snapshot?.overview?.attention?.[key] ?? 0) > 0) ? "healthRisk" : "healthy")), /* @__PURE__ */ import_react.default.createElement("p", null, t("attentionCountHint"))), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-button", onClick: () => void state.load() }, t("refresh"))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-health-filters", "aria-label": t("attention") }, ATTENTION_FILTERS.map((filter) => /* @__PURE__ */ import_react.default.createElement("button", { type: "button", key: filter, "aria-pressed": attentionFilter === filter, onClick: () => {
+  }, sessionId, pageSessionId, bridge, askContext, t }) : /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, historyDepth ? /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "hse-button hse-dashboard-back", onClick: closeWorkbench }, t("back")) : null, snapshot ? /* @__PURE__ */ import_react3.default.createElement(GettingStarted, { jobs: snapshot.jobs, openJob, t }) : null, /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-health-summary" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-head" }, /* @__PURE__ */ import_react3.default.createElement("div", null, /* @__PURE__ */ import_react3.default.createElement("small", null, "Harbor \xB7 ", t("eyebrow")), /* @__PURE__ */ import_react3.default.createElement("h1", null, t("health"), ": ", t((snapshot?.overview?.attention?.blocked ?? 0) > 0 ? "health_blocked" : ["blocked", "stalled", "infrastructure", "invalid", "regressed", "gate", "fresh-baseline"].some((key) => (snapshot?.overview?.attention?.[key] ?? 0) > 0) ? "healthRisk" : "healthy")), /* @__PURE__ */ import_react3.default.createElement("p", null, t("attentionCountHint"))), /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "hse-button", onClick: () => void state.load() }, t("refresh"))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-health-filters", "aria-label": t("attention") }, ATTENTION_FILTERS.map((filter) => /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", key: filter, "aria-pressed": attentionFilter === filter, onClick: () => {
     setAttentionFilter(filter);
     setOffset(0);
-  } }, /* @__PURE__ */ import_react.default.createElement("span", null, t(`health_${filter}`)), /* @__PURE__ */ import_react.default.createElement("b", null, snapshot?.overview?.attention?.[filter] ?? "\u2014"))))), snapshot?.workspace ? /* @__PURE__ */ import_react.default.createElement(HistoricalLauncher, { snapshot, reload: state.load, onCompleted: completedHistorical, t }) : null, state.stale ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-capability" }, t("dashboardStale")) : null, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-head" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("h2", null, t("attention"), " \xB7 ", t(`health_${attentionFilter}`)), /* @__PURE__ */ import_react.default.createElement("p", null, t("jobsHint"))), snapshot?.workspaces?.length ? /* @__PURE__ */ import_react.default.createElement("select", { className: "hse-select", "aria-label": t("workspaceSelect"), value: snapshot.workspace?.id ?? "", onChange: switchWorkspace }, snapshot.workspaces.map((item) => /* @__PURE__ */ import_react.default.createElement("option", { value: item.id, key: item.id }, item.label, " \xB7 ", item.root))) : null), snapshot?.workspace ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-hook-state" }, /* @__PURE__ */ import_react.default.createElement("b", null, t("workspace"), ": ", snapshot.workspace.label), /* @__PURE__ */ import_react.default.createElement("br", null), snapshot.config.projectRoot, " \xB7 ", snapshot.config.jobsDir) : null, state.status === "loading" ? /* @__PURE__ */ import_react.default.createElement(HarborSkeleton, { kind: "dashboard", rows: 7, label: t("loading") }) : state.status === "error" && !snapshot ? /* @__PURE__ */ import_react.default.createElement(HarborErrorState, { error: state.errorDetails ?? state.error, retry: () => void state.load(), t }) : !snapshot?.jobs?.length ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-empty" }, t(attentionFilter === "all" ? "empty" : "noFilteredJobs"), attentionFilter !== "all" ? /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-button", onClick: () => {
+  } }, /* @__PURE__ */ import_react3.default.createElement("span", null, t(`health_${filter}`)), /* @__PURE__ */ import_react3.default.createElement("b", null, snapshot?.overview?.attention?.[filter] ?? "\u2014"))))), snapshot?.workspace ? /* @__PURE__ */ import_react3.default.createElement(HistoricalLauncher, { snapshot, reload: state.load, onCompleted: completedHistorical, t }) : null, state.stale ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-capability" }, t("dashboardStale")) : null, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-head" }, /* @__PURE__ */ import_react3.default.createElement("div", null, /* @__PURE__ */ import_react3.default.createElement("h2", null, t("attention"), " \xB7 ", t(`health_${attentionFilter}`)), /* @__PURE__ */ import_react3.default.createElement("p", null, t("jobsHint"))), snapshot?.workspaces?.length ? /* @__PURE__ */ import_react3.default.createElement("select", { className: "hse-select", "aria-label": t("workspaceSelect"), value: snapshot.workspace?.id ?? "", onChange: switchWorkspace }, snapshot.workspaces.map((item) => /* @__PURE__ */ import_react3.default.createElement("option", { value: item.id, key: item.id }, item.label, " \xB7 ", item.root))) : null), snapshot?.workspace ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-hook-state" }, /* @__PURE__ */ import_react3.default.createElement("b", null, t("workspace"), ": ", snapshot.workspace.label), /* @__PURE__ */ import_react3.default.createElement("br", null), snapshot.config.projectRoot, " \xB7 ", snapshot.config.jobsDir) : null, state.status === "loading" ? /* @__PURE__ */ import_react3.default.createElement(HarborSkeleton, { kind: "dashboard", rows: 7, label: t("loading") }) : state.status === "error" && !snapshot ? /* @__PURE__ */ import_react3.default.createElement(HarborErrorState, { error: state.errorDetails ?? state.error, retry: () => void state.load(), t }) : !snapshot?.jobs?.length ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-empty" }, t(attentionFilter === "all" ? "empty" : "noFilteredJobs"), attentionFilter !== "all" ? /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "hse-button", onClick: () => {
     setAttentionFilter("all");
     setOffset(0);
-  } }, t("clearFilters")) : null) : /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-list" }, snapshot.jobs.map((job) => /* @__PURE__ */ import_react.default.createElement(JobCard, { job, t, open: openJob, ask: askJob, key: job.name }))), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-pager" }, /* @__PURE__ */ import_react.default.createElement("span", null, pagination.total ? `${offset + 1}\u2013${Math.min(offset + (snapshot.jobs?.length ?? 0), pagination.total)} / ${pagination.total}` : "0 / 0"), /* @__PURE__ */ import_react.default.createElement("button", { disabled: !offset, onClick: () => setOffset(Math.max(0, offset - (pagination.limit ?? 20))) }, t("previous")), /* @__PURE__ */ import_react.default.createElement("button", { disabled: !pagination.hasMore, onClick: () => setOffset(offset + (pagination.limit ?? 20)) }, t("next")))))))));
+  } }, t("clearFilters")) : null) : /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-list" }, snapshot.jobs.map((job) => /* @__PURE__ */ import_react3.default.createElement(JobCard, { job, t, open: openJob, ask: askJob, key: job.name }))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-pager" }, /* @__PURE__ */ import_react3.default.createElement("span", null, pagination.total ? `${offset + 1}\u2013${Math.min(offset + (snapshot.jobs?.length ?? 0), pagination.total)} / ${pagination.total}` : "0 / 0"), /* @__PURE__ */ import_react3.default.createElement("button", { disabled: !offset, onClick: () => setOffset(Math.max(0, offset - (pagination.limit ?? 20))) }, t("previous")), /* @__PURE__ */ import_react3.default.createElement("button", { disabled: !pagination.hasMore, onClick: () => setOffset(offset + (pagination.limit ?? 20)) }, t("next")))))))));
 }
 function VersionPanel({ t }) {
   const state = useVersionCheck();
-  const [copied, setCopied] = (0, import_react.useState)(false);
+  const [copied, setCopied] = (0, import_react3.useState)(false);
   const value = state.value;
   const status = state.status === "loading" ? "loading" : state.status === "error" ? "unavailable" : value?.status ?? "unavailable";
   const statusLabel = status === "loading" ? t("checkingUpdate") : status === "update-available" ? t("updateAvailable") : status === "up-to-date" ? t("upToDate") : t("updateUnavailable");
-  const copy = async () => {
+  const copy2 = async () => {
     if (!value?.command) return;
     try {
       await navigator.clipboard.writeText(value.command);
@@ -3495,13 +4348,13 @@ function VersionPanel({ t }) {
       setCopied(false);
     }
   };
-  return /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-version", "data-status": status, "aria-live": "polite" }, /* @__PURE__ */ import_react.default.createElement("header", { className: "hse-version-head" }, /* @__PURE__ */ import_react.default.createElement("h3", null, "\u{1F433} ", t("pluginVersion")), /* @__PURE__ */ import_react.default.createElement("span", { className: "hse-version-badge" }, statusLabel)), value ? /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-version-grid" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-version-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("currentVersion")), /* @__PURE__ */ import_react.default.createElement("b", null, value.currentVersion)), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-version-card" }, /* @__PURE__ */ import_react.default.createElement("span", null, t("latestVersion")), /* @__PURE__ */ import_react.default.createElement("b", null, value.latestVersion ?? "\u2014"))) : null, status === "update-available" ? /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-version-copy" }, t("updateHint")), /* @__PURE__ */ import_react.default.createElement("code", { className: "hse-update-command" }, value.command)) : null, status === "unavailable" ? /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-version-copy" }, t("offlineUpdateHint")) : null, value?.stale ? /* @__PURE__ */ import_react.default.createElement("p", { className: "hse-version-copy" }, t("staleVersion")) : null, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-version-actions" }, value?.command ? /* @__PURE__ */ import_react.default.createElement("button", { className: "hse-primary", type: "button", onClick: () => void copy() }, copied ? t("updateCommandCopied") : t("copyUpdateCommand")) : null, value?.releaseUrl ? /* @__PURE__ */ import_react.default.createElement("a", { href: value.releaseUrl, target: "_blank", rel: "noreferrer" }, t("viewRelease")) : null, status !== "loading" ? /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => void state.load(true) }, t("checkAgain")) : null, value?.checkedAt ? /* @__PURE__ */ import_react.default.createElement("small", null, t("checkedAt"), ": ", new Date(value.checkedAt).toLocaleString()) : null));
+  return /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-version", "data-status": status, "aria-live": "polite" }, /* @__PURE__ */ import_react3.default.createElement("header", { className: "hse-version-head" }, /* @__PURE__ */ import_react3.default.createElement("h3", null, "\u{1F433} ", t("pluginVersion")), /* @__PURE__ */ import_react3.default.createElement("span", { className: "hse-version-badge" }, statusLabel)), value ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-version-grid" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-version-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("currentVersion")), /* @__PURE__ */ import_react3.default.createElement("b", null, value.currentVersion)), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-version-card" }, /* @__PURE__ */ import_react3.default.createElement("span", null, t("latestVersion")), /* @__PURE__ */ import_react3.default.createElement("b", null, value.latestVersion ?? "\u2014"))) : null, status === "update-available" ? /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement("p", { className: "hse-version-copy" }, t("updateHint")), /* @__PURE__ */ import_react3.default.createElement("code", { className: "hse-update-command" }, value.command)) : null, status === "unavailable" ? /* @__PURE__ */ import_react3.default.createElement("p", { className: "hse-version-copy" }, t("offlineUpdateHint")) : null, value?.stale ? /* @__PURE__ */ import_react3.default.createElement("p", { className: "hse-version-copy" }, t("staleVersion")) : null, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-version-actions" }, value?.command ? /* @__PURE__ */ import_react3.default.createElement("button", { className: "hse-primary", type: "button", onClick: () => void copy2() }, copied ? t("updateCommandCopied") : t("copyUpdateCommand")) : null, value?.releaseUrl ? /* @__PURE__ */ import_react3.default.createElement("a", { href: value.releaseUrl, target: "_blank", rel: "noreferrer" }, t("viewRelease")) : null, status !== "loading" ? /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", onClick: () => void state.load(true) }, t("checkAgain")) : null, value?.checkedAt ? /* @__PURE__ */ import_react3.default.createElement("small", null, t("checkedAt"), ": ", new Date(value.checkedAt).toLocaleString()) : null));
 }
 function DoctorView({ t }) {
   const state = useDashboard(false);
-  const [projectRoot, setProjectRoot] = (0, import_react.useState)("");
-  const [mutation, setMutation] = (0, import_react.useState)({ status: "idle" });
-  (0, import_react.useEffect)(() => {
+  const [projectRoot, setProjectRoot] = (0, import_react3.useState)("");
+  const [mutation, setMutation] = (0, import_react3.useState)({ status: "idle" });
+  (0, import_react3.useEffect)(() => {
     if (state.value?.config?.projectRoot) setProjectRoot(state.value.config.projectRoot);
   }, [state.value?.config?.projectRoot]);
   const switchRoot = async () => {
@@ -3516,7 +4369,7 @@ function DoctorView({ t }) {
   };
   const credentialTiers = [[t("sessionCredential"), t("supported"), t("sessionCredentialHint"), true], [t("credentialStore"), t("hostServiceRequired"), t("credentialStoreHint"), false], [t("plaintextCredential"), t("forbidden"), t("plaintextCredentialHint"), false]];
   const rootSource = state.value?.config?.projectRootSource === "agent-session" ? t("projectRootAgent") : state.value?.config?.projectRootSource === "manual" ? t("projectRootManual") : t("projectRootConfigured");
-  return /* @__PURE__ */ import_react.default.createElement("main", { className: "hse-root" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-settings" }, /* @__PURE__ */ import_react.default.createElement("h2", null, t("setupDoctor")), /* @__PURE__ */ import_react.default.createElement("p", null, t("setupHint")), state.errorDetails ? /* @__PURE__ */ import_react.default.createElement(HarborErrorState, { error: state.errorDetails, title: state.stale ? t("dashboardStale") : void 0, retry: () => void state.load(), t }) : null, /* @__PURE__ */ import_react.default.createElement(VersionPanel, { t }), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-root-switch" }, /* @__PURE__ */ import_react.default.createElement("label", { htmlFor: "hse-project-root" }, t("projectRoot")), /* @__PURE__ */ import_react.default.createElement("input", { id: "hse-project-root", value: projectRoot, onChange: (event) => setProjectRoot(event.target.value), spellCheck: false }), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", disabled: mutation.status === "saving" || !projectRoot, onClick: () => void switchRoot() }, mutation.status === "saving" ? t("switchingProjectRoot") : t("switchProjectRoot")), /* @__PURE__ */ import_react.default.createElement("small", null, mutation.status === "saved" ? t("projectRootUpdated") : t("projectRootHint")), /* @__PURE__ */ import_react.default.createElement("small", null, rootSource), mutation.status === "error" ? /* @__PURE__ */ import_react.default.createElement(HarborErrorState, { error: mutation.error, retry: () => void switchRoot(), t }) : null), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-checks" }, Object.entries(state.value?.checks ?? {}).map(([key, check]) => /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-check", key }, /* @__PURE__ */ import_react.default.createElement("b", { className: check.status === "ok" ? "hse-valid" : "hse-invalid" }, key, " \xB7 ", check.status), /* @__PURE__ */ import_react.default.createElement("small", null, check.detail)))), /* @__PURE__ */ import_react.default.createElement("h3", null, t("credentialPolicy")), /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-checks" }, credentialTiers.map(([label, status, hint, active]) => /* @__PURE__ */ import_react.default.createElement("div", { className: "hse-check", key: label }, /* @__PURE__ */ import_react.default.createElement("b", { className: active ? "hse-valid" : "hse-invalid" }, label, " \xB7 ", status), /* @__PURE__ */ import_react.default.createElement("small", null, hint))))));
+  return /* @__PURE__ */ import_react3.default.createElement("main", { className: "hse-root" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-settings" }, /* @__PURE__ */ import_react3.default.createElement("h2", null, t("setupDoctor")), /* @__PURE__ */ import_react3.default.createElement("p", null, t("setupHint")), state.errorDetails ? /* @__PURE__ */ import_react3.default.createElement(HarborErrorState, { error: state.errorDetails, title: state.stale ? t("dashboardStale") : void 0, retry: () => void state.load(), t }) : null, /* @__PURE__ */ import_react3.default.createElement(VersionPanel, { t }), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-root-switch" }, /* @__PURE__ */ import_react3.default.createElement("label", { htmlFor: "hse-project-root" }, t("projectRoot")), /* @__PURE__ */ import_react3.default.createElement("input", { id: "hse-project-root", value: projectRoot, onChange: (event) => setProjectRoot(event.target.value), spellCheck: false }), /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", disabled: mutation.status === "saving" || !projectRoot, onClick: () => void switchRoot() }, mutation.status === "saving" ? t("switchingProjectRoot") : t("switchProjectRoot")), /* @__PURE__ */ import_react3.default.createElement("small", null, mutation.status === "saved" ? t("projectRootUpdated") : t("projectRootHint")), /* @__PURE__ */ import_react3.default.createElement("small", null, rootSource), mutation.status === "error" ? /* @__PURE__ */ import_react3.default.createElement(HarborErrorState, { error: mutation.error, retry: () => void switchRoot(), t }) : null), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-checks" }, Object.entries(state.value?.checks ?? {}).map(([key, check]) => /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-check", key }, /* @__PURE__ */ import_react3.default.createElement("b", { className: check.status === "ok" ? "hse-valid" : "hse-invalid" }, key, " \xB7 ", check.status), /* @__PURE__ */ import_react3.default.createElement("small", null, check.detail)))), /* @__PURE__ */ import_react3.default.createElement("h3", null, t("credentialPolicy")), /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-checks" }, credentialTiers.map(([label, status, hint, active]) => /* @__PURE__ */ import_react3.default.createElement("div", { className: "hse-check", key: label }, /* @__PURE__ */ import_react3.default.createElement("b", { className: active ? "hse-valid" : "hse-invalid" }, label, " \xB7 ", status), /* @__PURE__ */ import_react3.default.createElement("small", null, hint))))));
 }
 function blockText(block) {
   return isRecord(block) && Array.isArray(block.content) ? block.content.filter((item) => item?.type === "text").map((item) => item.text).join("\n") : "";
@@ -3532,11 +4385,11 @@ function decodeToolResult(block) {
   }
 }
 function HarborToolView({ block, toolName, bridge, sessionId, t }) {
-  const [open, setOpen] = (0, import_react.useState)(false);
+  const [open, setOpen] = (0, import_react3.useState)(false);
   const value = decodeToolResult(block);
   const uiAction = trustedHarborUiAction(toolName, value);
   const running = !isRecord(block) || !("kind" in block);
-  return /* @__PURE__ */ import_react.default.createElement("section", { className: "hse-tool" }, /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => setOpen(!open) }, /* @__PURE__ */ import_react.default.createElement("strong", null, "\u{1F433} ", toolName), /* @__PURE__ */ import_react.default.createElement("small", null, running ? "running" : block.isError ? "error" : "\u2713")), open ? /* @__PURE__ */ import_react.default.createElement("pre", null, value ? pretty(value) : blockText(block) || "Running\u2026") : null, uiAction ? /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "hse-tool-action", onClick: () => bridge.navigate(sessionId, uiAction, { force: true }) }, t("viewInHarbor")) : null);
+  return /* @__PURE__ */ import_react3.default.createElement("section", { className: "hse-tool" }, /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", onClick: () => setOpen(!open) }, /* @__PURE__ */ import_react3.default.createElement("strong", null, "\u{1F433} ", toolName), /* @__PURE__ */ import_react3.default.createElement("small", null, running ? "running" : block.isError ? "error" : "\u2713")), open ? /* @__PURE__ */ import_react3.default.createElement("pre", null, value ? pretty2(value) : blockText(block) || "Running\u2026") : null, uiAction ? /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "hse-tool-action", onClick: () => bridge.navigate(sessionId, uiAction, { force: true }) }, t("viewInHarbor")) : null);
 }
 var name = "dsh-harbor-evolution";
 var inject = ["slots", "locale", "inputTriggers", "sessions", "conversation"];
@@ -3585,7 +4438,7 @@ function apply(ctx) {
     for (const key of ["harbor_candidate_snapshot", "harbor_model_binding", "harbor_evolution_init", "harbor_evolution_doctor", "harbor_quick_diagnostic_init", "harbor_session_diagnostic_preview", "harbor_session_diagnostic_run", "harbor_dataset_validate", "harbor_context_preview", "harbor_eval_run", "harbor_eval_result", "harbor_evaluator_inspect", "harbor_evaluator_update", "harbor_ground_truth_init", "harbor_evaluator_meta_evaluate", "harbor_candidate_compare", "harbor_resolve_page_context", "harbor_get_evidence", "harbor_propose_action"]) yield ctx.slots.register({ name: "tool.call.toolview", key, inject: injected }, HarborToolView);
   });
 }
-module.exports = { name, inject, apply, recoverHarborTurn, applySourceProposal, removeContextPart, mergeHarborFocus, selectedSourceLines, sectionForNavigation, HarborUiBridge, buildUiContext, harborContextFilters, replaceStructuredHarborReference, clearStructuredHarborReferences, needsStructuredHarborNormalization, commitIssuedDraft, isHarborInputBusy, dashboardFailureState, workbenchSuccessState, workbenchFailureState, harborTurnProjection, harborSubmissionTransition, effectiveHarborSubmissionReference, shouldClearObservedExplicit, isExplicitContextExpired, evidenceCriterionOwners, evidenceFocusKey, isEvidenceFocused, trialNavigationView, trialRestoreView, navigationHistoryEntry, ownsNavigationHistoryEntry, restoreNavigationSelection, clearConsumedNavigation, ownsTrialRequest, trialListSuccessState, trialListFailureState, hasTrialFilters, trialDetailLoadingState, trialDetailErrorState, comparisonCandidates, governanceRequestKey, ownsGovernanceRequest, ownsGovernanceBinding, normalizeHarborUiError, harborApiError, trustedHarborUiAction, trustedHarborResolvedContext, trustedHarborReferences, harborAnswerBasis, toolUiAction };
+module.exports = { name, inject, apply, CopilotDock, actionDraftContext, resolvedUiContext, harborDisplayedAnswerBasis, recoverHarborTurn, applySourceProposal, removeContextPart, mergeHarborFocus, selectedSourceLines, sectionForNavigation, HarborUiBridge, buildUiContext, harborContextFilters, replaceStructuredHarborReference, clearStructuredHarborReferences, needsStructuredHarborNormalization, commitIssuedDraft, isHarborInputBusy, dashboardFailureState, workbenchSuccessState, workbenchFailureState, harborTurnProjection, harborSubmissionTransition, effectiveHarborSubmissionReference, shouldClearObservedExplicit, isExplicitContextExpired, evidenceCriterionOwners, evidenceFocusKey, isEvidenceFocused, trialNavigationView, trialRestoreView, navigationHistoryEntry, ownsNavigationHistoryEntry, restoreNavigationSelection, clearConsumedNavigation, ownsTrialRequest, trialListSuccessState, trialListFailureState, hasTrialFilters, trialDetailLoadingState, trialDetailErrorState, comparisonCandidates, governanceRequestKey, ownsGovernanceRequest, ownsGovernanceBinding, normalizeHarborUiError, harborApiError, trustedHarborUiAction, trustedHarborResolvedContext, trustedHarborReferences, harborAnswerBasis, toolUiAction };
     return module.exports;
   },
 });

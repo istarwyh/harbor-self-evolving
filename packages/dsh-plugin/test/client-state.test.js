@@ -105,6 +105,41 @@ test('source and draft conflicts request reload instead of suggesting a network 
   const { normalizeHarborUiError } = await loadClient()
   assert.equal(normalizeHarborUiError({ message: 'Evaluator source changed after it was opened; reload before saving', code: 'evaluator-update-failed' }).category, 'conflict')
   assert.equal(normalizeHarborUiError({ message: 'Rebind first', code: 'HARBOR_ACTION_REVISION_CONFLICT' }).category, 'conflict')
+  assert.equal(normalizeHarborUiError({ code: 'HARBOR_ACTION_EXPIRED' }).category, 'expired')
+  assert.equal(normalizeHarborUiError({ code: 'HARBOR_DRAFT_SOURCE_CONFLICT' }).category, 'conflict')
+})
+
+test('repreparing an expired proposal preserves its original typed selection, not the current page', async () => {
+  const { actionDraftContext } = await loadClient()
+  const digest = `sha256:${'a'.repeat(64)}`
+  const normalize = draft => normalizeHarborUiContext(actionDraftContext(draft, 'session-a', 'page-a'))
+  const home = normalize({ target: { kind: 'harbor.workspace/v1', workspace: 'workspace-a' } })
+  assert.equal(home.object.kind, 'workspace')
+  assert.equal(home.object.id, 'workspace-a')
+  const target = { kind: 'harbor.trial/v1', workspace: 'workspace-a', job: 'job-a', trial: 'trial-a' }
+  const selected = normalize({ target, selection: [{ kind: 'harbor.evidence/v1', workspace: 'workspace-a', job: 'job-a', trial: 'trial-a', criterion: 'quality', evidenceRef: 'artifact-a' }] })
+  assert.equal(selected.object.trial, 'trial-a')
+  assert.equal(selected.selection[0].kind, 'evidence')
+  assert.equal(selected.selection[0].evidenceRef, 'artifact-a')
+  const compare = normalize({ target: { kind: 'harbor.compare/v1', workspace: 'workspace-a', job: 'candidate-a', baseline: 'baseline-a', candidate: 'candidate-a', comparisonDigest: digest } })
+  assert.equal(compare.object.id, digest)
+  assert.equal(compare.route.params.baseline, 'baseline-a')
+  const source = { kind: 'evaluator-source', id: 'source-a', sourceRole: 'rubric', job: 'job-a', sourceDigest: digest, startLine: 3, endLine: 3 }
+  const editor = normalize({ target: { ...target, kind: 'harbor.job/v1', trial: undefined }, proposal: { sourceRef: source } })
+  assert.equal(editor.selection[0].sourceDigest, digest)
+  assert.equal(editor.selection[0].startLine, 3)
+  const gate = normalize({ target: { kind: 'harbor.gate/v1', workspace: 'workspace-a', job: 'candidate-a', baseline: 'baseline-a', candidate: 'candidate-a', policy: { id: 'policy-a', version: '1', digest }, reportDigest: digest } })
+  assert.equal(gate.object.kind, 'gate')
+  assert.equal(gate.route.params.policy, 'policy-a')
+})
+
+test('ordinary follow-up cannot inherit the prior objects freshness or evidence basis', async () => {
+  const { harborDisplayedAnswerBasis } = await loadClient()
+  const old = { schema: 'harbor-resolved-context/v1', contextSnapshotId: 'hctx_old', freshness: 'FRESH', refs: { object: { job: 'job-a' } }, basedOn: { artifactRevision: 'old', currentRevision: 'new' } }
+  const fallback = { object: { job: 'job-a' }, artifactRevision: 'old' }
+  assert.equal(harborDisplayedAnswerBasis(undefined, [], true, old, fallback), undefined)
+  assert.deepEqual(harborDisplayedAnswerBasis(undefined, [{ action: { target: { job: 'job-b' } }, artifactRevision: 'b' }], true, old, fallback), { job: 'job-b', artifactRevision: 'b' })
+  assert.deepEqual(harborDisplayedAnswerBasis(old, [], true, { ...old, contextSnapshotId: 'hctx_other', basedOn: { currentRevision: 'not-own' } }, fallback), { job: 'job-a', artifactRevision: 'old', currentRevision: 'new' })
 })
 
 test('Copilot recovers a sent turn from trusted current-session transcript without reviving one-shot draft', async () => {

@@ -2,6 +2,10 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 
 import { hasHarborReference, rawHarborReferenceRanges } from '../../lib/composer-context.js'
 import { ATTENTION_FILTERS, jobAttention } from '../../lib/workbench-health.js'
+import { harborQuestionKeys, harborQuestionLabelKey, JOURNEY_MESSAGES } from './workbench-journey.js'
+import { ActionDraftCardView, ACTION_CARD_MESSAGES } from './action-draft-card.jsx'
+import { harborConversationProjection } from './conversation-projection.js'
+import { EvaluatorEditorView, EVALUATOR_EDITOR_MESSAGES } from './evaluator-editor.jsx'
 
 const NS = 'harbor-evolution'
 const API = '/_dsh/harbor-evolution'
@@ -103,9 +107,13 @@ const dictionaries = {
   },
 }
 
+for (const locale of ['zh', 'en']) Object.assign(dictionaries[locale], JOURNEY_MESSAGES[locale], ACTION_CARD_MESSAGES[locale], EVALUATOR_EDITOR_MESSAGES[locale])
+
 const CSS = `
+.hse-journey{padding:18px;margin-bottom:18px;border:1px solid #2875ff35;border-radius:14px;background:#2875ff08}.hse-journey h2{margin:0;font-size:20px}.hse-journey p,.hse-journey li{font-size:13px;line-height:1.7}.hse-journey ol{padding:0;list-style:none}.hse-journey details summary{cursor:pointer}.hse-question{font-size:12px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}.hse-discussion-history{margin:10px 0;font-size:12px}.hse-discussion-history button{display:block;width:100%;margin:5px 0;padding:7px;text-align:left;color:inherit;border:1px solid #70cfff55;background:transparent;border-radius:6px;cursor:pointer}.hse-draft-notice{padding:10px;border:1px solid #2875ff44;border-radius:8px;font-size:12px;line-height:1.6}.hse-editor-tab[data-dirty=true]:after{content:' •';color:#c78312}.hse-local-actions{flex-wrap:wrap}.hse-answer-unverified>p{font-size:11px;color:#f3c779}.hse-copilot details>summary{cursor:pointer;font-size:11px}.hse-copilot-actions{flex-wrap:wrap}.hse-context-questions{max-height:70px;overflow:auto}.hse-job-identities>summary{cursor:pointer;font-size:12px}.hse-job-identities[open]>.hse-identity-tags{margin-top:12px}
 .hse-root{--ocean-950:#03152f;--ocean-800:#07366f;--ocean-600:#1464c8;--ocean-300:#75b7ff;--foam-50:#f4fbff;--whale-500:#2875ff;--coral-500:#ee6478;--amber-500:#e4a23b;--kelp-500:#1f9b72;height:100%;min-height:0;overflow:auto;color:var(--dsw-alias-label-primary,#142038);background:var(--dsw-alias-bg-layer-1,#f2f7fc);font-family:inherit}.hse-page{width:min(1320px,calc(100% - 36px));margin:auto;padding:24px 0 56px}
 .hse-dashboard-back{margin-bottom:10px}
+.hse-action-draft button{padding:7px 10px;border:1px solid #70cfff55;border-radius:7px;background:transparent;color:inherit;cursor:pointer;font:inherit}.hse-action-draft>.hse-primary{background:#2875ff;color:#fff;border-color:#2875ff}.hse-action-draft header{flex-wrap:wrap}.hse-action-draft header>span{font-size:10px;color:#a8d9ff}.hse-action-recovery,.hse-action-next-step{padding:8px;margin:8px 0;border:1px solid #e4a23b55;border-radius:8px}.hse-action-comparison{overflow:auto}.hse-action-comparison table{width:100%;border-collapse:collapse}.hse-action-comparison th,.hse-action-comparison td{padding:6px;border-bottom:1px solid #70cfff35;text-align:left}.hse-action-collapsed{display:flex;gap:10px;align-items:center}.hse-copilot-answer{font-size:12px}.hse-copilot-status{font-size:11px}.hse-editor-actions{flex-wrap:wrap}
 .hse-root-switch{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin:16px 0 8px;padding:14px;border:1px solid #2875ff42;border-radius:12px;background:#2875ff0b}.hse-root-switch label{grid-column:1/-1;font-size:11px;font-weight:700}.hse-root-switch input{min-width:0;padding:10px 12px;border:1px solid #c8d6e7;border-radius:8px;color:inherit;background:var(--dsw-alias-bg-layer-2,#fff);font:11px ui-monospace,SFMono-Regular,Menlo,monospace}.hse-root-switch button{padding:9px 13px;border:0;border-radius:8px;color:#fff;background:var(--ocean-600);cursor:pointer}.hse-root-switch small{grid-column:1/-1;color:var(--dsw-alias-label-secondary,#748096)}
 .hse-hero{position:relative;isolation:isolate;overflow:hidden;min-height:225px;padding:32px;border-radius:24px;color:#fff;background:var(--ocean-950) var(--ocean-image) center/cover no-repeat;box-shadow:0 22px 65px #03152f38}.hse-hero:before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,#02132fea,#062b62d6 55%,#0e6dc42e)}.hse-hero:after{content:"";position:absolute;width:220px;height:220px;right:8%;bottom:-170px;border:1px solid #8be9ff66;border-radius:50%;box-shadow:0 0 0 28px #68dfff0b,0 0 0 60px #68dfff08;animation:hse-ripple 5s ease-out infinite}.hse-hero h1{max-width:780px;margin:15px 0 10px;font-size:clamp(28px,4vw,46px);line-height:1.08;letter-spacing:-.04em}.hse-hero p{max-width:760px;margin:0;color:#d9eeff;font-size:14px;line-height:1.75}.hse-eyebrow{color:#86e8ff;font-size:11px;font-weight:800;letter-spacing:.17em}.hse-whale{margin-right:8px;font-size:17px}.hse-refresh{position:absolute;right:22px;top:22px;padding:8px 13px;border:1px solid #ffffff52;border-radius:999px;color:#fff;background:#06245eb8;cursor:pointer}.hse-stats{display:flex;gap:9px;margin-top:24px;flex-wrap:wrap}.hse-stat{min-width:130px;padding:11px 13px;border:1px solid #ffffff29;border-radius:13px;background:#031a41a8;backdrop-filter:blur(8px)}.hse-stat span{display:block;color:#cde7fb;font-size:10px}.hse-stat b{display:block;margin-top:4px;font-size:20px}.hse-head{margin:28px 0 12px}.hse-head h2{margin:0;font-size:18px}.hse-head p{margin:4px 0 0;color:#728097;font-size:12px}
 .hse-list{display:grid;gap:10px}.hse-job{display:block;width:100%;padding:0;border:1px solid var(--dsw-alias-border-l1,#d7e2ef);border-radius:16px;color:inherit;background:var(--dsw-alias-bg-layer-2,#fff);text-align:left;cursor:pointer;overflow:hidden;box-shadow:0 5px 18px #1736600d;transition:.18s ease}.hse-job:hover,.hse-job:focus-visible{border-color:var(--ocean-300);transform:translateY(-1px);outline:3px solid #2875ff20}.hse-job-body{padding:16px 18px}.hse-job-top{display:flex;justify-content:space-between;gap:14px}.hse-job-title{min-width:0}.hse-job-title strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}.hse-job-title small{display:block;margin-top:4px;color:#7b879c;font-size:10px}.hse-status{flex:none;padding:5px 9px;border-radius:999px;color:#126d50;background:#23ba8318;font-size:10px;font-weight:700}.hse-status:before{content:"✓ ";}.hse-status[data-status=running],.hse-status[data-status=pending]{color:#245dcc;background:#2875ff18}.hse-status[data-status=running]:before{content:"● ";animation:hse-pulse 1.6s ease-in-out infinite}.hse-status[data-status=partial],.hse-status[data-status=attention]{color:#8e5b0c;background:#e4a23b1b}.hse-status[data-status=partial]:before,.hse-status[data-status=attention]:before{content:"△ "}.hse-status[data-status=failed]{color:#b52f45;background:#ee647818}.hse-status[data-status=failed]:before{content:"× "}.hse-meta-grid{display:grid;grid-template-columns:1.35fr 1fr .9fr .65fr .75fr .75fr;gap:7px;margin-top:13px}.hse-meta{min-width:0;padding:8px 9px;border-radius:9px;background:var(--dsw-alias-bg-layer-1,#f3f7fb)}.hse-meta span{display:block;color:#7b879c;font-size:9px}.hse-meta b,.hse-meta code{display:block;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.hse-progress{height:5px;margin-top:11px;border-radius:99px;background:#dbe8f5;overflow:hidden}.hse-progress i{display:block;height:100%;background:linear-gradient(90deg,var(--ocean-600),#54d7f5);transition:width .3s}.hse-metrics{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.hse-pill{padding:5px 7px;border:1px solid var(--dsw-alias-border-l1,#dce4f0);border-radius:7px;font-size:10px}.hse-pill b{margin-left:5px;color:var(--ocean-600)}
@@ -198,8 +206,9 @@ export function normalizeHarborUiError(value, observedAt = new Date().toISOStrin
   const normalizedObservedAt = typeof source.observedAt === 'string' && !Number.isNaN(Date.parse(source.observedAt))
     ? new Date(source.observedAt).toISOString()
     : fallbackObservedAt
-  const category = /REVISION_CONFLICT|STALE_SELECTION|BINDING_STALE/i.test(code) || /source changed after it was opened/i.test(message)
+  const category = /REVISION_CONFLICT|STALE_SELECTION|BINDING_STALE|SOURCE_CONFLICT/i.test(code) || /source changed after it was opened/i.test(message)
     ? 'conflict'
+    : /EXPIRED/i.test(code) ? 'expired'
     : /PERMISSION|UNAUTHORIZED|FORBIDDEN|SESSION_PROJECT|PROJECT_MISMATCH/i.test(code)
     ? 'permission'
     : /NOT_FOUND|MISSING|UNKNOWN_OBJECT|NO_SUCH/i.test(code)
@@ -284,6 +293,7 @@ function HarborSkeleton({ kind = 'default', rows = 5, label = 'Loading' }) {
 
 function errorNextStep(error, t) {
   if (error.nextStep) return error.nextStep
+  if (error.category === 'expired') return t('errorNextExpired')
   if (error.category === 'conflict') return t('reloadBeforeSave')
   if (error.category === 'permission') return t('errorNextPermission')
   if (error.category === 'missing') return t('errorNextMissing')
@@ -291,9 +301,9 @@ function errorNextStep(error, t) {
   return t('errorNextRetry')
 }
 
-function HarborErrorState({ error, title, retry, t }) {
+function HarborErrorState({ error, title, retry, retryLabel, t }) {
   const value = normalizeHarborUiError(error)
-  return <div className="hse-error-state" data-category={value.category} role="alert"><div><b>{title ?? value.message}</b>{title && title !== value.message ? <span>{value.message}</span> : null}<small>{t('errorCode')}: <code>{value.code}</code> · {t('errorAt')}: <time dateTime={value.observedAt}>{new Date(value.observedAt).toLocaleString()}</time></small><small>{t('nextStep')}: {errorNextStep(value, t)}</small></div>{retry ? <button type="button" onClick={retry}>{t('retry')}</button> : null}</div>
+  return <div className="hse-error-state" data-category={value.category} role="alert"><div><b>{title ?? value.message}</b>{title && title !== value.message ? <span>{value.message}</span> : null}<small>{t('errorCode')}: <code>{value.code}</code> · {t('errorAt')}: <time dateTime={value.observedAt}>{new Date(value.observedAt).toLocaleString()}</time></small><small>{t('nextStep')}: {errorNextStep(value, t)}</small></div>{retry ? <button type="button" onClick={retry}>{retryLabel ?? t('retry')}</button> : null}</div>
 }
 
 const EMPTY_UI_STATE = Object.freeze({ current: undefined, explicit: undefined, lastSent: undefined, status: 'idle', error: undefined, navigation: undefined, pendingAction: undefined })
@@ -831,7 +841,7 @@ export function trustedHarborResolvedContext(nodes) {
   return undefined
 }
 
-const HARBOR_QUESTION_KEYS = ['suggestedQuestion1', 'suggestedQuestion2', 'suggestedQuestion3', 'suggestedQuestion4']
+// Contextual intents are labels plus full prompts, never automatic sends.
 
 function ContextFlags({ context, t }) {
   const flags = context?.flags ?? {}
@@ -1055,22 +1065,22 @@ function ContextDock({ bridge, sessionId, useInput, useSession, stop, inputActio
     ...(capsuleContext.object?.trial ? [{ key: 'trial', label: `Trial ${capsuleContext.object.trial}` }] : []),
     ...(capsuleContext.selection ?? []).map((ref, index) => ({ key: `selection-${index}`, label: `${ref.kind}${ref.selectionCount ? ` (${ref.selectionCount})` : ''} · ${ref.criterion ?? ref.evidenceRef ?? short(ref.id)}${ref.startLine ? ` · L${ref.startLine}–${ref.endLine}` : ''}` })),
   ] : []
-  const ask = async prompt => {
+  const ask = async (prompt, context) => {
     if (expired) return
     try {
-      const reusingExplicit = Boolean(explicit)
-      const issued = explicit ?? await bind(ui.current)
+      const reusingExplicit = Boolean(explicit && !context)
+      const issued = reusingExplicit ? explicit : await bind(context ?? ui.current)
       if (!issued) return
       commitIssuedDraft(bridge, sessionId, issued, replaceHarborReference, prompt, phaseRef.current, !reusingExplicit)
     } catch {}
   }
 
-  return <HarborSessionContext.Provider value={sessionId}><div className="hse-input-dock" ref={dockNode}>{ui.workbenchDock?.narrow ? <aside className="hse-mobile-copilot"><CopilotDock bridge={bridge} sessionId={sessionId} useSession={useSession} stop={stop} resolveLatest={ui.workbenchDock.resolveLatest} reanalyzeLatest={ui.workbenchDock.reanalyzeLatest} t={t}/></aside> : null}<section className="hse-context-dock" aria-live="polite">
+  return <HarborSessionContext.Provider value={sessionId}><div className="hse-input-dock" ref={dockNode}>{ui.workbenchDock?.narrow ? <aside className="hse-mobile-copilot"><CopilotDock bridge={bridge} sessionId={sessionId} useSession={useSession} stop={stop} resolveLatest={ui.workbenchDock.resolveLatest} reanalyzeLatest={ui.workbenchDock.reanalyzeLatest} prepareQuestion={ui.workbenchDock.prepareQuestion} t={t}/></aside> : null}<section className="hse-context-dock" aria-live="polite">
     <div className="hse-context-line"><strong>{t('currentPage')}</strong>{ui.current ? <><span className="hse-context-chip"><span>{contextLabel(ui.current)}</span></span><ContextFlags context={ui.current} t={t}/><button type="button" className="hse-context-link" disabled={ui.status === 'binding'} onClick={() => void update(ui.current)}>{explicit ? t('updateContext') : t('askAboutThis')}</button></> : <span className="hse-muted">Harbor —</span>}</div>
     <div className="hse-context-line"><strong>{t('turnContext')}</strong>{explicit ? <><span className="hse-context-chip"><span>{explicit.context.route?.params?.stage ?? 'Harbor'}</span><button type="button" aria-label={t('clearContext')} disabled={isHarborInputBusy(phase)} onClick={clear}>{t('clearContext')} ×</button></span><ContextFlags context={explicit.context} t={t}/>{expired ? <><em className="hse-context-error">{t('contextExpired')}</em><small>{t('contextExpiredHint')}</small><button type="button" className="hse-context-link" disabled={!ui.current || ui.status === 'binding'} onClick={() => void update(ui.current)}>{t('updateContext')}</button></> : <small>{t('oneShot')}</small>}</> : <span className="hse-muted">{ui.status === 'binding' ? t('bindingContext') : t('noTurnContext')}</span>}</div>
     {explicit ? <div className="hse-capsule-parts">{capsuleParts.map(part => <span className="hse-context-chip" key={part.key}><span>{part.label}</span><button type="button" aria-label={`${t('clearContext')} ${part.label}`} disabled={isHarborInputBusy(phase) || ui.status === 'binding'} onClick={() => void removePart(part.key)}>×</button></span>)}<details className="hse-context-identity"><summary>{t('contextIdentity')}</summary><pre>{pretty({ ...capsuleContext, contextSnapshotId: explicit.contextSnapshotId, expiresAt: explicit.expiresAt })}</pre></details></div> : null}
     {ui.error ? <HarborErrorState error={ui.error} title={t('contextBindFailed')} t={t}/> : null}
-    {ui.current ? <div className="hse-context-questions">{HARBOR_QUESTION_KEYS.map(key => <button type="button" key={key} disabled={expired} onClick={() => void ask(t(key))}>{t(key)}</button>)}</div> : null}
+    {ui.current ? <div className="hse-context-questions" aria-label={t('questionSuggestions')}>{harborQuestionKeys(explicit?.context ?? ui.current).map(key => <button type="button" key={key} disabled={expired || isHarborInputBusy(phase) || ui.status === 'binding'} onClick={() => void ask(t(key))}>{t(harborQuestionLabelKey(key))}</button>)}{ui.lastSent?.context && !explicit ? <button type="button" disabled={isHarborInputBusy(phase) || ui.status === 'binding'} title={t('followupHint')} onClick={() => void ask('', ui.lastSent.context)}>{t('continueObject')}</button> : null}</div> : null}
   </section></div></HarborSessionContext.Provider>
 }
 
@@ -1088,40 +1098,10 @@ function AnswerText({ text }) {
   })}</div>
 }
 
-function ActionDraftCard({ draft, onSourceDraft, t }) {
+function ActionDraftCard({ draft, onSourceDraft, onReprepare, onViewComparison, t }) {
   const update = useHarborMutation()
   const request = useHarborApi()
-  const [state, setState] = useState({ status: 'DRAFT' })
-  const [reviewed, setReviewed] = useState(false)
-  const [dismissed, setDismissed] = useState(false)
-  useEffect(() => {
-    if (!draft.operationId) return undefined
-    let alive = true
-    // Reconnect reads the same journal; it never reconfirms or repeats a write.
-    void request('action-operation', { operationId: draft.operationId }).then(operation => {
-      if (alive) setState(current => current.operation ? current : { status: operation.status, operation })
-    }).catch(() => {}) // A proposed-but-unconfirmed draft has no operation yet.
-    return () => { alive = false }
-  }, [draft.operationId, request])
-  const check = async () => {
-    setReviewed(false)
-    setState({ status: 'VALIDATING' })
-    try { const preview = await update('action-preview', { draftId: draft.draftId }); setState({ status: preview.status, preview }) }
-    catch (error) { setState({ status: 'FAILED', error: normalizeHarborUiError(error) }) }
-  }
-  const confirm = async () => {
-    if (!reviewed || state.status !== 'READY_FOR_REVIEW') return
-    const preview = state.preview
-    setState(current => ({ ...current, status: 'EXECUTING' }))
-    try {
-      const operation = await update('action-confirm', { previewId: preview.previewId, contentHash: preview.contentHash, expectedRevision: preview.baseRevision, confirmed: true })
-      setState({ status: operation.status, preview, operation })
-    } catch (error) { setState({ status: 'FAILED', preview, error: normalizeHarborUiError(error) }) }
-  }
-  if (dismissed) return <div className="hse-action-draft"><span>{t('draftDiscarded')}</span><button type="button" onClick={() => setDismissed(false)}>{t('expand')}</button></div>
-  const preview = state.preview
-  const result = state.operation?.events?.at(-1)?.result
-  return <section className="hse-action-draft"><header><strong>{t('actionDraft')} · {draft.kind}</strong><code>{state.status}</code></header><p>{draft.proposal?.summary}</p><p className="hse-muted">{draft.proposal?.rationale}</p><dl><dt>Target</dt><dd>{draft.target?.job ?? draft.target?.candidate ?? '—'}</dd><dt>Risk / Surface</dt><dd>{draft.risk} · {draft.mutationSurface}</dd><dt>Production</dt><dd>{t('noProductionImpact')}</dd><dt>Revision</dt><dd><code>{short(draft.baseRevision)}</code></dd><dt>Context</dt><dd>{draft.freshBaselineRequired ? t('freshBaseline') : draft.execution}</dd><dt>{t('selectedCount')}</dt><dd>{draft.selection?.find(ref => ref.selectionCount)?.selectionCount ?? (draft.target?.trial ? 1 : '—')}</dd></dl>{draft.identities ? <details className="hse-action-identities"><summary>{t('mainIdentity')}</summary>{Object.entries(draft.identities).map(([role, value]) => <p key={role}><b>{role}: {value.id} {value.version ? `@ ${value.version}` : ''}</b><br/><code>{value.digest ?? '—'}</code></p>)}</details> : null}{draft.proposal?.before !== undefined ? <details open><summary>{t('reviewDiff')}</summary><div className="hse-diff-grid"><pre>{draft.proposal.before}</pre><pre>{draft.proposal.replacement}</pre></div></details> : null}{preview ? <div className="hse-action-preview"><b>{preview.status}</b><p>{preview.costEstimate}</p><code>{preview.contentHash}</code>{preview.blocking.map(item => <p key={item.code}><b>{item.code}</b> · {item.message}</p>)}<small>{t('tokenExpiry')}: {preview.expiresAt}</small></div> : null}{state.error ? <HarborErrorState error={state.error} t={t}/> : null}{state.status === 'READY_FOR_REVIEW' ? <label><input type="checkbox" checked={reviewed} onChange={event => setReviewed(event.target.checked)}/>{t('confirmActionReview')}</label> : null}<div className="hse-local-actions">{!state.operation && state.status !== 'EXECUTING' ? <><button type="button" disabled={state.status === 'VALIDATING'} onClick={() => void check()}>{t('checkParameters')}</button><button type="button" onClick={() => setDismissed(true)}>{t('discardDraft')}</button></> : null}{state.status === 'READY_FOR_REVIEW' ? <button type="button" disabled={!reviewed} onClick={() => void confirm()}>{t('confirmAction')}</button> : null}{state.status === 'COMPLETED' && result?.kind === 'evaluator-draft' ? <button type="button" onClick={() => onSourceDraft?.(draft)}>{t('openDiffEditor')}</button> : null}</div>{result?.schema === 'harbor-change-draft/v1' ? <p role="status">{t('savedDraftOnly')}</p> : null}{state.operation ? <details><summary>{state.operation.operationId} · {t('audit')}</summary><pre>{pretty(state.operation)}</pre></details> : null}</section>
+  return <ActionDraftCardView {...{ draft, onSourceDraft, onReprepare, onViewComparison, update, request, t }} ErrorState={HarborErrorState}/>
 }
 
 export function recoverHarborTurn(nodes, sessionId) {
@@ -1137,8 +1117,51 @@ export function recoverHarborTurn(nodes, sessionId) {
   return undefined
 }
 
-function CopilotDock({ bridge, sessionId, useSession, stop, resolveLatest, reanalyzeLatest, t }) {
-  const [expanded, setExpanded] = useState(true)
+export function resolvedUiContext(resolved, sessionId) {
+  if (resolved?.schema !== 'harbor-resolved-context/v1') return undefined
+  const ref = resolved.context?.focus?.localObject
+  const context = actionDraftContext({ target: resolved.refs?.object, selection: resolved.refs?.selection, ...(ref?.kind === 'evaluator-source' ? { proposal: { sourceRef: ref } } : {}) }, sessionId, resolved.context?.pageSessionId)
+  return context ? { ...context, identities: resolved.context.identities, flags: resolved.context.flags, artifactRevision: resolved.basedOn?.artifactRevision, observedAt: resolved.basedOn?.observedAt } : undefined
+}
+
+export function harborDisplayedAnswerBasis(resolved, references, continuation, latest, fallback) {
+  const matching = resolved?.contextSnapshotId === latest?.contextSnapshotId ? latest : undefined
+  const verified = resolved ? { ...resolved, basedOn: { ...resolved.basedOn, currentRevision: matching?.basedOn?.currentRevision ?? resolved.basedOn?.currentRevision } } : undefined
+  return harborAnswerBasis(verified, references, continuation ? undefined : fallback)
+}
+
+export function actionDraftContext(draft, sessionId, pageSessionId) {
+  const target = draft?.target
+  if (!target?.workspace) return undefined
+  if (!target.job) return target.kind === 'harbor.workspace/v1' ? buildUiContext({ sessionId, pageSessionId, workspace: target.workspace }) : undefined
+  const source = draft.proposal?.sourceRef
+  const kind = target.kind?.replace(/^harbor\.(.+)\/v1$/, '$1')
+  const stage = source?.stage ?? target.stage ?? draft.selection?.at(-1)?.stage ?? ({ trial: 'judge', evaluator: 'judge', compare: 'gate', gate: 'gate', dataset: 'dataset' })[kind] ?? 'candidate'
+  const selections = (draft.selection ?? []).map(ref => {
+    const kind = ref.kind?.replace(/^harbor\.(.+)\/v1$/, '$1')
+    return { ...ref, kind, id: ref.id ?? ref.evidenceRef ?? ref.criterion ?? ref.hypothesis ?? ref.trial, stage }
+  })
+  const context = buildUiContext({ sessionId, pageSessionId, workspace: target.workspace, job: target.job, stage, trial: target.trial, localObject: source, selections: source ? undefined : selections })
+  const focus = selections.at(-1)
+  if (!source && focus?.evidenceRef) context.route.params.evidenceRef = focus.evidenceRef
+  else if (!source && focus?.criterion) context.route.params.criterion = focus.criterion
+  if (target.kind === 'harbor.compare/v1') {
+    context.object = { ...target, kind: 'compare', id: target.comparisonDigest, stage: 'gate' }
+    context.route = { name: 'harbor.compare', params: { job: target.job, stage: 'gate', baseline: target.baseline, candidate: target.candidate } }
+  } else if (kind === 'gate') {
+    const gate = { baseline: target.baseline, candidate: target.candidate, policy: target.policy?.id, policyVersion: target.policy?.version, policyDigest: target.policy?.digest, reportDigest: target.reportDigest }
+    context.object = { kind, id: target.reportDigest, job: target.job, stage: 'gate', ...gate }
+    context.route = { name: 'harbor.gate', params: { job: target.job, stage: 'gate', ...gate } }
+  } else if (['candidate', 'dataset', 'evaluator'].includes(kind)) {
+    context.object = { kind, id: target[kind], job: target.job, stage }
+    if (kind === 'evaluator') context.route.name = 'harbor.evaluator'
+  }
+  return context
+}
+
+function CopilotDock({ bridge, sessionId, useSession, stop, resolveLatest, reanalyzeLatest, prepareQuestion, t }) {
+  const [expanded, setExpanded] = useState(() => !bridge.getSnapshot(sessionId).workbenchDock?.narrow)
+  const [selectedSeq, setSelectedSeq] = useState()
   const [latest, setLatest] = useState({ status: 'idle' })
   const latestSequence = useRef(0)
   const ui = useHarborUi(bridge, sessionId)
@@ -1152,7 +1175,8 @@ function CopilotDock({ bridge, sessionId, useSession, stop, resolveLatest, reana
   const runningCalls = useSession(state => state?.runningCalls ?? [])
   const running = useSession(state => Boolean(state?.running))
   const lastAgentError = useSession(state => state?.lastAgentError ?? null)
-  const projection = harborTurnProjection(nodes, ui.lastSent?.contextSnapshotId)
+  // Display ordinary follow-ups without merging earlier evidence or actions.
+  const projection = harborConversationProjection(nodes, ui.lastSent?.contextSnapshotId, selectedSeq)
   const recent = projection.nodes
   const completed = [...recent].reverse().find(node => node?.kind === 'assistant')
   const answer = projection.active && running && partial ? assistantText(partial) : assistantText(completed)
@@ -1162,15 +1186,30 @@ function CopilotDock({ bridge, sessionId, useSession, stop, resolveLatest, reana
   const resolved = trustedHarborResolvedContext(recent)
   const actionDrafts = recent.filter(node => node?.call?.name === 'harbor_propose_action').map(toolResultValue).filter(value => value?.schema === 'harbor-action-draft/v1' && value?.draftId)
   const openSourceDraft = draft => {
-    bridge.update(sessionId, { evaluatorProposal: draft })
+    bridge.update(sessionId, { evaluatorProposal: { ...draft, reviewRequestId: pageSessionIdentity() } })
     const ref = draft.proposal?.sourceRef
-    if (ref) bridge.navigate(sessionId, { kind: 'harbor.navigate', actionId: `draft-source-${draft.draftId}`, target: { route: 'harbor.evaluator', workspace: draft.target.workspace, job: ref.job, stage: 'judge', localObject: ref } }, { force: true })
+    if (ref) bridge.navigate(sessionId, { kind: 'harbor.navigate', actionId: `draft-source-${draft.draftId}`, target: { route: 'harbor.evaluator', workspace: draft.target.workspace, job: ref.job, stage: 'judge' } }, { force: true })
   }
+  const reprepare = async draft => {
+    const original = actionDraftContext(draft, sessionId, ui.current?.pageSessionId ?? ui.lastSent?.context?.pageSessionId)
+    if (!original) return false
+    const prepared = await prepareQuestion?.(original, `${t('repreparePrompt')}\n${draft.proposal?.summary ?? ''}`)
+    const error = bridge.getSnapshot(sessionId).error
+    if (!prepared && ['conflict', 'expired'].includes(error?.category)) {
+      // Do not silently replace an expired subset or old source with a wider
+      // selection. Return to its page and ask for a new explicit selection.
+      const source = draft.proposal?.sourceRef
+      bridge.update(sessionId, { error: { ...error, nextStep: t('draftRecoveryReselect') } })
+      bridge.navigate(sessionId, { kind: 'harbor.navigate', actionId: `reselect-${draft.draftId}`, target: { route: source ? 'harbor.evaluator' : 'harbor.job', workspace: draft.target.workspace, job: draft.target.job, stage: source || draft.selection?.some(ref => /trial-set/.test(ref.kind)) ? 'judge' : original.route.params.stage, ...(draft.target.trial ? { trial: draft.target.trial } : {}) } }, { force: true })
+    }
+    return prepared === true
+  }
+  const viewComparison = draft => bridge.navigate(sessionId, { kind: 'harbor.navigate', actionId: `comparison-${draft.draftId}`, target: { route: 'harbor.compare', workspace: draft.target.workspace, job: draft.target.job, stage: 'gate', baseline: draft.target.baseline, candidate: draft.target.candidate } }, { force: true })
   const activeCalls = projection.active ? runningCalls : []
   const activeRunning = projection.active && running
   const relevantError = projection.active ? lastAgentError : null
   const turnId = projection.turn ?? projection.anchorSeq
-  const token = ui.lastSent?.contextSnapshotId
+  const token = resolved?.contextSnapshotId ?? projection.contextToken ?? ui.lastSent?.contextSnapshotId
   const completionId = completed?.messageId ?? completed?.seq
   const refreshLatest = useCallback(async () => {
     if (!token || !resolveLatest) return
@@ -1186,34 +1225,47 @@ function CopilotDock({ bridge, sessionId, useSession, stop, resolveLatest, reana
   }, [resolveLatest, sessionId, token, turnId])
   useEffect(() => {
     latestSequence.current += 1
-    if (!token || !completionId || activeRunning || !resolveLatest) {
+    if (!token || !completionId || activeRunning || !resolveLatest || !resolved) {
       setLatest({ status: 'idle' })
       return undefined
     }
     void refreshLatest()
     const timer = window.setInterval(() => void refreshLatest(), 15_000)
     return () => { window.clearInterval(timer); latestSequence.current += 1 }
-  }, [activeRunning, completionId, refreshLatest, resolveLatest, token])
+  }, [activeRunning, completionId, refreshLatest, resolveLatest, token, resolved?.contextSnapshotId])
   const currentLatest = latest.token === token ? latest : undefined
-  const freshness = currentLatest?.value?.freshness ?? currentLatest?.freshness ?? resolved?.freshness
-  const contextSummary = currentLatest?.value?.context ?? resolved?.context ?? ui.lastSent?.context
-  const basis = harborAnswerBasis(resolved ? { ...resolved, basedOn: { ...resolved.basedOn, currentRevision: currentLatest?.value?.basedOn?.currentRevision ?? resolved.basedOn?.currentRevision } } : currentLatest?.value, references, ui.lastSent?.context)
+  const origin = trustedHarborResolvedContext(projection.originNodes ?? [])
+  const discussionContext = resolvedUiContext(resolved ?? origin, sessionId) ?? (token === ui.lastSent?.contextSnapshotId ? ui.lastSent?.context : undefined)
+  const freshness = resolved ? currentLatest?.value?.freshness ?? currentLatest?.freshness ?? resolved.freshness : 'UNVERIFIED'
+  const contextSummary = resolved?.context ?? (projection.continuation ? undefined : discussionContext)
+  const basis = harborDisplayedAnswerBasis(resolved, references, projection.continuation, currentLatest?.value, discussionContext)
   const stale = freshness === 'DRIFTED_READ_ONLY' || freshness === 'DRIFTED' || freshness === 'EXPIRED'
 
   const status = relevantError ? t('copilotFailed') : activeCalls.length ? t('copilotReading') : activeRunning ? t('copilotAnalyzing') : ui.lastSent ? t('fullConversation') : t('copilotIdle')
   return <section className="hse-copilot" style={!ui.workbenchDock?.narrow && ui.composerTop ? { maxHeight: Math.max(80, ui.composerTop - 120), boxSizing: 'border-box' } : undefined} data-collapsed={String(!expanded)} aria-live="polite">
     <div className="hse-copilot-head"><h3>🐳 {t('copilot')}</h3><div className="hse-copilot-controls">{activeRunning && stop ? <button type="button" onClick={() => void stop()}>{t('stopAgent')}</button> : null}<button type="button" className="hse-copilot-toggle" aria-expanded={expanded} aria-label={expanded ? t('collapse') : t('expand')} onClick={() => setExpanded(value => !value)}>{expanded ? '−' : '+'}</button></div></div>
-    {expanded ? <><p className="hse-copilot-status">{status}{freshness && freshness !== 'FRESH' ? ` · ${t('contextStale')}` : ''}</p>
-      {actionDrafts.map(draft => <ActionDraftCard key={draft.draftId} draft={draft} onSourceDraft={openSourceDraft} t={t}/>)}
-      {token ? <div className="hse-hook-state"><b>{t('copilotTurn')}: {turnId ?? '—'} · {t('contextFreshness')}: {freshness ?? '—'}</b><br/>{contextSummary ? contextLabel(contextSummary) : '—'}</div> : null}
-      {activeCalls.length || settledTools.length ? <div className="hse-copilot-tools">{[...activeCalls.map(call => call.name ?? call.toolName ?? call.callId), ...settledTools].filter(Boolean).map((name, index) => <span key={`${name}-${index}`}>{name}</span>)}</div> : null}
-      {basis ? <div className="hse-copilot-basis"><strong>{t('basedOn')}</strong>{basis.job ? <span>Job<b>{basis.job}</b></span> : null}{basis.artifactRevision ? <span>{t('revision')}<code>{short(basis.artifactRevision)}</code></span> : null}{basis.currentRevision && basis.currentRevision !== basis.artifactRevision ? <span>{t('currentRevision')}<code>{short(basis.currentRevision)}</code></span> : null}{basis.observedAt ? <span>{t('observedAt')}<time dateTime={basis.observedAt}>{new Date(basis.observedAt).toLocaleString()}</time></span> : null}</div> : null}
-      {answer && (activeRunning || references.some(ref => ref.kind === 'evidence' && ref.available)) ? <div className="hse-copilot-answer"><AnswerText text={answer}/></div> : answer ? <div className="hse-answer-unverified" role="status"><p>{t('unverifiedAnswer')}</p><details><summary>{t('showUnverified')}</summary><pre className="hse-copilot-answer">{answer}</pre></details><button type="button" onClick={() => void reanalyzeLatest?.(ui.lastSent?.context)}>{t('suggestedQuestion3')}</button></div> : null}
+    {!expanded ? <p className="hse-copilot-status">{activeRunning ? status : answer ? t('replyReady') : t('copilotIdle')}</p> : null}
+    {expanded ? <>
+      <p className="hse-copilot-status">{status}</p>
+      {projection.turns?.length > 1 ? <details className="hse-discussion-history"><summary>{t('discussionHistory')} · {projection.turns.length}</summary>{projection.turns.map(item => <button type="button" key={item.seq} aria-current={item.seq === projection.selectedSeq ? 'true' : undefined} onClick={() => setSelectedSeq(item.seq)}>{item.question || t('aiQuestion')}</button>)}<button type="button" onClick={() => setSelectedSeq(undefined)}>{t('latestReply')}</button></details> : null}
+      {projection.question ? <div className="hse-question"><strong>{t('aiQuestion')}</strong><p>{projection.question}</p></div> : null}
+      {projection.continuation ? <p className="hse-copilot-status">{t('followupUnbound')}</p> : null}
+      {token ? <div className="hse-hook-state"><b>{t('copilotTurn')}: {turnId ?? '—'}</b><br/>{contextSummary ? contextLabel(contextSummary) : basis?.job ? `Job ${basis.job}` : t('historyOnly')}{stale ? <p>{t('contextStale')}</p> : null}</div> : null}
+      {answer ? <div className="hse-copilot-answer"><AnswerText text={answer}/></div> : null}
+      {answer && !activeRunning && !references.some(ref => ref.kind === 'evidence' && ref.available) ? <div className="hse-answer-unverified" role="status"><p>{t('evidenceNotChecked')}</p></div> : null}
       {references.length ? <div className="hse-copilot-refs"><strong>{references.some(reference => reference.kind === 'evidence') ? t('evidenceRefs') : t('objectRefs')}</strong>{references.map(reference => <button type="button" className="hse-copilot-ref" data-available={String(reference.available)} key={reference.action.actionId} onClick={() => bridge.navigate(sessionId, reference.action, { force: true })}><b>{reference.label ?? t('viewInHarbor')}</b><span>{reference.kind === 'evidence' ? t('evidence') : t('objectRefs')}</span><code>{harborReferenceIdentity(reference)}{reference.available ? '' : ` · ${t('evidenceUnavailable')}`}</code></button>)}</div> : null}
+      {actionDrafts.map(draft => <ActionDraftCard key={draft.draftId} draft={draft} onSourceDraft={openSourceDraft} onReprepare={reprepare} onViewComparison={viewComparison} t={t}/>)}
+      {discussionContext && prepareQuestion ? <div className="hse-copilot-actions"><button type="button" disabled={activeRunning || ui.status === 'binding'} onClick={() => void prepareQuestion(discussionContext, '')}>{t('continueObject')}</button><small>{t('followupHint')}</small></div> : null}
+      {basis || activeCalls.length || settledTools.length ? <details className="hse-answer-details"><summary>{t('answerDetails')}</summary>
+        <p>{t('contextFreshness')}: {freshness ?? '—'}</p>
+        {activeCalls.length || settledTools.length ? <div className="hse-copilot-tools">{[...activeCalls.map(call => call.name ?? call.toolName ?? call.callId), ...settledTools].filter(Boolean).map((name, index) => <span key={`${name}-${index}`}>{name}</span>)}</div> : null}
+        {basis ? <div className="hse-copilot-basis"><strong>{t('basedOn')}</strong>{basis.job ? <span>Job<b>{basis.job}</b></span> : null}{basis.artifactRevision ? <span>{t('revision')}<code>{short(basis.artifactRevision)}</code></span> : null}{basis.currentRevision && basis.currentRevision !== basis.artifactRevision ? <span>{t('currentRevision')}<code>{short(basis.currentRevision)}</code></span> : null}{basis.observedAt ? <span>{t('observedAt')}<time dateTime={basis.observedAt}>{new Date(basis.observedAt).toLocaleString()}</time></span> : null}</div> : null}
+      </details> : null}
       {relevantError ? <div className="hse-context-error">{relevantError}</div> : null}
       {currentLatest?.status === 'error' && freshness !== 'EXPIRED' ? <HarborErrorState error={currentLatest.error} t={t}/> : null}
-      {stale && reanalyzeLatest ? <div className="hse-copilot-actions"><button type="button" onClick={() => void reanalyzeLatest(ui.lastSent?.context)}>{t('reanalyzeLatest')}</button><small>{freshness}</small></div> : null}
-      {!references.length && action ? <div className="hse-copilot-actions"><button type="button" onClick={() => bridge.navigate(sessionId, action, { force: true })}>{t('viewInHarbor')}</button><small>{ui.pendingAction?.actionId === action.actionId ? t('preparedInHarbor') : t('fullConversation')}</small></div> : null}</> : null}
+      {stale && reanalyzeLatest ? <div className="hse-copilot-actions"><button type="button" onClick={() => void reanalyzeLatest(discussionContext)}>{t('reanalyzeLatest')}</button></div> : null}
+      {!references.length && action ? <div className="hse-copilot-actions"><button type="button" onClick={() => bridge.navigate(sessionId, action, { force: true })}>{t('viewInHarbor')}</button></div> : null}
+    </> : null}
   </section>
 }
 
@@ -2019,74 +2071,10 @@ export function applySourceProposal(text, sourceRef, proposal) {
   return [...lines.slice(0, start), proposal.replacement, ...lines.slice(end)].join('\n')
 }
 
-function EvaluatorEditor({ value, workspace, bindingKey, bindingIsCurrent, reload, onSaved, proposal, t }) {
+function EvaluatorEditor(props) {
   const update = useHarborMutation()
-  const active = value.evaluatorInterface
-  const evaluator = active?.evaluator
-  const files = evaluator?.editable_files ?? []
-  const [selectedPath, setSelectedPath] = useState(files[0]?.path ?? '')
-  const selected = files.find(item => item.path === selectedPath) ?? files[0]
-  const [draft, setDraft] = useState(selected?.text ?? '')
-  const [evaluatorVersion, setEvaluatorVersion] = useState(nextVersion(evaluator?.version))
-  const [stackVersion, setStackVersion] = useState(nextVersion(active?.stack?.version))
-  const [saveState, setSaveState] = useState({ status: 'idle' })
-  const [reviewed, setReviewed] = useState('')
-  const reviewIdentity = JSON.stringify([bindingKey, selected?.path, selected?.digest, draft, evaluatorVersion, stackVersion])
-  const sourceProposal = proposal?.proposal
-  const sourceRef = value.interactionObjects?.find(ref => ref.id === sourceProposal?.sourceRef?.id)
-  const applyProposal = () => {
-    try {
-      if (!bindingIsCurrent(bindingKey)) throw new Error('HARBOR_DRAFT_SOURCE_CONFLICT: Reload the saved source before applying this draft.')
-      setDraft(applySourceProposal(selected?.text, sourceRef, sourceProposal))
-      setReviewed('')
-      setSaveState({ status: 'idle' })
-    } catch (error) { setSaveState({ status: 'error', error: normalizeHarborUiError(error) }) }
-  }
-  useEffect(() => {
-    const first = files[0]
-    setSelectedPath(current => files.some(item => item.path === current) ? current : first?.path ?? '')
-    setEvaluatorVersion(nextVersion(evaluator?.version))
-    setStackVersion(nextVersion(active?.stack?.version))
-  }, [evaluator?.digest])
-  useEffect(() => { setDraft(selected?.text ?? ''); setSaveState({ status: 'idle' }) }, [selected?.path, selected?.digest])
-  if (active?.error || !evaluator) return <section className="hse-section"><h3>{t('evaluatorImplementation')}</h3><div className="hse-capability">{active?.error ?? t('noEvaluatorInterface')}</div></section>
-  const changed = selected && draft !== selected.text
-  const currentBinding = bindingIsCurrent(bindingKey)
-  const save = async () => {
-    if (reviewed !== reviewIdentity) return
-    if (!bindingIsCurrent(bindingKey)) {
-      setSaveState({ status: 'error', error: normalizeHarborUiError({ code: 'HARBOR_EVALUATOR_BINDING_STALE', message: t('reloadBeforeSave') }) })
-      return
-    }
-    setSaveState({ status: 'saving' })
-    try {
-      const receipt = await update('evaluator', {
-        workspace,
-        stackPath: active.stack.path,
-        filePath: selected.path,
-        content: draft,
-        expectedDigest: selected.digest,
-        newEvaluatorVersion: evaluatorVersion,
-        newStackVersion: stackVersion,
-      })
-      if (bindingIsCurrent(bindingKey)) {
-        onSaved?.(receipt)
-        setSaveState({ status: 'saved' })
-        await reload()
-      }
-    } catch (error) {
-      if (bindingIsCurrent(bindingKey)) setSaveState({ status: 'error', error: normalizeHarborUiError(error) })
-    }
-  }
-  return <section className="hse-section"><div className="hse-editor-head"><div><h3>{t('evaluatorImplementation')}</h3><p className="hse-muted">{evaluator.evaluator_id} · {evaluator.version}</p></div><div className="hse-card"><span>{t('evaluatorKind')}</span><b>{evaluator.kind}</b><code>{evaluator.interface}</code></div></div>
-    <div className="hse-grid"><div className="hse-card"><span>{t('evaluatorProtocol')}</span><b>{evaluator.protocol?.input} → {evaluator.protocol?.output}</b><code>{evaluator.implementation?.language} · {evaluator.implementation?.callable}</code></div><div className="hse-card"><span>{t('criteria')}</span><b>{(evaluator.criteria ?? []).map(item => item.label).join(' · ')}</b><code>0 · 0.5 · 1</code></div></div>
-    <div className="hse-editor-tabs" aria-label={t('editableFiles')}>{files.map(file => <button type="button" className="hse-editor-tab" data-active={file.path === selected?.path} key={file.path} onClick={() => setSelectedPath(file.path)}><b>{t('openFile')} {file.path.split('/').at(-1)}</b><span>{file.role} · {file.path}</span></button>)}</div>
-    <div className="hse-editor-current"><span>{t('editingFile')}</span><b>{selected?.path.split('/').at(-1)}</b><code>{selected?.path}</code></div>
-    <textarea className="hse-editor" aria-label={t('editSource')} spellCheck="false" value={draft} onChange={event => setDraft(event.target.value)}/>
-    {sourceProposal ? <div className="hse-action-preview"><b>{sourceProposal.summary}</b><p>{t('draftNotApplied')}</p><button type="button" className="hse-button" disabled={!sourceRef || selected?.text !== value.components?.[sourceRef?.sourceRole]?.source?.text} onClick={applyProposal}>{t('applyToDraft')}</button></div> : null}
-    {changed ? <section className="hse-diff-review"><h4>{t('reviewDiff')}</h4><div className="hse-report-compare"><pre aria-label={t('beforeChange')}>{selected.text}</pre><pre aria-label={t('afterChange')}>{draft}</pre></div><label><input type="checkbox" checked={reviewed === reviewIdentity} onChange={event => setReviewed(event.target.checked ? reviewIdentity : '')}/>{t('confirmDiff')}</label></section> : null}<div className="hse-editor-versions"><label className="hse-card"><span>{t('evaluatorVersion')}</span><input className="hse-input" value={evaluatorVersion} onChange={event => setEvaluatorVersion(event.target.value)}/></label><label className="hse-card"><span>{t('stackVersion')}</span><input className="hse-input" value={stackVersion} onChange={event => setStackVersion(event.target.value)}/></label></div>
-    {saveState.status === 'error' ? <HarborErrorState error={saveState.error} retry={() => void save()} t={t}/> : null}<div className="hse-editor-actions"><p className={saveState.status === 'saved' ? 'hse-editor-success' : 'hse-muted'}>{saveState.status === 'saved' ? t('saved') : t('editWarning')}</p><button type="button" className="hse-button" disabled={!currentBinding || !changed || reviewed !== reviewIdentity || !evaluatorVersion || !stackVersion || saveState.status === 'saving'} onClick={() => void save()}>{saveState.status === 'saving' ? t('saving') : t('saveEvaluator')}</button></div>
-  </section>
+  const sessionId = useContext(HarborSessionContext)
+  return <EvaluatorEditorView {...props} sessionId={String(sessionId)} update={update} ErrorState={HarborErrorState} applySourceProposal={applySourceProposal} nextVersion={nextVersion}/>
 }
 
 export function selectedSourceLines(text, start, end) {
@@ -2123,7 +2111,7 @@ function SavedSourceFragment({ component, object, contextFor, setContext, askCon
     setRange(next)
     setContext(context(next))
   }
-  return <section className="hse-section hse-saved-source"><h3>{component.id} · {t('sourceSelection')}</h3><p className="hse-muted">{t('sourceSaved')}</p><textarea ref={input} className="hse-editor" readOnly value={source} aria-label={`${t('sourceSelection')} ${object.sourceRole}`} onSelect={select}/><div className="hse-local-actions"><span>L{range.startLine}–{range.endLine}</span><button type="button" className="hse-inline-ask" onClick={() => void askContext(context(range), t('askSource'))}>{t('askAboutThis')}</button></div></section>
+  return <section className="hse-section hse-saved-source"><h3>{component.id} · {t('sourceSelection')}</h3><p className="hse-muted">{t('sourceSaved')}</p><textarea ref={input} className="hse-editor" readOnly value={source} aria-label={`${t('sourceSelection')} ${object.sourceRole}`} onSelect={select}/><div className="hse-local-actions"><span>L{range.startLine}–{range.endLine}</span><button type="button" className="hse-inline-ask" onClick={() => void askContext(context(range), t('askSource'))}>{t('askSourceLabel')}</button><button type="button" className="hse-inline-ask" onClick={() => void askContext(context(range), t('askSourceChange'))}>{t('askSourceChangeLabel')}</button></div></section>
 }
 
 function GovernancePanel({ job, workspace, contextFor, setContext, askContext, navigation, proposal, t }) {
@@ -2166,7 +2154,7 @@ function GovernancePanel({ job, workspace, contextFor, setContext, askContext, n
   const prompt = t('evaluatorPrompt')
   const copy = async () => { try { await navigator.clipboard.writeText(prompt); setCopied(true); window.setTimeout(() => setCopied(false), 1_500) } catch { setCopied(false) } }
   return <>{saveReceipt?.requestKey === requestKey ? <section className="hse-section hse-save-receipt" role="status"><h3>{t('saved')}</h3><p>Evaluator {saveReceipt.value.evaluator?.version} · Stack {saveReceipt.value.stack?.version}</p><b>{t('freshBaseline')}</b><p>{t('editWarning')}</p></section> : null}<section className="hse-section"><h3>{t('currentEvaluator')}</h3><p className="hse-muted">{t('governanceHint')}</p><div className="hse-governance-id"><div className="hse-card"><span>{t('evaluator')}</span><b>{evaluator?.id ?? '—'} · {evaluator?.version ?? '—'}</b><code>{evaluator?.entry ?? '—'}</code></div><div className="hse-card"><span>{t('rubric')}</span><b>{rubric?.id ?? '—'} · {rubric?.version ?? '—'}</b><code>{rubric?.entry ?? '—'}</code></div><div className="hse-card"><span>Judge</span><b>{value.judge?.provider ?? '—'} / {value.judge?.model ?? '—'}</b><code>{judgeIdentityDetails(value.judge)}</code></div></div></section>
-    <EvaluatorEditor proposal={proposal} value={value} workspace={workspace} bindingKey={currentState.requestKey} bindingIsCurrent={bindingIsCurrent} reload={load} onSaved={value => setSaveReceipt({ requestKey, value })} t={t}/>{['evaluator', 'rubric'].map(role => <SavedSourceFragment key={role} component={value.components?.[role]} object={value.interactionObjects?.find(ref => ref.sourceRole === role)} contextFor={contextFor} setContext={setContext} askContext={askContext} navigation={navigation} t={t}/>)}
+    <EvaluatorEditor proposal={proposal} job={job} value={value} workspace={workspace} bindingKey={currentState.requestKey} bindingIsCurrent={bindingIsCurrent} reload={load} onSaved={value => setSaveReceipt({ requestKey, value })} t={t}/>{['evaluator', 'rubric'].map(role => <SavedSourceFragment key={role} component={value.components?.[role]} object={value.interactionObjects?.find(ref => ref.sourceRole === role)} contextFor={contextFor} setContext={setContext} askContext={askContext} navigation={navigation} t={t}/>)}
     {[['evaluator', evaluator], ['rubric', rubric]].map(([role, component]) => <section className="hse-section" key={role}><h3>{role === 'evaluator' ? t('evaluator') : t('rubric')} · {component?.id ?? '—'} · {component?.version ?? '—'}</h3><div className="hse-grid"><div className="hse-card"><span>{t('sourceCode')}</span><b>{component?.entry ?? '—'}</b><code>{short(component?.digest)}</code></div><div className="hse-card"><span>Reward semantics</span><b>{component?.reward_affecting ? 'reward-affecting' : 'non-reward'}</b><code>{component?.source?.error ?? 'read-only'}</code></div></div>{component?.source?.text ? <details className="hse-source-details"><summary>{t('sourceCode')}</summary><pre className="hse-source">{component.source.text}</pre></details> : <div className="hse-capability">{component?.source?.error}</div>}</section>)}
     <section className="hse-section hse-upgrade"><h3>{t('upgradeEvaluator')}</h3><p className="hse-muted">{t('upgradeHint')}</p><ol>{[1, 2, 3, 4, 5].map(index => <li key={index}>{t(`upgradeStep${index}`)}</li>)}</ol><div className="hse-grid"><div className="hse-card"><span>{t('freshBaseline')}</span><b>Evaluator / Rubric / Judge identity</b><code>{(workflow.freshBaselineRequiredWhen ?? []).join(' · ')}</code></div><div className="hse-card"><span>{t('metaEvaluation')}</span><b>Independent GT · ESF · SCE · RCR</b><code>No automatic evaluation or Gate</code></div></div><pre className="hse-prompt">{prompt}</pre><div className="hse-prompt-actions"><button className="hse-button" type="button" onClick={() => void copy()}>{copied ? t('copied') : t('copyPrompt')}</button></div></section></>
 }
@@ -2230,10 +2218,10 @@ export function sectionForNavigation(target = {}) {
 }
 
 function JobIdentityHeader({ context, summary, t }) {
-  return <div className="hse-job-identities"><div className="hse-identity-tags">{['candidate', 'dataset', 'context', 'stack'].map(role => {
+  return <details className="hse-job-identities"><summary>{t('identityDetails')} · {t('progress')}: {summary?.progress?.completed ?? 0}/{summary?.progress?.total ?? summary?.nTrials ?? '—'}</summary><div className="hse-identity-tags">{['candidate', 'dataset', 'context', 'stack'].map(role => {
     const value = context?.identities?.[role]
     return <span key={role}><small>{role}</small><b title={value?.digest}>{value?.id ?? '—'}{value?.version ? ` @ ${value.version}` : ''}</b><code>{short(value?.digest)}</code></span>
-  })}</div><div className="hse-identity-flags"><ContextFlags context={context} t={t}/><span>{t('mode')}: {summary?.mode ?? '—'}</span><span>{t('validity')}: {summary?.nValidScores ?? '—'} / {summary?.nTrials ?? '—'}</span><span>{t('progress')}: {summary?.progress?.completed ?? 0}/{summary?.progress?.total ?? summary?.nTrials ?? '—'}</span></div></div>
+  })}</div><div className="hse-identity-flags"><ContextFlags context={context} t={t}/><span>{t('mode')}: {summary?.mode ?? '—'}</span><span>{t('validity')}: {summary?.nValidScores ?? '—'} / {summary?.nTrials ?? '—'}</span></div></details>
 }
 
 function JobSummaryPanel({ detail, summary, contextFor, setContext, askContext, navigation, openSection, t }) {
@@ -2564,6 +2552,10 @@ function nearestScrollPort(element) {
   return element
 }
 
+function GettingStarted({ jobs, openJob, t }) {
+  return <section className="hse-journey" aria-label={t('journeyTitle')}><h2>{t('journeyTitle')}</h2><p>{t('journeyIntro')}</p><ol>{[1, 2, 3].map(step => <li key={step}>{t(`journeyStep${step}`)}</li>)}</ol>{jobs?.length ? <button type="button" className="hse-button" onClick={() => openJob(jobs[0].name)}>{t('journeyOpen')}</button> : <p>{t('journeyEmpty')}</p>}</section>
+}
+
 function DashboardSessionView({ t, bridge, stop, sessionId, useSession, useInput, inputActions, replaceHarborReference }) {
   const [workspace, setWorkspace] = useState('')
   const [offset, setOffset] = useState(0)
@@ -2588,11 +2580,11 @@ function DashboardSessionView({ t, bridge, stop, sessionId, useSession, useInput
   // Attention filters are computed by the Host over the entire Job population.
   const pagination = snapshot?.jobPagination ?? {}
   const askContext = useCallback(async (context, prompt = '') => {
-    if (!context || !inputActions) return
+    if (!context || !inputActions) return false
     try {
       const issued = await bridge.issue(sessionId, context, { forceNew: true })
-      commitIssuedDraft(bridge, sessionId, issued, replaceHarborReference, prompt, phaseRef.current, true)
-    } catch {}
+      return commitIssuedDraft(bridge, sessionId, issued, replaceHarborReference, prompt, phaseRef.current, true)
+    } catch { return false }
   }, [bridge, inputActions, replaceHarborReference, sessionId])
   const resolveLatest = useCallback((token, requestedSessionId) => {
     if (!token || String(requestedSessionId) !== String(sessionId)) throw new Error('Harbor context resolution requires the active Session')
@@ -2606,12 +2598,12 @@ function DashboardSessionView({ t, bridge, stop, sessionId, useSession, useInput
     } catch {}
   }, [bridge, inputActions, replaceHarborReference, sessionId, t])
   const dockCallbacks = useRef()
-  dockCallbacks.current = { resolveLatest, reanalyzeLatest }
+  dockCallbacks.current = { resolveLatest, reanalyzeLatest, prepareQuestion: askContext }
   useEffect(() => {
     // Observe only our own canvas. Placement uses the public input.dock slot,
     // not Host DOM selectors, private stores, or duplicate conversation state.
     let previous
-    const callbacks = { resolveLatest: (...args) => dockCallbacks.current.resolveLatest(...args), reanalyzeLatest: (...args) => dockCallbacks.current.reanalyzeLatest(...args) }
+    const callbacks = { resolveLatest: (...args) => dockCallbacks.current.resolveLatest(...args), reanalyzeLatest: (...args) => dockCallbacks.current.reanalyzeLatest(...args), prepareQuestion: (...args) => dockCallbacks.current.prepareQuestion(...args) }
     const publish = width => {
       const narrow = width <= 1050
       if (previous === narrow) return
@@ -2737,9 +2729,10 @@ function DashboardSessionView({ t, bridge, stop, sessionId, useSession, useInput
   const askJob = jobSummary => askContext(buildUiContext({ sessionId, pageSessionId, workspace: snapshot.workspace.id, job: jobSummary.name, detail: undefined, jobSummary }), t('suggestedQuestion2'))
 
   return <HarborSessionContext.Provider value={sessionId}><main ref={rootNode} className="hse-root"><div className="hse-page hse-layout">
-    {!ui.workbenchDock?.narrow ? <CopilotDock bridge={bridge} sessionId={sessionId} useSession={useSession} stop={stop} resolveLatest={resolveLatest} reanalyzeLatest={reanalyzeLatest} t={t}/> : null}
+    {!ui.workbenchDock?.narrow ? <CopilotDock bridge={bridge} sessionId={sessionId} useSession={useSession} stop={stop} resolveLatest={resolveLatest} reanalyzeLatest={reanalyzeLatest} prepareQuestion={askContext} t={t}/> : null}
     <div className="hse-main-panel">{selected ? <Workbench key={`${selected.workspace}\u0000${selected.job}`} job={selected.job} workspace={selected.workspace} jobs={snapshot?.jobs ?? []} close={closeWorkbench} navigation={selected.navigation} consumeNavigation={consumeNavigation} restoreView={selected.restoreView} hasHistory={selected.fromNavigation} scrollContainerRef={scrollNode} onViewStateChange={value => { activeWorkbenchView.current = value }} sessionId={sessionId} pageSessionId={pageSessionId} bridge={bridge} askContext={askContext} t={t}/> : <>
       {historyDepth ? <button type="button" className="hse-button hse-dashboard-back" onClick={closeWorkbench}>{t('back')}</button> : null}
+      {snapshot ? <GettingStarted jobs={snapshot.jobs} openJob={openJob} t={t}/> : null}
       <section className="hse-health-summary"><div className="hse-head"><div><small>Harbor · {t('eyebrow')}</small><h1>{t('health')}: {t((snapshot?.overview?.attention?.blocked ?? 0) > 0 ? 'health_blocked' : ['blocked', 'stalled', 'infrastructure', 'invalid', 'regressed', 'gate', 'fresh-baseline'].some(key => (snapshot?.overview?.attention?.[key] ?? 0) > 0) ? 'healthRisk' : 'healthy')}</h1><p>{t('attentionCountHint')}</p></div><button type="button" className="hse-button" onClick={() => void state.load()}>{t('refresh')}</button></div><div className="hse-health-filters" aria-label={t('attention')}>{ATTENTION_FILTERS.map(filter => <button type="button" key={filter} aria-pressed={attentionFilter === filter} onClick={() => { setAttentionFilter(filter); setOffset(0) }}><span>{t(`health_${filter}`)}</span><b>{snapshot?.overview?.attention?.[filter] ?? '—'}</b></button>)}</div></section>
       {snapshot?.workspace ? <HistoricalLauncher snapshot={snapshot} reload={state.load} onCompleted={completedHistorical} t={t}/> : null}
       {state.stale ? <div className="hse-capability">{t('dashboardStale')}</div> : null}
@@ -2848,4 +2841,4 @@ export function apply(ctx) {
   })
 }
 
-module.exports = { name, inject, apply, recoverHarborTurn, applySourceProposal, removeContextPart, mergeHarborFocus, selectedSourceLines, sectionForNavigation, HarborUiBridge, buildUiContext, harborContextFilters, replaceStructuredHarborReference, clearStructuredHarborReferences, needsStructuredHarborNormalization, commitIssuedDraft, isHarborInputBusy, dashboardFailureState, workbenchSuccessState, workbenchFailureState, harborTurnProjection, harborSubmissionTransition, effectiveHarborSubmissionReference, shouldClearObservedExplicit, isExplicitContextExpired, evidenceCriterionOwners, evidenceFocusKey, isEvidenceFocused, trialNavigationView, trialRestoreView, navigationHistoryEntry, ownsNavigationHistoryEntry, restoreNavigationSelection, clearConsumedNavigation, ownsTrialRequest, trialListSuccessState, trialListFailureState, hasTrialFilters, trialDetailLoadingState, trialDetailErrorState, comparisonCandidates, governanceRequestKey, ownsGovernanceRequest, ownsGovernanceBinding, normalizeHarborUiError, harborApiError, trustedHarborUiAction, trustedHarborResolvedContext, trustedHarborReferences, harborAnswerBasis, toolUiAction }
+module.exports = { name, inject, apply, CopilotDock, actionDraftContext, resolvedUiContext, harborDisplayedAnswerBasis, recoverHarborTurn, applySourceProposal, removeContextPart, mergeHarborFocus, selectedSourceLines, sectionForNavigation, HarborUiBridge, buildUiContext, harborContextFilters, replaceStructuredHarborReference, clearStructuredHarborReferences, needsStructuredHarborNormalization, commitIssuedDraft, isHarborInputBusy, dashboardFailureState, workbenchSuccessState, workbenchFailureState, harborTurnProjection, harborSubmissionTransition, effectiveHarborSubmissionReference, shouldClearObservedExplicit, isExplicitContextExpired, evidenceCriterionOwners, evidenceFocusKey, isEvidenceFocused, trialNavigationView, trialRestoreView, navigationHistoryEntry, ownsNavigationHistoryEntry, restoreNavigationSelection, clearConsumedNavigation, ownsTrialRequest, trialListSuccessState, trialListFailureState, hasTrialFilters, trialDetailLoadingState, trialDetailErrorState, comparisonCandidates, governanceRequestKey, ownsGovernanceRequest, ownsGovernanceBinding, normalizeHarborUiError, harborApiError, trustedHarborUiAction, trustedHarborResolvedContext, trustedHarborReferences, harborAnswerBasis, toolUiAction }
