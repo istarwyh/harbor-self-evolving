@@ -40,6 +40,7 @@ test('Cordis plugin registers the bundled evolution Skill and strict architectur
     'harbor_eval_result',
     'harbor_resolve_page_context',
     'harbor_get_evidence',
+    'harbor_propose_action',
     'harbor_evaluator_inspect',
     'harbor_evaluator_update',
     'harbor_ground_truth_init',

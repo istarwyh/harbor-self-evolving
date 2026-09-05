@@ -9,6 +9,7 @@ import {
   redactOpaqueSecretText,
 } from './credential-redaction.js'
 import { resolveWithin } from './evolution.js'
+import { ATTENTION_FILTERS, attentionCounts, jobAttention, matchesJobFilter } from './workbench-health.js'
 
 const SUMMARY_NAME = 'evaluation-summary.json'
 const HISTORICAL_COMPLETION_NAME = 'historical-evaluation-complete.json'
@@ -338,6 +339,8 @@ async function readJob(jobsDir, entry, details, projectRoot) {
     nInvalidScores: summary?.n_invalid_scores,
     nUnscoredTrials: Number(coverage.unscored_trials ?? 0),
     nExceptions: Number(summary?.n_exceptions ?? 0),
+    nInfrastructureExceptions: Number(summary?.n_infrastructure_exceptions ?? 0),
+    nEvaluationExceptions: Number(summary?.n_evaluation_exceptions ?? 0),
     primaryMetric: primaryMetric(summary, contract),
     metrics: summary?.metrics ?? {},
     candidate: summary?.candidate ?? evaluationContext?.candidate,
@@ -351,12 +354,13 @@ async function readJob(jobsDir, entry, details, projectRoot) {
     progress,
     capabilities,
     artifactValidation: summary?.artifact_validation,
-    promotion: promotion ? { decision: promotion.decision, reasons: promotion.reasons ?? [], baselineJob: promotion.baseline_job } : undefined,
+    promotion: promotion ? { decision: promotion.decision, reasons: promotion.reasons ?? [], baselineJob: promotion.baseline_job, regressions: promotion.regressed_trials?.length ?? 0 } : undefined,
     readError: summary?.__readError,
   }
 }
 
-async function listJobs(jobsDir, { offset = 0, limit = DEFAULT_JOB_PAGE_SIZE, root } = {}) {
+async function listJobs(jobsDir, { offset = 0, limit = DEFAULT_JOB_PAGE_SIZE, root, attention = 'all' } = {}) {
+  if (!ATTENTION_FILTERS.includes(attention)) throw new Error('HARBOR_FILTER_INVALID: Unknown attention filter')
   const check = await directoryCheck(jobsDir, { optional: true, root })
   if (check.status === 'warning') return { items: [], total: 0, offset, limit, hasMore: false }
   if (check.status !== 'ok') throw new Error('Jobs directory is not safe')
@@ -370,9 +374,18 @@ async function listJobs(jobsDir, { offset = 0, limit = DEFAULT_JOB_PAGE_SIZE, ro
   const directories = entries.filter(entry => entry.isDirectory() && !entry.isSymbolicLink())
   const recent = await Promise.all(directories.map(async entry => ({ entry, details: await stat(path.join(jobsDir, entry.name)) })))
   recent.sort((left, right) => right.details.mtimeMs - left.details.mtimeMs)
-  const page = recent.slice(offset, offset + limit)
-  const jobs = await Promise.all(page.map(({ entry, details }) => readJob(jobsDir, entry, details, root)))
-  return { items: jobs.filter(Boolean), total: recent.length, offset, limit, hasMore: offset + limit < recent.length }
+  const allJobs = []
+  let cursor = 0
+  await Promise.all(Array.from({ length: Math.min(8, recent.length) }, async () => {
+    while (cursor < recent.length) {
+      const { entry, details } = recent[cursor++]
+      const job = await readJob(jobsDir, entry, details, root)
+      if (job) allJobs.push(job)
+    }
+  }))
+  allJobs.sort((a, b) => jobAttention(a).rank - jobAttention(b).rank || Date.parse(b.updatedAt) - Date.parse(a.updatedAt) || a.name.localeCompare(b.name))
+  const jobs = allJobs.filter(job => matchesJobFilter(job, attention))
+  return { items: jobs.slice(offset, offset + limit), allJobs, attentionCounts: attentionCounts(allJobs), total: jobs.length, offset, limit, hasMore: offset + limit < jobs.length }
 }
 
 function relativePath(root, value) {
@@ -475,7 +488,7 @@ export async function readDashboardSnapshot(config, metadata = {}, args = {}) {
   const offset = Math.max(0, Number.parseInt(args.offset ?? 0, 10) || 0)
   const limit = Math.min(MAX_JOB_PAGE_SIZE, Math.max(1, Number.parseInt(args.limit ?? DEFAULT_JOB_PAGE_SIZE, 10) || DEFAULT_JOB_PAGE_SIZE))
   const [jobPage, projectRootCheck, jobsDirCheck, harborCheck, harborDshCheck, stackCheck] = await Promise.all([
-    listJobs(jobsDir, { offset, limit, root: projectRoot }),
+    listJobs(jobsDir, { offset, limit, root: projectRoot, attention: args.attention ?? 'all' }),
     directoryCheck(projectRoot),
     directoryCheck(jobsDir, { optional: true, root: projectRoot }),
     executableCheck(config.harborBin),
@@ -483,7 +496,8 @@ export async function readDashboardSnapshot(config, metadata = {}, args = {}) {
     fileCheck(resolveWithin(projectRoot, config.stackPath ?? '.harbor/evaluation-stack.yml', 'stackPath'), { root: projectRoot }),
   ])
   const jobs = jobPage.items
-  const counts = jobs.reduce((result, job) => ({ ...result, [job.status]: (result[job.status] ?? 0) + 1 }), {})
+  const allJobs = jobPage.allJobs ?? jobs
+  const counts = allJobs.reduce((result, job) => ({ ...result, [job.status]: (result[job.status] ?? 0) + 1 }), {})
   const latestMetric = jobs.find(job => job.primaryMetric)?.primaryMetric
   return {
     schemaVersion: 3,
@@ -494,7 +508,8 @@ export async function readDashboardSnapshot(config, metadata = {}, args = {}) {
     config: { projectRoot, projectRootSource: metadata.projectRootSource ?? 'configured', jobsDir: config.jobsDir, runtimePolicy: config.runtimePolicy ?? 'follow-latest', agentImportPath: config.agentImportPath, pluginImportPath: config.pluginImportPath },
     checks: { projectRoot: projectRootCheck, jobsDir: jobsDirCheck, harbor: harborCheck, harborDsh: harborDshCheck, evaluationStack: stackCheck },
     overview: {
-      totalJobs: jobPage.total,
+      totalJobs: allJobs.length,
+      attention: jobPage.attentionCounts ?? attentionCounts(allJobs),
       visibleJobs: jobs.length,
       completedJobs: (counts.completed ?? 0) + (counts.partial ?? 0) + (counts.attention ?? 0),
       activeJobs: (counts.pending ?? 0) + (counts.running ?? 0),
@@ -705,6 +720,11 @@ export async function readTrialsPage(config, args) {
   const sort = String(args.sort ?? 'dataset-order')
   const source = await jobTrials(config, job)
   let trials = await enrichTrialsWithDataset(config, job, source.trials)
+  // Internal fixed-set reads must not expand to the entire (possibly large) Job.
+  if (Array.isArray(args.trialIds)) {
+    const selectedIds = new Set(args.trialIds)
+    trials = trials.filter(trial => selectedIds.has(trial.id))
+  }
   if (query) trials = trials.filter(trial => `${trial.id ?? ''} ${trial.displayName ?? ''} ${trial.name ?? ''} ${trial.datasetTrial ?? ''}`.toLowerCase().includes(query))
   if (status) trials = trials.filter(trial => trial.status === status)
   if (validity) trials = trials.filter(trial => String(Boolean(trial.score?.valid)) === validity)
@@ -1235,7 +1255,12 @@ export async function readEvaluatorGovernance(config, args) {
   for (const [role, component] of Object.entries(stack.components ?? {})) {
     const entry = component?.entry
     const snapshot = historicalSources?.components?.[role]
-    const snapshotFile = snapshot?.files?.find(item => item.path === entry && item.text)
+    // The descriptor is identity/configuration, not the editable prompt. Prefer
+    // an authorized historical prompt/implementation without reading live text.
+    const editable = role === 'evaluator' ? component?.interface?.editable_files ?? [] : []
+    const preferred = editable.find(item => item.role === 'prompt') ?? editable.find(item => item.role === 'implementation')
+    const snapshotFile = snapshot?.files?.find(item => item.path === preferred?.path && item.text)
+      ?? snapshot?.files?.find(item => item.path === entry && item.text)
       ?? snapshot?.files?.find(item => item.text)
     const source = snapshotFile
       ? { ...snapshotFile, source: 'job-snapshot', readOnly: true }

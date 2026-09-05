@@ -333,6 +333,21 @@ export function apply(ctx, config) {
     },
   }, (args, exec) => serviceForTool(exec).getEvidence(args)))
 
+  ctx.tools.register(objectTool({
+    name: 'harbor_propose_action',
+    description: 'Propose a structured, expiring Workbench action draft for an explicit user request, using a fresh Harbor context. This never writes files, starts a Job, changes an Evaluator, runs Gate, or deploys. The user must separately inspect deterministic Preflight and confirm in Harbor. Production actions are unregistered and denied.',
+    parameters: {
+      contextSnapshotId: { type: 'string', required: true, description: 'Exact fresh hctx token from the user reference.' },
+      kind: { type: 'string', required: true, description: 'candidate-draft, evaluator-draft, compare, diagnostic-evaluation, retry-infrastructure, gate-request, or deployment-handoff. Offline execution may be blocked by missing registered runner capabilities.' },
+      summary: { type: 'string', required: true, description: 'One bounded proposed change. No credentials or local paths.' },
+      rationale: { type: 'string', description: 'Evidence-supported reason and uncertainty, not authorization.' },
+      replacement: { type: 'string', description: 'Only evaluator-draft: replacement text for the exact saved source fragment. No file paths. The Host supplies the before text and digest.' },
+    },
+  }, (args, exec) => {
+    const projectRoot = synchronizeWorkbenchProjectRoot(service, exec)
+    return service.proposeAction(args, { sessionId: toolSessionId(exec), projectRoot })
+  }))
+
   ctx.tools.register(jsonTool({
     name: 'harbor_evaluator_inspect',
     description: 'Inspect the active harbor-dsh-evaluator/v1 descriptor, implementation kind, ternary Criteria, and a bounded set of editable source files inside an explicitly untrusted envelope. Source text containing secret- or local-path-shaped values is omitted.',

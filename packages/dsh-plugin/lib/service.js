@@ -3,6 +3,9 @@ import { createHash } from 'node:crypto'
 import path from 'node:path'
 
 import { loadModelBinding } from './candidate.js'
+import { LOCAL_OBJECT_KINDS, interactionObjectCatalog, resolveCatalogSelection } from './interaction-objects.js'
+import { TrialSelectionRegistry, MAX_SELECTED_TRIALS } from './trial-selection.js'
+import { ActionDraftController } from './action-drafts.js'
 import {
   containsCredentialText,
   containsLocalPath,
@@ -62,6 +65,15 @@ const SAFE_EVIDENCE_REF = /^[\p{L}\p{N}][\p{L}\p{N}._:@+#/+-]{0,319}$/u
 
 function compact(value) {
   return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined))
+}
+
+function selectedObjectEvidence(entries = []) {
+  const budget = { remaining: 32 * 1024 }
+  return entries.slice(0, 10).map(item => {
+    const value = sanitizeAgentRead(item.value, budget)
+    const complete = !JSON.stringify(value).includes('[TRUNCATED') && !JSON.stringify(value).includes('"__truncated"')
+    return { ref: item.ref, artifactTrust: 'untrusted-evidence', available: complete, ...(complete ? { value } : { reason: 'Selected evidence exceeded the bounded reader; narrow the selection.' }) }
+  })
 }
 
 function sensitiveEvidenceKey(value) {
@@ -262,6 +274,7 @@ function interactionRevision(jobState, trialState, objectState) {
       previewDigest: trialState.preview === undefined ? undefined : digest(trialState.preview),
     } : undefined,
     object: compact({
+      selected: objectState?.selected?.map(item => item.ref),
       comparison: objectState?.comparison ? {
         baseline: objectState.comparison.baselineJob,
         candidate: objectState.comparison.candidateJob,
@@ -313,10 +326,14 @@ async function interactionComparisonSnapshot(config, baseline, candidate) {
   }
 }
 
-async function interactionObjectState(config, context, job, jobState) {
+async function interactionObjectState(config, context, job, jobState, trialState, selectionEntries = []) {
   const refs = [context.object, ...(context.selection ?? [])]
   const compareRef = refs.find(ref => ref?.kind === 'compare')
+  const governance = refs.some(ref => ref?.kind === 'evaluator-source') ? await readEvaluatorGovernance(config, { job }) : undefined
+  const catalog = [...interactionObjectCatalog(job, jobState, trialState, governance), ...selectionEntries]
   return {
+    catalog,
+    selected: refs.filter(ref => LOCAL_OBJECT_KINDS.has(ref?.kind) && ref.sourceDigest).map(ref => resolveCatalogSelection(ref, catalog)),
     comparison: compareRef ? await interactionComparisonSnapshot(config, compareRef.baseline, compareRef.candidate) : undefined,
     gate: interactionGateIdentity(job, jobState),
   }
@@ -331,6 +348,10 @@ function interactionObjectRef(ref, workspace, job, jobState, trialState, objectS
   }
   if (!jobState || ref.job !== job) {
     throw new Error('HARBOR_CONTEXT_STALE_SELECTION: selected object does not belong to the current Job')
+  }
+  if (LOCAL_OBJECT_KINDS.has(kind) && ref.sourceDigest) {
+    const selected = resolveCatalogSelection(ref, objectState?.catalog ?? [])
+    return { ...selected.ref, kind: `harbor.${kind}/v1`, workspace }
   }
   if (kind === 'compare') {
     const comparison = objectState?.comparison
@@ -448,6 +469,7 @@ function interactionTypedRefs(context, job, jobState, trialState, objectState, o
     workspace: { kind: 'harbor.workspace/v1', workspace },
     job: job ? { kind: 'harbor.job/v1', workspace, job } : undefined,
     object: interactionObjectRef(context.object, workspace, job, jobState, trialState, objectState, options),
+    selection: (context.selection ?? []).map(ref => interactionObjectRef(ref, workspace, job, jobState, trialState, objectState, options)),
     trial: trial ? { kind: 'harbor.trial/v1', workspace, job, trial } : undefined,
     criteria: criterionRefs.length ? criterionRefs : undefined,
     evidence: evidenceRefs.length ? evidenceRefs : undefined,
@@ -472,6 +494,7 @@ function interactionFocus(context, job, trialState) {
     ? requestedEvidence
     : undefined
   return compact({
+    localObject: selected?.sourceDigest ? selected : context.object?.sourceDigest ? context.object : undefined,
     job,
     stage: context.route.params.stage ?? context.object?.stage,
     trial: safeMetadataText(trialState?.lifecycle?.id, 200) ?? trialState?.trial,
@@ -520,6 +543,7 @@ function interactionContextSummary(context, job, jobState, trialState, objectSta
     pageSessionId: context.pageSessionId,
     generation: context.generation,
     workspace: context.workspace,
+    identities: authoritativeUiIdentities(jobState),
     object: interactionObjectRef(context.object, context.workspace, job, jobState, trialState, objectState, options),
     route: {
       name: context.route.name,
@@ -548,10 +572,27 @@ function interactionContextSummary(context, job, jobState, trialState, objectSta
   })
 }
 
+function authoritativeUiIdentities(jobState) {
+  const artifacts = jobState?.artifacts ?? {}
+  const context = artifacts.context ?? {}
+  const sources = { candidate: artifacts.candidate ?? context.candidate, dataset: artifacts.dataset ?? context.dataset, context, stack: artifacts.stack ?? context.evaluation_stack, evaluator: artifacts.stack?.components?.evaluator ?? context.evaluation_stack?.components?.evaluator }
+  const result = {}
+  for (const [role, source] of Object.entries(sources)) {
+    if (!source || source.__readError) continue
+    const id = source[`${role}_id`] ?? source.id ?? (role === 'context' ? source.digest : undefined)
+    const version = source.version
+    const identityDigest = role === 'dataset' ? source.source_digest : source.digest
+    if (typeof id !== 'string' || id.length > 180 || !/^(?:@?[\p{L}\p{N}][\p{L}\p{N}._:@+-]*|@[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+)$/u.test(id) || safeMetadataText(id, 180) !== id) continue
+    result[role] = compact({ id, version: typeof version === 'string' && /^[A-Za-z0-9][A-Za-z0-9._:+-]{0,119}$/.test(version) ? version : undefined, digest: /^sha256:[a-f0-9]{64}$/.test(identityDigest ?? '') ? identityDigest : undefined })
+  }
+  return Object.keys(result).length ? result : undefined
+}
+
 function interactionNavigationTarget(context, job, trialState) {
   const focus = interactionFocus(context, job, trialState)
   return compact({
     route: context.route.name,
+    localObject: focus.localObject,
     workspace: context.workspace,
     job: focus.job,
     stage: focus.stage,
@@ -857,6 +898,17 @@ export class EvolutionService {
     this.modelRuntime = modelRuntime
     this.versionChecker = metadata.versionChecker ?? createVersionChecker()
     this.uiContexts = metadata.uiContexts ?? new HarborUiContextRegistry(metadata.uiContextOptions)
+    this.trialSelections = metadata.trialSelections ?? new TrialSelectionRegistry(metadata.uiContextOptions)
+    this.actionDrafts = new ActionDraftController({
+      resolve: (token, owner) => this.resolveUiContext({ contextSnapshotId: token }, owner),
+      execute: async (draft, basis, owner) => {
+        if (draft.kind === 'compare') {
+          const { config } = await this._webContext({ workspace: draft.target.workspace, sessionId: owner.sessionId })
+          return { schema: 'harbor-readonly-comparison/v1', artifactTrust: 'untrusted-evidence', data: sanitizeAgentRead(await readComparison(config, { baseline: draft.target.baseline, candidate: draft.target.candidate }), { remaining: 48 * 1024 }), productionImpact: 'none' }
+        }
+        return { schema: 'harbor-change-draft/v1', applied: false, kind: draft.kind, proposal: draft.proposal, target: draft.target, source: draft.selection, freshBaselineRequired: draft.freshBaselineRequired, note: 'Saved draft only. No Candidate source, Evaluator identity, Job, Gate or deployment was changed.' }
+      },
+    })
     this.uiContextObservedAt = metadata.uiContextObservedAt ?? new Map()
     this.projectRoots = new Map()
     this.workspaceConfigs = new Map()
@@ -1131,13 +1183,15 @@ export class EvolutionService {
       if (!job) throw new Error('HARBOR_CONTEXT_INVALID: a Trial context requires a Job')
       trialState = await readTrialDetail(config, { job, trial })
     }
-    const objectState = await interactionObjectState(config, normalized, job, jobState)
+    const objectState = await interactionObjectState(config, normalized, job, jobState, trialState, await this._selectionEntries(normalized, config))
     validateInteractionFocus(normalized, trialState)
     validateInteractionObjects(normalized, job, jobState, trialState, objectState)
     // artifactRevision is Host-owned. A browser-supplied value is only an
     // observation hint and must never become the freshness authority.
     const context = {
       ...normalized,
+      identities: authoritativeUiIdentities(jobState),
+      flags: interactionContextSummary(normalized, job, jobState, trialState, objectState).flags,
       artifactRevision: interactionRevision(jobState, trialState, objectState),
     }
     return this.uiContexts.issue({
@@ -1175,7 +1229,7 @@ export class EvolutionService {
       if (!job) throw new Error('HARBOR_CONTEXT_INVALID: a Trial context requires a Job')
       trialState = await readTrialDetail(config, { job, trial })
     }
-    const objectState = await interactionObjectState(config, context, job, jobState)
+    const objectState = await interactionObjectState(config, context, job, jobState, trialState, await this._selectionEntries(context, config))
     validateInteractionFocus(context, trialState)
     validateInteractionObjects(context, job, jobState, trialState, objectState, { allowDigestDrift: true })
     const currentRevision = interactionRevision(jobState, trialState, objectState)
@@ -1213,6 +1267,7 @@ export class EvolutionService {
         }) : undefined,
       }),
       refs: interactionTypedRefs(context, job, jobState, trialState, objectState, { allowDigestDrift: true }),
+      selectedEvidence: selectedObjectEvidence(objectState.selected),
       answerContract: {
         sections: ['结论', '证据', '根因分类', '不确定性', '建议下一步'],
         evidenceRequired: true,
@@ -1223,7 +1278,10 @@ export class EvolutionService {
       ...(job ? { uiAction: {
         kind: 'harbor.navigate',
         actionId: `harbor-nav-${entry.digest.slice(-16)}-${context.generation}`,
-        label: trial ? `查看 Trial ${trial} 的证据` : `查看 Job ${job}`,
+        label: target.localObject?.kind === 'evaluator-source'
+          ? `查看 ${target.localObject.sourceRole} L${target.localObject.startLine ?? 1}–${target.localObject.endLine ?? 1}`
+          : target.localObject ? `查看 ${target.localObject.kind}${trial ? ` · ${trial}` : ''}`
+            : trial ? `查看 Trial ${trial} 的证据` : `查看 Job ${job}`,
         target,
         artifactRevision: currentRevision,
         expectedPageSessionId: context.pageSessionId,
@@ -1429,6 +1487,7 @@ export class EvolutionService {
     return {
       ...value,
       interactionIdentities: compact({ gate: interactionGateIdentity(value.job, value) }),
+      interactionObjects: interactionObjectCatalog(value.job, value).map(item => item.ref),
     }
   }
 
@@ -1437,10 +1496,88 @@ export class EvolutionService {
     return readTrialsPage(config, args)
   }
 
+  async _allSelectionTrials(config, args) {
+    const result = []
+    for (let offset = 0; ; offset += 100) {
+      const page = await readTrialsPage(config, { ...args, offset, limit: 100 })
+      if (page.total > MAX_SELECTED_TRIALS) throw new Error('HARBOR_SELECTION_TOO_LARGE: Narrow the Trial filter to at most 1000 results.')
+      result.push(...page.items)
+      if (!page.hasMore) return result
+    }
+  }
+
+  async createTrialSelection(args) {
+    const { config } = await this._webContext(args)
+    const sessionId = String(args.sessionId ?? '')
+    if (!sessionId || this._sessionProjectRoot(sessionId) !== path.resolve(config.projectRoot)) throw new Error('HARBOR_SELECTION_DENIED: An authoritative Session project is required.')
+    const filters = args.filters ?? {}
+    if (Object.keys(filters).some(key => !['status', 'validity', 'query', 'sort'].includes(key))) throw new Error('HARBOR_SELECTION_INVALID: Unsupported filter.')
+    if (args.mode === 'explicit' && (!Array.isArray(args.trialIds) || !args.trialIds.length || args.trialIds.length > MAX_SELECTED_TRIALS || args.trialIds.some(id => typeof id !== 'string'))) throw new Error('HARBOR_SELECTION_INVALID: Select 1–1000 fixed Trial IDs.')
+    const trials = await this._allSelectionTrials(config, { job: args.job, ...filters, ...(args.mode === 'explicit' ? { trialIds: args.trialIds } : {}) })
+    const ids = args.mode === 'explicit' ? args.trialIds : trials.map(trial => trial.id)
+    if (!Array.isArray(ids) || new Set(ids).size !== ids.length || ids.some(id => typeof id !== 'string')) throw new Error('HARBOR_SELECTION_INVALID: Fixed Trial IDs are required.')
+    const selected = trials.filter(trial => ids.includes(trial.id))
+    if (selected.length !== ids.length) throw new Error('HARBOR_SELECTION_DENIED: A selected Trial is missing or outside this Job/filter.')
+    return this.trialSelections.issue({ sessionId, projectRoot: path.resolve(config.projectRoot), workspace: config.workspaceId, job: args.job, mode: args.mode, filters, trials: selected })
+  }
+
+  async _selectionEntries(context, config) {
+    const refs = [context.object, ...(context.selection ?? [])].filter(ref => ref?.kind === 'trial-set')
+    if (!refs.length) return []
+    const owner = { sessionId: context.sessionId, projectRoot: path.resolve(config.projectRoot), workspace: context.workspace }
+    return Promise.all(refs.map(async ref => {
+      const trialIds = this.trialSelections.memberIds(ref, owner)
+      const trials = await this._allSelectionTrials(config, { job: context.route.params.job, trialIds })
+      return this.trialSelections.resolve(ref, owner, trials)
+    }))
+  }
+
+  async trialSelection(args) {
+    const { config } = await this._webContext(args)
+    const owner = this._actionOwner(args.sessionId)
+    if (owner.projectRoot !== path.resolve(config.projectRoot)) throw new Error('HARBOR_SELECTION_DENIED: Session project changed.')
+    const ref = { kind: 'trial-set', id: args.id, job: args.job, stage: 'judge', sourceDigest: args.sourceDigest, selectionCount: Number(args.selectionCount) }
+    const selectionOwner = { ...owner, workspace: config.workspaceId }
+    const trialIds = this.trialSelections.memberIds(ref, selectionOwner)
+    const value = this.trialSelections.resolve(ref, selectionOwner, await this._allSelectionTrials(config, { job: args.job, trialIds }))
+    return { ref: value.ref, count: value.value.count, mode: value.value.mode, members: value.value.members }
+  }
+
   async trial(args) {
     const { config } = await this._webContext(args)
-    return readTrialDetail(config, args)
+    const value = await readTrialDetail(config, args)
+    return { ...value, interactionObjects: interactionObjectCatalog(value.job, undefined, value).map(item => item.ref) }
   }
+
+  _actionOwner(sessionId) {
+    const projectRoot = this._sessionProjectRoot(sessionId)
+    if (!projectRoot) throw new Error('HARBOR_ACTION_DENIED: An authoritative Session project is required.')
+    return { sessionId: String(sessionId), projectRoot }
+  }
+
+  async proposeAction(args, owner = this._actionOwner(args.sessionId)) {
+    if (owner.projectRoot !== this._sessionProjectRoot(owner.sessionId)) throw new Error('HARBOR_ACTION_DENIED: Session project changed.')
+    const basis = await this.resolveUiContext({ contextSnapshotId: args.contextSnapshotId }, owner)
+    const proposal = {}
+    for (const field of ['summary', 'rationale', 'replacement']) {
+      const text = args[field]
+      if (text === undefined) continue
+      if (typeof text !== 'string' || text.length > (field === 'replacement' ? 16000 : 2000) || containsCredentialText(text) || containsOpaqueSecretText(text) || containsLocalPath(text)) throw new Error('HARBOR_ACTION_INVALID: Proposal must be bounded text without credentials or local paths.')
+      proposal[field] = text
+    }
+    if (!proposal.summary?.trim()) throw new Error('HARBOR_ACTION_INVALID: A proposal summary is required.')
+    if (args.kind === 'evaluator-draft') {
+      const selected = basis.selectedEvidence?.find(item => item.available && item.ref.kind === 'evaluator-source')
+      if (!selected || typeof proposal.replacement !== 'string') throw new Error('HARBOR_ACTION_INVALID: Select saved source and supply a replacement fragment, not a file path.')
+      proposal.before = selected.value.text
+      proposal.sourceRef = selected.ref
+    } else if (proposal.replacement !== undefined) throw new Error('HARBOR_ACTION_INVALID: Source replacement is only allowed in an Evaluator/Rubric draft.')
+    return this.actionDrafts.propose({ kind: args.kind, contextSnapshotId: args.contextSnapshotId, proposal }, owner)
+  }
+
+  previewAction(args) { return this.actionDrafts.preview(args, this._actionOwner(args.sessionId)) }
+  confirmAction(args) { return this.actionDrafts.confirm(args, this._actionOwner(args.sessionId)) }
+  actionOperation(args) { return this.actionDrafts.operation(args, this._actionOwner(args.sessionId)) }
 
   async dataset(args) {
     const { config } = await this._webContext(args)
@@ -1460,6 +1597,7 @@ export class EvolutionService {
   async governance(args) {
     const { config } = await this._webContext(args)
     const governance = await readEvaluatorGovernance(config, args)
+    governance.interactionObjects = interactionObjectCatalog(args.job, undefined, undefined, governance).map(item => item.ref)
     try {
       const stackPath = await resolveEvaluatorStackPath(config, governance, args.stackPath)
       const current = await inspectEvaluator(config, { ...args, stackPath })
