@@ -2,6 +2,28 @@
 
 All notable changes to this project are documented in this file.
 
+## Unreleased
+
+## 0.9.1 - 2026-09-05
+
+- Complete the AI-native Workbench release across npm, PyPI, and GitHub, superseding the partially published 0.9.0 release.
+- Preserve file-reference chips when normalizing Harbor references, including file labels that contain Harbor-looking text.
+- Return stable, bounded, redacted errors when a bound Job or Trial disappears before context resolution or evidence reading.
+- Align Node and Python redaction for credential containers, URL userinfo, and single-segment absolute local paths; keep synthetic credential regression fixtures effective without embedding token-shaped literals in source.
+- Require both Node and Python regression suites, a current committed Web bundle, and matching package/tag versions before publishing Python distributions.
+
+## 0.9.0 - 2026-09-04
+
+- Upgrade the Harbor Tab into an AI-native interactive Workbench with explicit `Ask AI` and `@harbor` object binding, a visible one-shot Context Capsule in the Composer, and zero automatic prompt sending or page-context attachment.
+- Add a same-session Harbor Copilot Dock that renders the real Chat Session's run, Tool, error, and final-answer state without copying conversation history, plus typed `harbor.navigate` actions guarded by page-Session and generation preconditions; navigation restores exact Job/Stage/Trial/Evidence or Compare targets and Back restores the prior filters, sorting, selection, Baseline, and scroll position.
+- Separate Compare results into Improved, Regressed, Invalid-score, and New Infrastructure Exception Trial groups; only lifecycle-valid scores can enter quality deltas.
+- Add `harbor_resolve_page_context` and `harbor_get_evidence`: short-lived Session/workspace-bound snapshots resolve to narrow typed refs, while evidence reads enforce full object ancestry, size limits, redaction, and untrusted-evidence semantics.
+- Return every `harbor_eval_result` view and `harbor_evaluator_inspect` payload under a bounded `harbor-agent-read/v1` untrusted-evidence envelope, with recursive secret/path redaction and strict Evaluator source count/size limits.
+- Breaking for direct Agent-tool consumers: read `harbor_eval_result` and `harbor_evaluator_inspect` business fields from `data`; the former top-level payload is intentionally no longer part of the contract.
+- Add structured answer bases and multiple typed Evidence/Object links in the Copilot Dock, stable API error identity and recovery guidance, Trial loading/error/empty states, Skeletons, and a clear-filters recovery action.
+- Keep the interaction path read-only with respect to Harbor and production state: no automatic Job, Gate, promotion, deployment, publishing, or other production mutation; existing Web writes retain explicit confirmation, while every Agent-requested Harbor write or evaluation tool now requires DSH's audited one-shot approval and fails closed when approval is unavailable.
+- Keep Historical Session previews and operation visibility scoped to the owning DSH Session while preserving one active Historical Job per workspace.
+
 ## 0.8.3 - 2026-09-01
 
 - Make GUI-launched macOS Harness processes inherit Docker Desktop's credential-helper directory without mutating the Host environment or duplicating `PATH` entries.

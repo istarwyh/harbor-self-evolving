@@ -6,6 +6,7 @@ import path from 'node:path'
 import test from 'node:test'
 
 import { apply, synchronizeWorkbenchProjectRoot } from '../index.js'
+import { historicalRunLock } from '../lib/historical-run-lock.js'
 
 test('Cordis plugin registers the bundled evolution Skill and strict architecture tools', () => {
   const tools = []
@@ -13,6 +14,7 @@ test('Cordis plugin registers the bundled evolution Skill and strict architectur
   const ctx = {
     skills: { register(skill) { skills.push(skill) } },
     tools: { register(tool) { tools.push(tool) } },
+    on() {},
   }
   apply(ctx, {
     projectRoot: '.',
@@ -36,6 +38,8 @@ test('Cordis plugin registers the bundled evolution Skill and strict architectur
     'harbor_context_preview',
     'harbor_eval_run',
     'harbor_eval_result',
+    'harbor_resolve_page_context',
+    'harbor_get_evidence',
     'harbor_evaluator_inspect',
     'harbor_evaluator_update',
     'harbor_ground_truth_init',
@@ -64,6 +68,92 @@ test('Cordis plugin registers the bundled evolution Skill and strict architectur
   assert.doesNotMatch(skills[0].content, /configured to a different `projectRoot`/)
   assert.doesNotMatch(skills[0].content, /Obtain:\s*\n\s*1\. Business behavior/)
   assert.doesNotMatch(skills[0].content, /^---/)
+
+  const pageContextTool = tools.find(tool => tool.name === 'harbor_resolve_page_context')
+  assert.deepEqual(pageContextTool.parameters.required, ['contextSnapshotId'])
+  assert.deepEqual(Object.keys(pageContextTool.parameters.properties), ['contextSnapshotId'])
+  assert.match(pageContextTool.description, /exact calling DSH Session/)
+  assert.match(pageContextTool.description, /read-only/)
+  assert.equal(pageContextTool.output.schema.type, 'object')
+  const evidenceTool = tools.find(tool => tool.name === 'harbor_get_evidence')
+  assert.deepEqual(evidenceTool.parameters.required, ['workspace', 'job', 'trial', 'criterion', 'evidenceRef'])
+  assert.match(evidenceTool.description, /untrusted Harbor evidence/)
+  assert.equal(evidenceTool.output.schema.type, 'object')
+})
+
+test('Agent-requested Harbor mutations require one-shot approval after downstream policy', async () => {
+  const hooks = []
+  const ctx = {
+    skills: { register() {} },
+    tools: { register() {} },
+    on(event, handler, options) { hooks.push({ event, handler, options }) },
+  }
+  apply(ctx, {
+    projectRoot: '.',
+    jobsDir: 'jobs',
+    harborBin: 'harbor',
+    harborDshBin: 'harbor-dsh',
+    agentImportPath: 'harbor_dsh_evolution.agent:DshCandidateAgent',
+    pluginImportPath: 'dsh-evolution',
+    pythonPath: '',
+    timeoutMs: 1000,
+  })
+
+  const hook = hooks.find(item => item.event === 'tools/pre-execute')
+  assert.ok(hook)
+  assert.equal(hook.options?.prepend, true)
+
+  const mutating = [
+    'harbor_candidate_snapshot',
+    'harbor_evolution_init',
+    'harbor_quick_diagnostic_init',
+    'harbor_context_preview',
+    'harbor_session_diagnostic_run',
+    'harbor_eval_run',
+    'harbor_evaluator_update',
+    'harbor_ground_truth_init',
+    'harbor_evaluator_meta_evaluate',
+    'harbor_candidate_compare',
+  ]
+  for (const name of mutating) {
+    const decision = await hook.handler({ name }, async () => ({ kind: 'allow' }))
+    assert.equal(decision.kind, 'ask', `${name} must require approval`)
+    assert.match(decision.reason, new RegExp(`^Harbor tool ${name} `))
+    assert.doesNotMatch(decision.reason, /argument|token|secret|path/i)
+  }
+
+  assert.deepEqual(
+    await hook.handler({ name: 'harbor_get_evidence' }, async () => ({ kind: 'allow' })),
+    { kind: 'allow' },
+  )
+  assert.deepEqual(
+    await hook.handler({ name: 'harbor_eval_run' }, async () => ({ kind: 'deny', reason: 'owner policy' })),
+    { kind: 'deny', reason: 'owner policy' },
+  )
+})
+
+test('plugin registration fails closed when the DSH approval hook is unavailable', () => {
+  const tools = []
+  const skills = []
+  assert.throws(() => apply({
+    skills: { register(skill) { skills.push(skill) } },
+    tools: { register(tool) { tools.push(tool) } },
+  }, {
+    projectRoot: '.',
+    jobsDir: 'jobs',
+    harborBin: 'harbor',
+    harborDshBin: 'harbor-dsh',
+    agentImportPath: 'harbor_dsh_evolution.agent:DshCandidateAgent',
+    pluginImportPath: 'dsh-evolution',
+    pythonPath: '',
+    timeoutMs: 1000,
+  }), error => {
+    assert.equal(error.code, 'HARBOR_APPROVAL_HOOK_UNAVAILABLE')
+    assert.match(error.message, /^HARBOR_APPROVAL_HOOK_UNAVAILABLE:/)
+    return true
+  })
+  assert.equal(tools.length, 0)
+  assert.equal(skills.length, 0)
 })
 
 test('published package exposes the DSH bundle patch', async () => {
@@ -92,6 +182,7 @@ test('model binding tool snapshots the current model without exposing Host crede
   const ctx = {
     skills: { register() {} },
     tools: { register(tool) { tools.push(tool) } },
+    on() {},
     agentDefaultModel: { currentSelection: () => ({ provider: 'other', model: 'model-a', reasoningEffort: 'high' }) },
     llm: {
       listProviders: () => [{ id: 'other' }],
@@ -132,6 +223,7 @@ test('Session diagnostic tools remain registered and fail explicitly without Ses
   apply({
     skills: { register() {} },
     tools: { register(tool) { tools.push(tool) } },
+    on() {},
     get() { return undefined },
   }, {
     projectRoot: root,
@@ -152,6 +244,46 @@ test('Session diagnostic tools remain registered and fail explicitly without Ses
     preview.execute({}, toolExecution(root)),
     /DSH_SESSION_QUERY_UNAVAILABLE/,
   )
+})
+
+test('Agent Historical Run shares the process lock and releases it on every failure path', async () => {
+  const tools = []
+  const root = await mkdtemp(path.join(os.tmpdir(), 'harbor-shared-run-lock-'))
+  apply({
+    skills: { register() {} },
+    tools: { register(tool) { tools.push(tool) } },
+    on() {},
+    get() { return undefined },
+  }, {
+    projectRoot: root,
+    jobsDir: 'jobs',
+    harborBin: 'harbor',
+    harborDshBin: 'harbor-dsh',
+    agentImportPath: 'harbor_dsh_evolution.agent:DshCandidateAgent',
+    pluginImportPath: 'dsh-evolution',
+    pythonPath: '',
+    timeoutMs: 1000,
+  })
+  const run = tools.find(tool => tool.name === 'harbor_session_diagnostic_run')
+  const webLease = historicalRunLock.acquire(
+    { projectRoot: root, jobsDir: 'jobs' },
+    { channel: 'web' },
+  )
+  await assert.rejects(
+    run.execute({ selectionToken: 'not-consumed-while-busy' }, toolExecution(root)),
+    error => error.code === 'HISTORICAL_JOB_ALREADY_RUNNING',
+  )
+  webLease.release()
+
+  await assert.rejects(
+    run.execute({ selectionToken: 'invalid-token' }, toolExecution(root)),
+    /TOKEN_INVALID/,
+  )
+  const afterFailure = historicalRunLock.acquire(
+    { projectRoot: root, jobsDir: 'jobs' },
+    { channel: 'verification' },
+  )
+  afterFailure.release()
 })
 
 test('Agent tool invocation activates its Session root for the shared Web Workbench', () => {
@@ -185,6 +317,7 @@ test('Agent tools isolate concurrent calls by the calling session working direct
   apply({
     skills: { register() {} },
     tools: { register(tool) { tools.push(tool) } },
+    on() {},
   }, {
     projectRoot: configuredRoot,
     jobsDir: 'jobs',

@@ -1,3 +1,5 @@
+import { redactCredentialText, redactLocalPaths, redactOpaqueSecretText } from './credential-redaction.js'
+
 export const DASHBOARD_ROUTE = '/_dsh/harbor-evolution/dashboard'
 export const JOB_ROUTE = '/_dsh/harbor-evolution/job'
 export const TRIALS_ROUTE = '/_dsh/harbor-evolution/trials'
@@ -13,7 +15,10 @@ export const VERSION_ROUTE = '/_dsh/harbor-evolution/version'
 export const HISTORICAL_PREVIEW_ROUTE = '/_dsh/harbor-evolution/historical-preview'
 export const HISTORICAL_RUN_ROUTE = '/_dsh/harbor-evolution/historical-run'
 export const HISTORICAL_OPERATION_ROUTE = '/_dsh/harbor-evolution/historical-operation'
+export const SESSION_CONTEXT_ROUTE = '/_dsh/harbor-evolution/session-context'
+export const SESSION_CONTEXT_RESOLVE_ROUTE = '/_dsh/harbor-evolution/session-context-resolve'
 const MAX_MUTATION_BYTES = 256 * 1024
+const SAFE_ERROR_CODE = /^[A-Z][A-Z0-9_]{2,127}$/
 
 function sendJson(response, status, body) {
   response.writeHead(status, {
@@ -29,7 +34,7 @@ export function isSameOriginRequest(request) {
   if (fetchSite && fetchSite !== 'same-origin' && fetchSite !== 'none') return false
   const origin = request.headers.origin
   if (!origin) {
-    if (fetchSite === 'same-origin' || fetchSite === 'none') return true
+    if (fetchSite === 'same-origin') return true
     const address = request.socket?.remoteAddress ?? ''
     return address === '::1' || address === '127.0.0.1' || address.startsWith('127.') || address.startsWith('::ffff:127.')
   }
@@ -45,7 +50,16 @@ export function isSameOriginRequest(request) {
 
 function safeError(error) {
   const message = error instanceof Error ? error.message : String(error)
-  return message.replace(/(?:\/[A-Za-z0-9._ -]+){2,}/g, '[local path]').replace(/[A-Za-z]:\\[^\s]+/g, '[local path]')
+  return redactLocalPaths(redactOpaqueSecretText(redactCredentialText(message, '[redacted]'), '[redacted]'))
+}
+
+function safeErrorPayload(error, fallbackCode) {
+  const message = safeError(error)
+  const directCode = error && typeof error === 'object' && typeof error.code === 'string' && SAFE_ERROR_CODE.test(error.code)
+    ? error.code
+    : undefined
+  const embeddedCode = message.match(/^(?:[A-Za-z]+Error:\s*)?([A-Z][A-Z0-9_]{2,127})(?::|\b)/)?.[1]
+  return { code: directCode ?? embeddedCode ?? fallbackCode, message }
 }
 
 export function createApiHandler(load, code = 'request-failed') {
@@ -63,7 +77,7 @@ export function createApiHandler(load, code = 'request-failed') {
     const args = Object.fromEntries(url.searchParams)
     Promise.resolve(load(args)).then(
       value => sendJson(response, 200, { ok: true, value }),
-      error => sendJson(response, 500, { ok: false, error: { code, message: safeError(error) } }),
+      error => sendJson(response, 500, { ok: false, error: safeErrorPayload(error, code) }),
     )
   }
 }
@@ -102,7 +116,7 @@ export function createMutationHandler(update, code = 'update-failed') {
       const value = await update(body)
       sendJson(response, 200, { ok: true, value })
     } catch (error) {
-      sendJson(response, 400, { ok: false, error: { code, message: safeError(error) } })
+      sendJson(response, 400, { ok: false, error: safeErrorPayload(error, code) })
     }
   }
 }
@@ -126,6 +140,8 @@ export function installDashboardWeb(ctx, service, historicalController) {
         [HISTORICAL_RUN_ROUTE, createMutationHandler(args => historicalController.run(args), 'historical-run-failed')],
         [HISTORICAL_OPERATION_ROUTE, createApiHandler(args => historicalController.operation(args), 'historical-operation-unavailable')],
       ] : []),
+      [SESSION_CONTEXT_ROUTE, createMutationHandler(args => service.bindUiContext(args), 'session-context-bind-failed')],
+      [SESSION_CONTEXT_RESOLVE_ROUTE, createMutationHandler(args => service.resolveBrowserUiContext(args), 'session-context-resolve-failed')],
       [VERSION_ROUTE, createApiHandler(args => service.version(args), 'version-check-unavailable')],
       [PROJECT_ROOT_ROUTE, createMutationHandler(args => service.setProjectRoot(args), 'project-root-update-failed')],
     ]

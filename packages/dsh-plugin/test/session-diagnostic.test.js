@@ -78,6 +78,7 @@ test('Preview and Run preserve a shared token, revalidate sources, and write onl
 
   const preview = await service.preview({}, execution(root))
   assert.equal(preview.selectionToken, 'opaque-token')
+  assert.equal(preview.projectRoot, undefined, 'safe Preview metadata must not expose an absolute local path')
   assert.equal(preview.selected.length, 1)
   assert.equal(preview.selected[0].feedback.positive, 1)
   assert.match(preview.warnings.join('\n'), /retention policy/)

@@ -215,7 +215,6 @@ export class SessionDiagnosticService {
       schema_version: 1,
       capability: 'historical-generation-evaluation',
       jobKind: 'historical-generation-evaluation',
-      projectRoot: identity.projectRoot,
       scope: 'exact-cwd',
       order: 'last-activity-desc',
       ...(createdAfter === undefined ? {} : { createdAfter: new Date(createdAfter).toISOString() }),

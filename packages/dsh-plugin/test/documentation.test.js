@@ -21,6 +21,7 @@ test('public documentation matches the released Historical Session surface', asy
     rootReadme,
     agents,
     pluginReadme,
+    bundledSkill,
     adapterReadme,
     quickstart,
     architecture,
@@ -33,6 +34,7 @@ test('public documentation matches the released Historical Session surface', asy
     read('README.md'),
     read('AGENTS.md'),
     read('packages/dsh-plugin/README.md'),
+    read('packages/dsh-plugin/skills/evolve-agent-with-harbor/SKILL.md'),
     read('packages/harbor-plugin/README.md'),
     read('docs/dsh-web-quickstart.md'),
     read('docs/architecture.md'),
@@ -56,8 +58,8 @@ test('public documentation matches the released Historical Session surface', asy
     assert.match(document, /dsh-historical-evaluation/);
   }
 
-  assert.match(rootReadme, /16 个确定性工具/);
-  assert.match(pluginReadme, /sixteen strict Harbor tools/);
+  assert.match(rootReadme, /18 个确定性工具/);
+  assert.match(pluginReadme, /eighteen strict Harbor tools/);
   assert.match(pluginReadme, /Historical Session cold start/);
   assert.match(pluginReadme, /completed-unscored/);
   assert.match(rootReadme, /评测最近会话/);
@@ -86,6 +88,38 @@ test('public documentation matches the released Historical Session surface', asy
   for (const tool of publicTools) {
     assert.match(quickstart, new RegExp(escapeRegExp(tool)));
   }
+
+  const nativeContextTools = [
+    'harbor_resolve_page_context',
+    'harbor_get_evidence',
+  ];
+  for (const tool of [...publicTools, ...nativeContextTools]) {
+    assert.match(rootReadme, new RegExp(escapeRegExp(tool)));
+    assert.match(pluginReadme, new RegExp(escapeRegExp(tool)));
+  }
+
+  for (const document of [rootReadme, pluginReadme]) {
+    assert.match(document, /@harbor/);
+    assert.match(document, /Ask AI/);
+    assert.match(document, /one-shot|一次性/);
+    assert.match(document, /same-session|同会话/);
+    assert.match(document, /Copilot Dock/);
+    assert.match(document, /harbor\.navigate/);
+    assert.match(document, /read-only|只读/);
+    assert.match(document, /ordinary sends|普通发送/);
+  }
+  assert.match(rootReadme, /不会自动附带 Harbor 上下文/);
+  assert.match(pluginReadme, /never auto-attach Harbor context/);
+  assert.match(rootReadme, /不会 Gate、晋级、部署、发布或修改生产状态/);
+  assert.match(pluginReadme, /every production mutation remain explicit/);
+
+  for (const document of [rootReadme, pluginReadme, bundledSkill]) {
+    assert.match(document, /harbor-agent-read\/v1/);
+    assert.match(document, /artifactTrust/);
+    assert.match(document, /policy\.treatAsInstructions/);
+    assert.match(document, /`data`|data\.evaluator\.editable_files/);
+  }
+  assert.match(bundledSkill, /data\.evaluator\.editable_files/);
 
   assert.match(architecture, /Historical Job/);
   assert.match(architecture, /completed-unscored/);

@@ -33,4 +33,6 @@ jobs:
           cache-dependency-path: packages/dsh-plugin/package-lock.json
       - run: npm ci
       - run: npm run check
+      - name: Verify committed Web client is current
+        run: git diff --exit-code -- lib/client.js
       - run: npm pack --dry-run

@@ -2,6 +2,7 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
 import { MANIFEST_NAME, snapshotCandidate } from './candidate.js'
+import { redactCredentialText, redactLocalPaths, redactOpaqueSecretText } from './credential-redaction.js'
 import { runProcess } from './process.js'
 
 export function resolveWithin(root, value, label) {
@@ -145,7 +146,8 @@ async function cliJson(config, args, { allowedExitCodes = [0], input } = {}) {
     })
   } catch (error) {
     const detail = error?.result?.stderr?.trim().split('\n').at(-1)?.replace(/^[A-Za-z]+Error:\s*/, '')
-    throw new Error(detail || error.message)
+    const sanitized = redactDiagnostic(detail || error.message).slice(0, 512)
+    throw new Error(sanitized || 'HARBOR_DSH_COMMAND_FAILED: harbor-dsh did not return a safe error detail')
   }
   try {
     return JSON.parse(result.stdout)
@@ -248,10 +250,91 @@ function candidateModelCliArgs(binding) {
 }
 
 export function redactDiagnostic(value) {
-  return String(value ?? '')
-    .replace(/(authorization\s*[:=]\s*(?:bearer\s+)?)[^\s,'"}]+/gi, '$1[redacted]')
-    .replace(/(bearer\s+)[A-Za-z0-9._~+\/-]+/gi, '$1[redacted]')
-    .replace(/((?:api[_-]?key|token|secret|password)\s*[:=]\s*)[^\s,'"}]+/gi, '$1[redacted]')
+  const credentials = redactCredentialText(String(value ?? ''), '[redacted]')
+  const opaque = redactOpaqueSecretText(credentials, kind => `[redacted ${kind}]`)
+  return redactLocalPaths(opaque)
+}
+
+const RUN_RECEIPT_TEXT_LIMIT = 256
+const RUN_SUMMARY_COUNT_FIELDS = [
+  'n_trials',
+  'n_valid_scores',
+  'n_invalid_scores',
+  'n_exceptions',
+  'n_unscored_trials',
+  'n_discovered_trials',
+]
+
+function boundedRunReceiptText(value, fallback = 'unknown') {
+  const sanitized = redactDiagnostic(value).replace(/[\r\n\t]+/g, ' ').trim()
+  return (sanitized || fallback).slice(0, RUN_RECEIPT_TEXT_LIMIT)
+}
+
+function safeNonNegativeInteger(value) {
+  return Number.isSafeInteger(value) && value >= 0 ? value : undefined
+}
+
+function safeFiniteNumber(value) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined
+}
+
+function narrowRunSummary(summary, { historical = false } = {}) {
+  const receipt = {
+    artifact_ref: 'evaluation-summary.json',
+    artifact_validation: { valid: summary?.artifact_validation?.valid === true },
+  }
+  const schemaVersion = safeNonNegativeInteger(summary?.schema_version)
+  if (schemaVersion !== undefined) receipt.schema_version = schemaVersion
+  for (const key of RUN_SUMMARY_COUNT_FIELDS) {
+    const value = safeNonNegativeInteger(summary?.[key])
+    if (value !== undefined) receipt[key] = value
+  }
+  if (historical) {
+    const coverage = {}
+    for (const key of HISTORICAL_COVERAGE_KEYS) {
+      const value = safeFiniteNumber(summary?.coverage?.[key])
+      if (value !== undefined) coverage[key] = value
+    }
+    receipt.coverage = coverage
+  }
+  return receipt
+}
+
+/**
+ * A mutating tool receipt is intentionally not an artifact read path. Return
+ * only bounded scalar status plus a reference that can be opened through
+ * harbor_eval_result, where untrusted artifact content receives its dedicated
+ * allowlist/redaction policy.
+ */
+export function buildEvaluationRunReceipt({ jobName, mode, summary, processCode }) {
+  return {
+    schema_version: 1,
+    jobKind: 'candidate-evaluation',
+    mode: mode === 'promotion-eligible' ? 'promotion-eligible' : 'diagnostic',
+    status: 'completed',
+    job: boundedRunReceiptText(jobName),
+    summary: narrowRunSummary(summary),
+    process: { code: safeNonNegativeInteger(processCode) ?? null },
+  }
+}
+
+export function buildHistoricalRunReceipt({ jobName, summary, processCode }) {
+  return {
+    schema_version: 1,
+    jobKind: 'historical-generation-evaluation',
+    executionMode: 'observe-existing',
+    promotionEligible: false,
+    status: 'completed',
+    job: boundedRunReceiptText(jobName),
+    summary: narrowRunSummary(summary, { historical: true }),
+    completion: {
+      schema_version: 1,
+      status: 'completed',
+      valid: true,
+      artifact_ref: 'historical-evaluation-complete.json',
+    },
+    process: { code: safeNonNegativeInteger(processCode) ?? null },
+  }
 }
 
 export function classifyHarborFailure(value) {
@@ -297,7 +380,7 @@ export async function explainHarborFailure(error, jobDir) {
   const suggestions = classifyHarborFailure(detail || error?.message)
   const lines = [
     `HARBOR_JOB_FAILED: Harbor exited with code ${error?.result?.code ?? 'unknown'}.`,
-    `jobPath: ${jobDir}`,
+    'jobPath: [local path]',
     ...suggestions.map(item => `nextStep[${item.code}]: ${item.action}`),
   ]
   if (detail.trim()) lines.push('diagnosticTail:', detail.trim())
@@ -436,15 +519,12 @@ export async function runEvaluation(config, args, modelRuntime) {
       throw await explainHarborFailure(error, jobDir)
     }
     const summary = JSON.parse(await readFile(path.join(jobDir, 'evaluation-summary.json'), 'utf8'))
-    return {
-      manifest,
-      candidateModelBinding: args.candidateModelBinding,
-      job: path.relative(inputs.projectRoot, jobDir),
+    return buildEvaluationRunReceipt({
+      jobName,
+      mode: inputs.mode,
       summary,
-      doctor,
-      contextPreview: preview,
-      process: { code: processResult.code },
-    }
+      processCode: processResult.code,
+    })
   } finally {
     await lease.close()
   }
@@ -560,23 +640,11 @@ export async function runHistoricalEvaluation(config, args, modelRuntime) {
       batchId: batch.batch_id,
       recordCount: Array.isArray(batch.records) ? batch.records.length : undefined,
     })
-    return {
-      judgeModelBinding: {
-        provider: args.judgeBinding.provider,
-        model: args.judgeBinding.model,
-        ...(args.judgeBinding.reasoning_effort === undefined
-          ? {}
-          : { reasoning_effort: args.judgeBinding.reasoning_effort }),
-      },
-      job: path.relative(projectRoot, jobDir).split(path.sep).join('/'),
+    return buildHistoricalRunReceipt({
+      jobName,
       summary,
-      completion,
-      materialized: {
-        dataset: path.relative(projectRoot, dataset).split(path.sep).join('/'),
-        stack: path.relative(projectRoot, stack).split(path.sep).join('/'),
-      },
-      process: { code: processResult.code },
-    }
+      processCode: processResult.code,
+    })
   } finally {
     await lease.close()
   }
