@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rename, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
@@ -810,7 +810,7 @@ test('evidence redaction covers credential families and final response stays bel
     'gho_abcdefghijklmnopqrstuvwxyz123456',
     'ghu_abcdefghijklmnopqrstuvwxyz123456',
     'github_pat_abcdefghijklmnopqrstuvwxyz123456',
-    'SLACK_TOKEN_PLACEHOLDER',
+    ['xoxb', '1234567890', 'syntheticfixtureonly'].join('-'),
     'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJzZWNyZXQifQ.signaturepart',
     '-----BEGIN PRIVATE KEY-----\nprivate-key-material\n-----END PRIVATE KEY-----',
     'postgres://user:dbpassword@localhost',
@@ -837,7 +837,7 @@ test('evidence redaction covers credential families and final response stays bel
   assert.ok(Buffer.byteLength(serialized, 'utf8') <= 64 * 1024)
   for (const secret of [
     'bearer-secret-value', 'dXNlcjpwYXNzd29yZA', 'key-value-secret', 'abcdefghijklmnopqrstuvwxyz', 'private-key-material',
-    'dbpassword', 'supersecret', 'private-key-material-without-footer',
+    'dbpassword', 'supersecret', 'private-key-material-without-footer', 'syntheticfixtureonly',
     '/Users/alice', '/home/alice', '/etc/private.conf', String.raw`C:\Users\alice`, String.raw`\\server\share`,
   ]) assert.doesNotMatch(serialized, new RegExp(secret.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
   assert.match(serialized, /REDACTED/)
@@ -942,4 +942,23 @@ test('authoritative session project lookup never falls back to a stale cached ro
     service.dashboard({ sessionId: 'session-live' }),
     /HARBOR_SESSION_PROJECT_UNAVAILABLE/,
   )
+})
+
+test('missing Evidence and a vanished bound Job return a stable safe error code', async () => {
+  const { projectRoot, service, workspace } = await fixture()
+  const assertMissing = error => {
+    assert.equal(error.code, 'HARBOR_OBJECT_NOT_FOUND')
+    assert.match(error.message, /^HARBOR_OBJECT_NOT_FOUND:/)
+    assert.ok(error.message.length < 160)
+    assert.equal(error.message.includes(projectRoot), false)
+    return true
+  }
+  await assert.rejects(service.getEvidence({
+    workspace, job: 'job-42', trial: 'missing-trial', criterion: 'quality', evidenceRef: 'renderer-output',
+  }), assertMissing)
+  const bound = await service.bindUiContext({ sessionId: 'session-1', context: context(workspace) })
+  await rename(path.join(projectRoot, 'jobs', 'job-42'), path.join(projectRoot, 'jobs', 'moved-job'))
+  await assert.rejects(service.resolveUiContext(
+    { contextSnapshotId: bound.contextSnapshotId }, { sessionId: 'session-1', projectRoot },
+  ), assertMissing)
 })

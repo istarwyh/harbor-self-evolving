@@ -97,27 +97,15 @@ function rawReferencePattern(token, global = false) {
   const ref = token ? escapeRegExp(token) : TOKEN_PATTERN;
   return new RegExp(`@harbor(?:\\[[^\\]\\r\\n]{0,300}\\])?\\(${ref}\\)[ \\t]?`, global ? "g" : "");
 }
-function occurrenceRanges(occurrences, token) {
-  return (Array.isArray(occurrences) ? occurrences : []).filter((item) => item?.source === "harbor" && (!token || item.ref === token)).map((item) => ({ start: Number(item.offset), end: Number(item.offset) + Number(item.length) })).filter((item) => Number.isSafeInteger(item.start) && Number.isSafeInteger(item.end) && item.start >= 0 && item.end >= item.start).sort((left, right) => right.start - left.start);
-}
 function rawHarborReferenceRanges(value, occurrences = [], token) {
   const draft = String(value ?? "");
-  const occupied = occurrenceRanges(occurrences).sort((left, right) => left.start - right.start);
+  const occupied = (Array.isArray(occurrences) ? occurrences : []).map((item) => ({ start: Number(item?.offset), end: Number(item?.offset) + Number(item?.length) })).filter((item) => Number.isSafeInteger(item.start) && Number.isSafeInteger(item.end) && item.start >= 0 && item.end >= item.start);
   return [...draft.matchAll(rawReferencePattern(token, true))].map((match) => ({ start: match.index, end: match.index + match[0].length })).filter((range) => !occupied.some((item) => range.start < item.end && item.start < range.end)).sort((left, right) => right.start - left.start);
-}
-function stripHarborReferences(value, occurrences = [], token) {
-  let draft = String(value ?? "");
-  for (const range of occurrenceRanges(occurrences, token)) {
-    if (range.end > draft.length) continue;
-    const end = draft[range.end] === " " ? range.end + 1 : range.end;
-    draft = draft.slice(0, range.start) + draft.slice(end);
-  }
-  return draft.replace(rawReferencePattern(token, true), "");
 }
 function hasHarborReference(value, occurrences = [], token) {
   if (!token) return false;
   if ((Array.isArray(occurrences) ? occurrences : []).some((item) => item?.source === "harbor" && item.ref === token)) return true;
-  return rawReferencePattern(token).test(String(value ?? ""));
+  return rawHarborReferenceRanges(value, occurrences, token).length > 0;
 }
 
 // src/client/index.jsx
@@ -1548,7 +1536,7 @@ function needsStructuredHarborNormalization(value, occurrences, explicit, observ
   if (!token) return false;
   const harborOccurrences = (Array.isArray(occurrences) ? occurrences : []).filter((item) => item?.source === "harbor");
   if (observed && !hasHarborReference(value, occurrences, token)) return false;
-  const hasRawReference = stripHarborReferences(value, []) !== String(value ?? "");
+  const hasRawReference = rawHarborReferenceRanges(value, occurrences).length > 0;
   return hasRawReference || harborOccurrences.length !== 1 || harborOccurrences[0].ref !== token;
 }
 function commitIssuedDraft(bridge, sessionId, issued, replaceReference, prompt = "", phase = "plain", discardFreshOnBusy = false) {
@@ -1573,7 +1561,7 @@ function ContextDock({ bridge, sessionId, useInput, inputActions, replaceHarborR
   const [clock, setClock] = (0, import_react.useState)(Date.now);
   const explicit = ui.explicit;
   const token = explicit?.contextSnapshotId;
-  const hasReference = Boolean(token && (draft.includes(token) || occurrences.some((item) => item.source === "harbor" && item.ref === token)));
+  const hasReference = hasHarborReference(draft, occurrences, token);
   const expiry = Date.parse(explicit?.expiresAt ?? "");
   const expired = isExplicitContextExpired(explicit?.expiresAt, clock);
   (0, import_react.useEffect)(() => {

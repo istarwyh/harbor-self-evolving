@@ -741,6 +741,20 @@ function agentReadFailure(tool) {
   return error
 }
 
+function interactionReadFailure(cause, tool) {
+  const message = String(cause?.message ?? '')
+  const declaredCode = /^HARBOR_[A-Z0-9_]{1,100}$/.test(cause?.code ?? '') ? cause.code : undefined
+  const code = declaredCode ?? message.match(/^(HARBOR_[A-Z0-9_]{1,100}):/)?.[1]
+  if (code) {
+    const detail = redactUntrustedString(message.replace(new RegExp(`^${code}:\\s*`), '')).slice(0, 320)
+    return Object.assign(new Error(`${code}: ${detail || 'The requested Harbor object is unavailable.'}`), { code })
+  }
+  if (/^(Job|Trial) not found$/.test(message)) {
+    return Object.assign(new Error(`HARBOR_OBJECT_NOT_FOUND: ${message}`), { code: 'HARBOR_OBJECT_NOT_FOUND' })
+  }
+  return agentReadFailure(tool)
+}
+
 function exactEvidenceArtifact(provenance, trialState) {
   const artifactRef = provenance?.artifact_ref
   const output = trialState.assessment?.output
@@ -1074,6 +1088,14 @@ export class EvolutionService {
   }
 
   async bindUiContext(args) {
+    try {
+      return await this._bindUiContext(args)
+    } catch (error) {
+      throw interactionReadFailure(error, 'harbor_resolve_page_context')
+    }
+  }
+
+  async _bindUiContext(args) {
     const sessionId = String(args?.sessionId ?? '').trim()
     if (!sessionId) throw new Error('HARBOR_CONTEXT_SESSION_MISMATCH: sessionId is required')
     const authoritativeRoot = this._sessionProjectRoot(sessionId)
@@ -1126,6 +1148,14 @@ export class EvolutionService {
   }
 
   async resolveUiContext(args, owner) {
+    try {
+      return await this._resolveUiContext(args, owner)
+    } catch (error) {
+      throw interactionReadFailure(error, 'harbor_resolve_page_context')
+    }
+  }
+
+  async _resolveUiContext(args, owner) {
     const entry = this.uiContexts.resolve({
       contextSnapshotId: args?.contextSnapshotId,
       sessionId: owner.sessionId,
@@ -1213,6 +1243,14 @@ export class EvolutionService {
   }
 
   async getEvidence(args = {}) {
+    try {
+      return await this._getEvidence(args)
+    } catch (error) {
+      throw interactionReadFailure(error, 'harbor_get_evidence')
+    }
+  }
+
+  async _getEvidence(args) {
     const workspace = String(args.workspace ?? '').trim()
     const job = String(args.job ?? '').trim()
     const trial = String(args.trial ?? '').trim()

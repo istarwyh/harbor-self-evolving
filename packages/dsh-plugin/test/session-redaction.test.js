@@ -105,7 +105,7 @@ test('Session Observation redacts opaque tokens, credential URLs, and a private 
     '\npostgres://user:dbpassword@localhost',
     'https://alice:supersecret@example.com',
     'github_pat_abcdefghijklmnopqrstuvwxyz123456',
-    'SLACK_TOKEN_PLACEHOLDER',
+    ['xoxb', '1234567890', 'syntheticfixtureonly'].join('-'),
     'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJzZWNyZXQifQ.signaturepart',
     'ASIA1234567890ABCDEF',
     '-----BEGIN PRIVATE KEY-----',
@@ -115,7 +115,7 @@ test('Session Observation redacts opaque tokens, credential URLs, and a private 
   const serialized = JSON.stringify(buildSessionObservation(selected))
 
   assert.match(serialized, /REDACTED_SECRET/)
-  assert.doesNotMatch(serialized, /dbpassword|supersecret|github_pat_|SLACK_TOKEN_PLACEHOLDER|eyJhbGci|ASIA1234|opaque-private-material/)
+  assert.doesNotMatch(serialized, /dbpassword|supersecret|github_pat_|syntheticfixtureonly|eyJhbGci|ASIA1234|opaque-private-material/)
 })
 
 test('Historical Batch is immutable, private, and contains no raw Session id', async () => {

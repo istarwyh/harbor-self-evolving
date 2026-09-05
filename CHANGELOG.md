@@ -4,6 +4,14 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+## 0.9.1 - 2026-09-05
+
+- Complete the AI-native Workbench release across npm, PyPI, and GitHub, superseding the partially published 0.9.0 release.
+- Preserve file-reference chips when normalizing Harbor references, including file labels that contain Harbor-looking text.
+- Return stable, bounded, redacted errors when a bound Job or Trial disappears before context resolution or evidence reading.
+- Align Node and Python redaction for credential containers, URL userinfo, and single-segment absolute local paths; keep synthetic credential regression fixtures effective without embedding token-shaped literals in source.
+- Require both Node and Python regression suites, a current committed Web bundle, and matching package/tag versions before publishing Python distributions.
+
 ## 0.9.0 - 2026-09-04
 
 - Upgrade the Harbor Tab into an AI-native interactive Workbench with explicit `Ask AI` and `@harbor` object binding, a visible one-shot Context Capsule in the Composer, and zero automatic prompt sending or page-context attachment.

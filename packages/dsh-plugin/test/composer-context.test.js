@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { hasHarborReference, stripHarborReferences, withHarborReference } from '../lib/composer-context.js'
+import { hasHarborReference, rawHarborReferenceRanges, stripHarborReferences, withHarborReference } from '../lib/composer-context.js'
 
 const OLD_TOKEN = 'hctx_abcdefghijklmnopqrstuvwxyz012345'
 const NEW_TOKEN = 'hctx_9876543210zyxwvutsrqponmlkjihg'
@@ -44,4 +44,13 @@ test('multiple stale Harbor occurrences collapse to one reference while preservi
 test('a suggested question is only used when the draft has no user-authored body', () => {
   assert.equal(withHarborReference(oldReference, newReference, 'Why did this fail?'), `${newReference} Why did this fail?`)
   assert.equal(withHarborReference(`${oldReference} My own question`, newReference, 'fallback'), `${newReference} My own question`)
+})
+
+test('literal Harbor-looking text inside another structured reference is owned by that source', () => {
+  const draft = `@file ${oldReference}`
+  const occurrences = [{ source: 'file', offset: 0, length: draft.length }]
+  assert.deepEqual(rawHarborReferenceRanges(draft, occurrences), [])
+  assert.equal(hasHarborReference(draft, occurrences, OLD_TOKEN), false)
+  assert.equal(stripHarborReferences(draft, occurrences), draft)
+  assert.equal(rawHarborReferenceRanges(draft, []).length, 1)
 })

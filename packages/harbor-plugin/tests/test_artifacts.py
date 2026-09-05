@@ -114,10 +114,12 @@ def test_exception_summary_redacts_credential_families_and_local_paths():
         ("Bearer bearer-secret-material", "bearer-secret-material"),
         ("Basic dXNlcjpwYXNzd29yZA==", "dXNlcjpwYXNzd29yZA=="),
         ("https://alice:supersecret@example.com", "supersecret"),
+        ("https://superopaque@example.com", "superopaque"),
+        ("postgres://dbtoken@localhost", "dbtoken"),
         ("eyJheader.payloadsegment.signaturepart", "eyJheader"),
         ("ghp_abcdefghijklmnopqrstuvwxyz123456", "ghp_abcdefghijklmnopqrstuvwxyz123456"),
         ("github_pat_abcdefghijklmnopqrstuvwxyz123456", "github_pat_abcdefghijklmnopqrstuvwxyz123456"),
-        ("xoxb-123456789012-abcdefghijkl", "xoxb-123456789012-abcdefghijkl"),
+        ("-".join(["xoxb", "123456789012", "syntheticfixtureonly"]), "syntheticfixtureonly"),
         ("sk-proj-abcdefghijklmnopqrstuv", "sk-proj-abcdefghijklmnopqrstuv"),
         ("AKIAABCDEFGHIJKLMNOP", "AKIAABCDEFGHIJKLMNOP"),
         ("ASIAABCDEFGHIJKLMNOP", "ASIAABCDEFGHIJKLMNOP"),
@@ -127,6 +129,8 @@ def test_exception_summary_redacts_credential_families_and_local_paths():
         ),
         ("-----BEGIN PRIVATE KEY-----\ntruncated-private-material", "truncated-private-material"),
         ("failure at /Users/alice/private/report.json", "/Users/alice/private/report.json"),
+        ("path=/private", "/private"),
+        ("failure at /tmp", "/tmp"),
         (r"failure at C:\Users\Alice\private\report.txt", r"C:\Users\Alice\private\report.txt"),
     ]
     for diagnostic, forbidden in cases:

@@ -67,11 +67,12 @@ QUOTED_AUTH_VALUE = re.compile(r"([\"'`])(Bearer|Basic)\s+[^\r\n]*", re.I)
 AUTH_VALUE = re.compile(r"\b(Bearer|Basic)\s+[^\s,;\"'`<>]+", re.I)
 URL_USERINFO_VALUE = re.compile(
     r"\b([A-Za-z][A-Za-z0-9+.-]{0,31}://)"
-    r"([^/\s?#@\"'`<>]*:[^/\s?#@\"'`<>]+)@",
+    r"(?!\[REDACTED[^\]]*\]@)([^/\s?#@\"'`<>]+)@",
     re.I,
 )
 POSIX_LOCAL_PATH = re.compile(
-    r"(?<![A-Za-z0-9:])/(?:[^/\r\n\"'`<>,;]+/)+[^/\r\n\"'`<>,;]*"
+    r"(?<![A-Za-z0-9:/])/(?:[^/\r\n\"'`<>,;]+/)+[^/\r\n\"'`<>,;]*"
+    r"|(?<![A-Za-z0-9:/])/[A-Za-z0-9._~+-]+(?=$|[\s\"'`<>,;])"
 )
 WINDOWS_LOCAL_PATH = re.compile(r"(?:\b[A-Za-z]:\\|\\\\)[^\r\n\"'`<>,;]*")
 OPAQUE_SECRET_RULES = (
@@ -287,7 +288,10 @@ def _sensitive_container_key(value: Any) -> bool:
     if SENSITIVE_KEY.search(key):
         return True
     canonical = re.sub(r"[^A-Za-z0-9]", "", key).casefold()
-    return any(canonical.endswith(suffix) for suffix in SENSITIVE_CONTAINER_SUFFIXES)
+    return (
+        any(canonical.endswith(suffix) for suffix in SENSITIVE_CONTAINER_SUFFIXES)
+        or re.search(r"credentials?(?:maps?|stores?|values?)$", canonical) is not None
+    )
 
 
 def redact(value: Any) -> Any:

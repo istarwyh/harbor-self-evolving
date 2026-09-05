@@ -4,9 +4,11 @@ import test from 'node:test'
 
 import {
   containsCredentialText,
+  containsLocalPath,
   containsOpaqueSecretText,
   isSensitiveCredentialContainerKey,
   redactCredentialText,
+  redactLocalPaths,
   redactOpaqueSecretText,
 } from '../lib/credential-redaction.js'
 
@@ -47,7 +49,7 @@ test('URL userinfo, opaque token families, and truncated PEM values fail closed'
   ].join('\n')
   const opaque = [
     'github_pat_abcdefghijklmnopqrstuvwxyz123456',
-    'SLACK_TOKEN_PLACEHOLDER',
+    ['xoxb', '1234567890', 'syntheticfixtureonly'].join('-'),
     'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJzZWNyZXQifQ.signaturepart',
     'ASIA1234567890ABCDEF',
     '-----BEGIN PRIVATE KEY-----\nopaque-private-material-without-footer',
@@ -61,7 +63,7 @@ test('URL userinfo, opaque token families, and truncated PEM values fail closed'
   assert.match(redactedUrls, /postgres:\/\/\[REDACTED\]@localhost/)
   assert.equal(containsCredentialText(redactedUrls), false)
   assert.equal(containsOpaqueSecretText(opaque), true)
-  assert.doesNotMatch(redactedOpaque, /github_pat_|SLACK_TOKEN_PLACEHOLDER|eyJ|ASIA|opaque-private-material/)
+  assert.doesNotMatch(redactedOpaque, /github_pat_|syntheticfixtureonly|eyJ|ASIA|opaque-private-material/)
   assert.equal(containsOpaqueSecretText(redactedOpaque), false)
 })
 
@@ -72,4 +74,15 @@ test('sensitive container classification covers header, environment, and credent
     'providerCredentials', 'credentialMap', 'credentialStore', 'credentialValues',
   ]) assert.equal(isSensitiveCredentialContainerKey(key), true, key)
   assert.equal(isSensitiveCredentialContainerKey('safeMetadata'), false)
+})
+
+test('local path redaction includes a single absolute segment and preserves ordinary URLs and relative refs', () => {
+  for (const value of ['/private', '/tmp', 'path=/private', '/Users/mac/My Secret/file.txt']) {
+    assert.equal(containsLocalPath(value), true, value)
+    assert.match(redactLocalPaths(value), /\[local path\]/)
+  }
+  for (const value of ['https://example.com/path', 'postgres://localhost', 'artifacts/result.json', 'generation_record.visible_transcript/1']) {
+    assert.equal(containsLocalPath(value), false, value)
+    assert.equal(redactLocalPaths(value), value)
+  }
 })

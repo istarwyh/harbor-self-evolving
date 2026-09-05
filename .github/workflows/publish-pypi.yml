@@ -17,6 +17,11 @@ jobs:
         working-directory: packages/harbor-plugin
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: packages/dsh-plugin/package-lock.json
       - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           python-version: "3.12"
@@ -24,6 +29,16 @@ jobs:
         run: |
           package_version="$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml)"
           test "$GITHUB_REF_NAME" = "v$package_version"
+          node_version="$(node -p "require('../dsh-plugin/package.json').version")"
+          test "$package_version" = "$node_version"
+      - name: Validate Node plugin before publishing
+        working-directory: packages/dsh-plugin
+        run: |
+          npm ci
+          npm run check
+          git diff --exit-code -- lib/client.js
+      - name: Validate Python adapter before publishing
+        run: uv run --frozen pytest
       - run: uv build
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v7
         with:

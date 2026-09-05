@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 
 import oceanBackground from './assets/harbor-ocean.jpg'
-import { hasHarborReference, rawHarborReferenceRanges, stripHarborReferences } from '../../lib/composer-context.js'
+import { hasHarborReference, rawHarborReferenceRanges } from '../../lib/composer-context.js'
 
 const NS = 'harbor-evolution'
 const API = '/_dsh/harbor-evolution'
@@ -917,7 +917,7 @@ export function needsStructuredHarborNormalization(value, occurrences, explicit,
   if (!token) return false
   const harborOccurrences = (Array.isArray(occurrences) ? occurrences : []).filter(item => item?.source === 'harbor')
   if (observed && !hasHarborReference(value, occurrences, token)) return false
-  const hasRawReference = stripHarborReferences(value, []) !== String(value ?? '')
+  const hasRawReference = rawHarborReferenceRanges(value, occurrences).length > 0
   return hasRawReference || harborOccurrences.length !== 1 || harborOccurrences[0].ref !== token
 }
 
@@ -944,7 +944,7 @@ function ContextDock({ bridge, sessionId, useInput, inputActions, replaceHarborR
   const [clock, setClock] = useState(Date.now)
   const explicit = ui.explicit
   const token = explicit?.contextSnapshotId
-  const hasReference = Boolean(token && (draft.includes(token) || occurrences.some(item => item.source === 'harbor' && item.ref === token)))
+  const hasReference = hasHarborReference(draft, occurrences, token)
   const expiry = Date.parse(explicit?.expiresAt ?? '')
   const expired = isExplicitContextExpired(explicit?.expiresAt, clock)
 

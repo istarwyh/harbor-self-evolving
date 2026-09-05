@@ -88,7 +88,7 @@ test('public Historical Preview identities redact every shared credential family
   const values = [
     ['preset-url', 'https://alice:supersecret@example.com'],
     ['model-github', 'github_pat_abcdefghijklmnopqrstuvwxyz123456'],
-    ['model-slack', 'SLACK_TOKEN_PLACEHOLDER'],
+    ['model-slack', ['xoxb', '1234567890', 'syntheticfixtureonly'].join('-')],
     ['model-jwt', 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJzZWNyZXQifQ.signaturepart'],
     ['model-aws', 'ASIA1234567890ABCDEF'],
     ['model-pem', '-----BEGIN PRIVATE KEY-----\nopaque-private-material-without-footer'],
@@ -105,7 +105,7 @@ test('public Historical Preview identities redact every shared credential family
 
   assert.ok(result.publicSelected.every(item => item.agentPreset === '[redacted-identity]'))
   assert.ok(result.publicSelected.every(item => item.modelRoutes[0].model === '[redacted-identity]'))
-  assert.doesNotMatch(serialized, /supersecret|github_pat_|SLACK_TOKEN_PLACEHOLDER|eyJ|ASIA1234|opaque-private-material/)
+  assert.doesNotMatch(serialized, /supersecret|github_pat_|syntheticfixtureonly|eyJ|ASIA1234|opaque-private-material/)
 })
 
 test('selection is bounded before exact Session reads', async () => {

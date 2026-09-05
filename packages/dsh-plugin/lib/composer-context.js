@@ -20,7 +20,9 @@ function occurrenceRanges(occurrences, token) {
 /** Locate literal Harbor references that are not owned by another structured chip. */
 export function rawHarborReferenceRanges(value, occurrences = [], token) {
   const draft = String(value ?? '')
-  const occupied = occurrenceRanges(occurrences).sort((left, right) => left.start - right.start)
+  const occupied = (Array.isArray(occurrences) ? occurrences : [])
+    .map(item => ({ start: Number(item?.offset), end: Number(item?.offset) + Number(item?.length) }))
+    .filter(item => Number.isSafeInteger(item.start) && Number.isSafeInteger(item.end) && item.start >= 0 && item.end >= item.start)
   return [...draft.matchAll(rawReferencePattern(token, true))]
     .map(match => ({ start: match.index, end: match.index + match[0].length }))
     .filter(range => !occupied.some(item => range.start < item.end && item.start < range.end))
@@ -30,18 +32,20 @@ export function rawHarborReferenceRanges(value, occurrences = [], token) {
 /** Remove Harbor references while preserving all non-reference draft text. */
 export function stripHarborReferences(value, occurrences = [], token) {
   let draft = String(value ?? '')
-  for (const range of occurrenceRanges(occurrences, token)) {
+  const ranges = [...occurrenceRanges(occurrences, token), ...rawHarborReferenceRanges(draft, occurrences, token)]
+    .sort((left, right) => right.start - left.start)
+  for (const range of ranges) {
     if (range.end > draft.length) continue
     const end = draft[range.end] === ' ' ? range.end + 1 : range.end
     draft = draft.slice(0, range.start) + draft.slice(end)
   }
-  return draft.replace(rawReferencePattern(token, true), '')
+  return draft
 }
 
 export function hasHarborReference(value, occurrences = [], token) {
   if (!token) return false
   if ((Array.isArray(occurrences) ? occurrences : []).some(item => item?.source === 'harbor' && item.ref === token)) return true
-  return rawReferencePattern(token).test(String(value ?? ''))
+  return rawHarborReferenceRanges(value, occurrences, token).length > 0
 }
 
 /** Enforce one explicit Harbor reference and retain the latest user-authored body. */

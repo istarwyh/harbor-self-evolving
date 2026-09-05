@@ -25,8 +25,8 @@ const AUTH_VALUE = /\b(Bearer|Basic)\s+[^\s,;"'`<>]+/gi
 const AUTH_VALUE_TEST = /\b(?:Bearer|Basic)\s+(?:["'`]|[^\s,;"'`<>])/i
 const URL_USERINFO_VALUE = /\b([A-Za-z][A-Za-z0-9+.-]{0,31}:\/\/)(?!\[REDACTED[^\]]*\]@)([^/\s?#@"'`<>]+)@/gi
 const URL_USERINFO_VALUE_TEST = /\b[A-Za-z][A-Za-z0-9+.-]{0,31}:\/\/(?!\[REDACTED[^\]]*\]@)[^/\s?#@"'`<>]+@/i
-const POSIX_LOCAL_PATH = /(?<![A-Za-z0-9:/])\/(?:[^/\r\n"'`<>,;]+\/)+[^/\r\n"'`<>,;]*/g
-const POSIX_LOCAL_PATH_TEST = /(?<![A-Za-z0-9:/])\/(?:[^/\r\n"'`<>,;]+\/)+[^/\r\n"'`<>,;]*/
+const POSIX_LOCAL_PATH = /(?<![A-Za-z0-9:/])\/(?:[^/\r\n"'`<>,;]+\/)+[^/\r\n"'`<>,;]*|(?<![A-Za-z0-9:/])\/[A-Za-z0-9._~+-]+(?=$|[\s"'`<>,;])/g
+const POSIX_LOCAL_PATH_TEST = /(?<![A-Za-z0-9:/])\/(?:[^/\r\n"'`<>,;]+\/)+[^/\r\n"'`<>,;]*|(?<![A-Za-z0-9:/])\/[A-Za-z0-9._~+-]+(?=$|[\s"'`<>,;])/
 const WINDOWS_LOCAL_PATH = /(?:\b[A-Za-z]:\\|\\\\)[^\r\n"'`<>,;]*/g
 const WINDOWS_LOCAL_PATH_TEST = /(?:\b[A-Za-z]:\\|\\\\)[^\r\n"'`<>,;]*/
 const SENSITIVE_CONTAINER_KEY = /authorization|cookie|token|api[_-]?key|secret|password|request[_-]?headers/i
