@@ -3,7 +3,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 
-from harbor_dsh_evolution.lifecycle import TrialLifecycleStore
+import pytest
+
+from harbor_dsh_evolution.lifecycle import TrialLifecycleStore, bind_lifecycle_task_names
 
 
 def event(task: str, execution: str, trial_name: str):
@@ -123,3 +125,46 @@ def test_historical_lifecycle_records_completed_unscored_as_normal_terminal_stat
     assert snapshot["job_kind"] == "historical-generation-evaluation"
     assert snapshot["counts"] == {"completed-unscored": 1}
     assert snapshot["trials"][0]["terminal"] is True
+
+
+def test_runtime_toml_name_binds_to_existing_dataset_item_without_changing_manifest(tmp_path: Path):
+    task = tmp_path / "dataset/wiring-check"
+    task.mkdir(parents=True)
+    (task / "task.toml").write_text('[task]\nname = "diagnostic/acceptance-independent-name"\n')
+    registered = [{"id": "wiring-check", "path": "wiring-check", "metadata": {}}]
+    original = json.dumps(registered)
+    tasks = bind_lifecycle_task_names(task.parent, registered)
+    store = TrialLifecycleStore(tmp_path / "job", job="diagnostic", tasks=tasks)
+    store.initialize()
+    first = event("diagnostic/acceptance-independent-name", "execution-1", "wiring-check__random")
+    store.transition(first, "preparing-environment")
+    store.transition(first, "completed", terminal=True)
+    snapshot = json.loads((tmp_path / "job/trial-lifecycle.json").read_text())
+    assert snapshot["dataset_total"] == 1
+    assert snapshot["attempt_count"] == 1
+    assert snapshot["trials"][0]["dataset_trial"] == "wiring-check"
+    assert snapshot["trials"][0]["execution_id"] == "execution-1"
+    assert json.dumps(registered) == original
+
+
+def test_runtime_name_binding_rejects_duplicate_toml_names(tmp_path: Path):
+    tasks = []
+    for name in ("task-a", "task-b"):
+        task = tmp_path / name
+        task.mkdir()
+        (task / "task.toml").write_text('[task]\nname = "suite/same-name"\n')
+        tasks.append({"id": name, "path": name})
+    with pytest.raises(ValueError, match="HARBOR_TASK_NAME_AMBIGUOUS"):
+        bind_lifecycle_task_names(tmp_path, tasks)
+
+
+def test_exact_runtime_name_wins_over_shared_basename_and_ambiguous_fallback_is_rejected(tmp_path: Path):
+    store = TrialLifecycleStore(tmp_path, job="aliases", tasks=[
+        {"id": "task-a", "harbor_task_name": "suite-a/same"},
+        {"id": "task-b", "harbor_task_name": "suite-b/same"},
+    ])
+    store.initialize()
+    store.transition(event("suite-b/same", "b", "trial-b"), "completed", terminal=True)
+    assert store._records[1]["execution_id"] == "b"
+    with pytest.raises(ValueError, match="HARBOR_TASK_NAME_AMBIGUOUS"):
+        store.transition(event("same", "ambiguous", "trial-unknown"), "running-agent")

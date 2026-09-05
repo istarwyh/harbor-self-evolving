@@ -43,6 +43,7 @@ export const Config = Schema.object({
   modelBrokerBindHost: Schema.string().default('127.0.0.1'),
   modelBrokerAdvertisedHost: Schema.string().default('host.docker.internal'),
   modelBrokerMaxRequests: Schema.number().min(1).default(1000),
+  modelBrokerMaxResponseBytes: Schema.number().min(1).default(4194304),
   modelBrokerMaxRequestBytes: Schema.number().min(1024).default(33554432),
   sessionMaxReads: Schema.number().min(1).default(100),
   sessionReadConcurrency: Schema.number().min(1).default(4),
@@ -117,6 +118,9 @@ export function apply(ctx, config) {
     },
   }
   const service = new EvolutionService(resolved, metadata, modelRuntime)
+  // Cordis hot reload/unload must not orphan accepted background diagnostics.
+  // Hard process termination still leaves the durable claim for manual recovery.
+  if (typeof ctx.effect === 'function') ctx.effect(() => () => service.actionDrafts.dispose())
   const approvalChannelAvailable = typeof ctx.on === 'function'
   if (!approvalChannelAvailable) {
     const error = new Error('HARBOR_APPROVAL_HOOK_UNAVAILABLE: Harbor requires the DSH tools/pre-execute approval seam before registering Agent tools.')

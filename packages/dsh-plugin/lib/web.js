@@ -147,6 +147,7 @@ export function installDashboardWeb(ctx, service, historicalController) {
       ['/_dsh/harbor-evolution/action-preview', createMutationHandler(args => service.previewAction(args), 'action-preview-failed')],
       ['/_dsh/harbor-evolution/action-confirm', createMutationHandler(args => service.confirmAction(args), 'action-confirm-failed')],
       ['/_dsh/harbor-evolution/action-operation', createApiHandler(args => service.actionOperation(args), 'action-operation-failed')],
+      ['/_dsh/harbor-evolution/action-cancel', createMutationHandler(args => service.cancelAction(args), 'action-cancel-failed')],
       [SESSION_CONTEXT_RESOLVE_ROUTE, createMutationHandler(args => service.resolveBrowserUiContext(args), 'session-context-resolve-failed')],
       [VERSION_ROUTE, createApiHandler(args => service.version(args), 'version-check-unavailable')],
       [PROJECT_ROOT_ROUTE, createMutationHandler(args => service.setProjectRoot(args), 'project-root-update-failed')],

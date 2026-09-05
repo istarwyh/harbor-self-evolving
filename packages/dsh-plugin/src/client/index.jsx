@@ -6,6 +6,7 @@ import { harborQuestionKeys, harborQuestionLabelKey, JOURNEY_MESSAGES } from './
 import { ActionDraftCardView, ACTION_CARD_MESSAGES } from './action-draft-card.jsx'
 import { harborConversationProjection } from './conversation-projection.js'
 import { EvaluatorEditorView, EVALUATOR_EDITOR_MESSAGES } from './evaluator-editor.jsx'
+import { SavedEvaluatorNextSteps, SAVED_EVALUATOR_MESSAGES } from './saved-evaluator-next-steps.jsx'
 
 const NS = 'harbor-evolution'
 const API = '/_dsh/harbor-evolution'
@@ -107,7 +108,9 @@ const dictionaries = {
   },
 }
 
-for (const locale of ['zh', 'en']) Object.assign(dictionaries[locale], JOURNEY_MESSAGES[locale], ACTION_CARD_MESSAGES[locale], EVALUATOR_EDITOR_MESSAGES[locale])
+for (const locale of ['zh', 'en']) Object.assign(dictionaries[locale], JOURNEY_MESSAGES[locale], ACTION_CARD_MESSAGES[locale], EVALUATOR_EDITOR_MESSAGES[locale], SAVED_EVALUATOR_MESSAGES[locale])
+Object.assign(dictionaries.zh, { prepareDiagnostic: '规划选中项的诊断实验', askDiagnostic: '基于这组已冻结的 Trial，先读取证据并说明共同原因与不确定性，再调用 harbor_propose_action 创建 diagnostic-evaluation 草稿。只使用此引用的选中任务，不扩大范围、不改 Candidate 或评分规则。实际执行由我检查参数并确认；现在不要运行任何评测、重试、Gate 或发布。' })
+Object.assign(dictionaries.en, { prepareDiagnostic: 'Plan a diagnostic for this selection', askDiagnostic: 'Read this frozen Trial selection and explain the common cause and uncertainty, then use harbor_propose_action to propose a diagnostic-evaluation. Use only these selected tasks, without changing Candidate or scoring rules. I will review the parameters and confirm execution. Do not run evaluations, retries, Gate, or deployment now.' })
 
 const CSS = `
 .hse-journey{padding:18px;margin-bottom:18px;border:1px solid #2875ff35;border-radius:14px;background:#2875ff08}.hse-journey h2{margin:0;font-size:20px}.hse-journey p,.hse-journey li{font-size:13px;line-height:1.7}.hse-journey ol{padding:0;list-style:none}.hse-journey details summary{cursor:pointer}.hse-question{font-size:12px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}.hse-discussion-history{margin:10px 0;font-size:12px}.hse-discussion-history button{display:block;width:100%;margin:5px 0;padding:7px;text-align:left;color:inherit;border:1px solid #70cfff55;background:transparent;border-radius:6px;cursor:pointer}.hse-draft-notice{padding:10px;border:1px solid #2875ff44;border-radius:8px;font-size:12px;line-height:1.6}.hse-editor-tab[data-dirty=true]:after{content:' •';color:#c78312}.hse-local-actions{flex-wrap:wrap}.hse-answer-unverified>p{font-size:11px;color:#f3c779}.hse-copilot details>summary{cursor:pointer;font-size:11px}.hse-copilot-actions{flex-wrap:wrap}.hse-context-questions{max-height:70px;overflow:auto}.hse-job-identities>summary{cursor:pointer;font-size:12px}.hse-job-identities[open]>.hse-identity-tags{margin-top:12px}
@@ -261,9 +264,9 @@ async function requestJson(url, options) {
   return body.value
 }
 
-async function api(route, params = {}) {
+async function api(route, params = {}, options = {}) {
   const query = new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined && value !== ''))
-  return requestJson(`${API}/${route}${query.size ? `?${query}` : ''}`, { credentials: 'same-origin', cache: 'no-store' })
+  return requestJson(`${API}/${route}${query.size ? `?${query}` : ''}`, { credentials: 'same-origin', cache: 'no-store', signal: options.signal })
 }
 
 async function mutate(route, value) {
@@ -278,7 +281,7 @@ const HarborSessionContext = createContext(undefined)
 function useHarborApi() {
   const sessionId = useContext(HarborSessionContext)
   if (!sessionId) throw new Error('Harbor workspace requests require a DSH Session')
-  return useCallback((route, params = {}) => api(route, { ...params, sessionId }), [sessionId])
+  return useCallback((route, params = {}, options) => api(route, { ...params, sessionId }, options), [sessionId])
 }
 
 function useHarborMutation() {
@@ -1098,10 +1101,10 @@ function AnswerText({ text }) {
   })}</div>
 }
 
-function ActionDraftCard({ draft, onSourceDraft, onReprepare, onViewComparison, t }) {
+function ActionDraftCard({ draft, onSourceDraft, onReprepare, onViewComparison, onViewResult, t }) {
   const update = useHarborMutation()
   const request = useHarborApi()
-  return <ActionDraftCardView {...{ draft, onSourceDraft, onReprepare, onViewComparison, update, request, t }} ErrorState={HarborErrorState}/>
+  return <ActionDraftCardView {...{ draft, onSourceDraft, onReprepare, onViewComparison, onViewResult, update, request, t }} ErrorState={HarborErrorState}/>
 }
 
 export function recoverHarborTurn(nodes, sessionId) {
@@ -1205,6 +1208,7 @@ function CopilotDock({ bridge, sessionId, useSession, stop, resolveLatest, reana
     return prepared === true
   }
   const viewComparison = draft => bridge.navigate(sessionId, { kind: 'harbor.navigate', actionId: `comparison-${draft.draftId}`, target: { route: 'harbor.compare', workspace: draft.target.workspace, job: draft.target.job, stage: 'gate', baseline: draft.target.baseline, candidate: draft.target.candidate } }, { force: true })
+  const viewDiagnostic = (draft, result) => bridge.navigate(sessionId, { kind: 'harbor.navigate', actionId: `diagnostic-result-${draft.operationId}`, target: { route: 'harbor.job', workspace: draft.target.workspace, job: result.jobName, stage: 'judge' } }, { force: true })
   const activeCalls = projection.active ? runningCalls : []
   const activeRunning = projection.active && running
   const relevantError = projection.active ? lastAgentError : null
@@ -1254,7 +1258,7 @@ function CopilotDock({ bridge, sessionId, useSession, stop, resolveLatest, reana
       {answer ? <div className="hse-copilot-answer"><AnswerText text={answer}/></div> : null}
       {answer && !activeRunning && !references.some(ref => ref.kind === 'evidence' && ref.available) ? <div className="hse-answer-unverified" role="status"><p>{t('evidenceNotChecked')}</p></div> : null}
       {references.length ? <div className="hse-copilot-refs"><strong>{references.some(reference => reference.kind === 'evidence') ? t('evidenceRefs') : t('objectRefs')}</strong>{references.map(reference => <button type="button" className="hse-copilot-ref" data-available={String(reference.available)} key={reference.action.actionId} onClick={() => bridge.navigate(sessionId, reference.action, { force: true })}><b>{reference.label ?? t('viewInHarbor')}</b><span>{reference.kind === 'evidence' ? t('evidence') : t('objectRefs')}</span><code>{harborReferenceIdentity(reference)}{reference.available ? '' : ` · ${t('evidenceUnavailable')}`}</code></button>)}</div> : null}
-      {actionDrafts.map(draft => <ActionDraftCard key={draft.draftId} draft={draft} onSourceDraft={openSourceDraft} onReprepare={reprepare} onViewComparison={viewComparison} t={t}/>)}
+      {actionDrafts.map(draft => <ActionDraftCard key={draft.draftId} draft={draft} onSourceDraft={openSourceDraft} onReprepare={reprepare} onViewComparison={viewComparison} onViewResult={result => viewDiagnostic(draft, result)} t={t}/>)}
       {discussionContext && prepareQuestion ? <div className="hse-copilot-actions"><button type="button" disabled={activeRunning || ui.status === 'binding'} onClick={() => void prepareQuestion(discussionContext, '')}>{t('continueObject')}</button><small>{t('followupHint')}</small></div> : null}
       {basis || activeCalls.length || settledTools.length ? <details className="hse-answer-details"><summary>{t('answerDetails')}</summary>
         <p>{t('contextFreshness')}: {freshness ?? '—'}</p>
@@ -1459,24 +1463,28 @@ function TrialSelectionBar({ job, workspace, checked, setChecked, page, filters,
   const update = useHarborMutation()
   const [state, setState] = useState({ status: 'idle' })
   const owner = useRef(0)
+  const previousSnapshot = useRef()
   useEffect(() => {
     owner.current += 1
+    if (previousSnapshot.current) setContext(contextFor({ trial: undefined, detail: undefined, selections: [] }))
+    previousSnapshot.current = undefined
     setState({ status: 'idle' })
     return () => { owner.current += 1 }
   }, [checked, filters])
-  const select = async (mode, ask = false) => {
+  const select = async (mode, ask = false, question = t('askSelected')) => {
     const generation = ++owner.current
     setState({ status: 'loading' })
     try {
       const value = await update('trial-selection', { workspace, job, mode, ...(mode === 'explicit' ? { trialIds: checked, filters: {} } : { filters }) })
       if (generation !== owner.current) return
       const context = contextFor({ trial: undefined, detail: undefined, selections: [value.ref] })
+      previousSnapshot.current = value.ref
       setState({ status: 'ready', value, context })
       setContext(context)
-      if (ask) await askContext(context, t('askSelected'))
+      if (ask) await askContext(context, question)
     } catch (error) { if (generation === owner.current) setState({ status: 'error', error: normalizeHarborUiError(error) }) }
   }
-  return <div className="hse-selection-bar"><strong>{t('selectedCount')}: {state.value?.count ?? checked.length}{state.value ? ` · ${state.value.mode}` : ''}</strong><div className="hse-local-actions"><button type="button" onClick={() => setChecked([...new Set([...checked, ...(page?.items ?? []).map(trial => trial.id)])])}>{t('allVisible')}</button><button type="button" disabled={!page?.total || state.status === 'loading'} onClick={() => void select('query-snapshot')}>{t('selectFiltered')} ({page?.total ?? 0})</button><button type="button" disabled={state.status === 'loading' || (!checked.length && !state.value)} onClick={() => state.value ? void askContext(state.context, t('askSelected')) : void select('explicit', true)}>{t('askSelected')}</button><button type="button" onClick={() => { owner.current += 1; setChecked([]); setState({ status: 'idle' }); setContext(contextFor({})) }}>{t('clearSelection')}</button></div>{state.status === 'loading' ? <small>{t('bindingContext')}</small> : null}{state.value ? <details><summary>{t('contextIdentity')}</summary><code>{state.value.ref.sourceDigest} · {state.value.filterDigest} · {state.value.expiresAt}</code></details> : null}{state.error ? <HarborErrorState error={state.error} t={t}/> : null}</div>
+  return <div className="hse-selection-bar"><strong>{t('selectedCount')}: {state.value?.count ?? checked.length}{state.value ? ` · ${state.value.mode}` : ''}</strong><div className="hse-local-actions"><button type="button" onClick={() => setChecked([...new Set([...checked, ...(page?.items ?? []).map(trial => trial.id)])])}>{t('allVisible')}</button><button type="button" disabled={!page?.total || state.status === 'loading'} onClick={() => void select('query-snapshot')}>{t('selectFiltered')} ({page?.total ?? 0})</button><button type="button" disabled={state.status === 'loading' || (!checked.length && !state.value)} onClick={() => state.value ? void askContext(state.context, t('askSelected')) : void select('explicit', true)}>{t('askSelected')}</button><button type="button" disabled={state.status === 'loading' || !(state.value?.count ?? checked.length) || (state.value?.count ?? checked.length) > 12} onClick={() => state.value ? void askContext(state.context, t('askDiagnostic')) : void select('explicit', true, t('askDiagnostic'))}>{t('prepareDiagnostic')} (1–12)</button><button type="button" onClick={() => { owner.current += 1; setChecked([]); setState({ status: 'idle' }); setContext(contextFor({})) }}>{t('clearSelection')}</button></div>{state.status === 'loading' ? <small>{t('bindingContext')}</small> : null}{state.value ? <details><summary>{t('contextIdentity')}</summary><code>{state.value.ref.sourceDigest} · {state.value.filterDigest} · {state.value.expiresAt}</code></details> : null}{state.error ? <HarborErrorState error={state.error} t={t}/> : null}</div>
 }
 
 function TrialExplorer({ job, workspace, active, navigation, restoreView, onViewStateChange, onRestoreReady, onRestoreCancel, contextFor, setContext, resetContext, askContext, t }) {
@@ -2144,16 +2152,17 @@ function GovernancePanel({ job, workspace, contextFor, setContext, askContext, n
     return () => { requestSequence.current += 1 }
   }, [load])
   const bindingIsCurrent = useCallback(loadedKey => ownsGovernanceBinding(activeGovernanceKey.current, loadedKey), [])
+  const receipt = saveReceipt?.requestKey === requestKey ? <SavedEvaluatorNextSteps receipt={saveReceipt.value} historicalJob={job} onPreparePlan={prompt => askContext(contextFor({}), prompt)} t={t}/> : null
   const currentState = state.requestKey === requestKey ? state : { requestKey, status: 'loading' }
-  if (currentState.status === 'loading') return <HarborSkeleton kind="governance" rows={6} label={t('loading')}/>
-  if (currentState.status === 'error') return <HarborErrorState error={currentState.error} retry={() => void load()} t={t}/>
+  if (currentState.status === 'loading') return <>{receipt}<HarborSkeleton kind="governance" rows={6} label={t('loading')}/></>
+  if (currentState.status === 'error') return <>{receipt}<HarborErrorState error={currentState.error} retry={() => void load()} t={t}/></>
   const value = currentState.value
   const evaluator = value.components?.evaluator
   const rubric = value.components?.rubric
   const workflow = value.upgradeWorkflow ?? {}
   const prompt = t('evaluatorPrompt')
   const copy = async () => { try { await navigator.clipboard.writeText(prompt); setCopied(true); window.setTimeout(() => setCopied(false), 1_500) } catch { setCopied(false) } }
-  return <>{saveReceipt?.requestKey === requestKey ? <section className="hse-section hse-save-receipt" role="status"><h3>{t('saved')}</h3><p>Evaluator {saveReceipt.value.evaluator?.version} · Stack {saveReceipt.value.stack?.version}</p><b>{t('freshBaseline')}</b><p>{t('editWarning')}</p></section> : null}<section className="hse-section"><h3>{t('currentEvaluator')}</h3><p className="hse-muted">{t('governanceHint')}</p><div className="hse-governance-id"><div className="hse-card"><span>{t('evaluator')}</span><b>{evaluator?.id ?? '—'} · {evaluator?.version ?? '—'}</b><code>{evaluator?.entry ?? '—'}</code></div><div className="hse-card"><span>{t('rubric')}</span><b>{rubric?.id ?? '—'} · {rubric?.version ?? '—'}</b><code>{rubric?.entry ?? '—'}</code></div><div className="hse-card"><span>Judge</span><b>{value.judge?.provider ?? '—'} / {value.judge?.model ?? '—'}</b><code>{judgeIdentityDetails(value.judge)}</code></div></div></section>
+  return <>{receipt}<section className="hse-section"><h3>{t('currentEvaluator')}</h3><p className="hse-muted">{t('governanceHint')}</p><div className="hse-governance-id"><div className="hse-card"><span>{t('evaluator')}</span><b>{evaluator?.id ?? '—'} · {evaluator?.version ?? '—'}</b><code>{evaluator?.entry ?? '—'}</code></div><div className="hse-card"><span>{t('rubric')}</span><b>{rubric?.id ?? '—'} · {rubric?.version ?? '—'}</b><code>{rubric?.entry ?? '—'}</code></div><div className="hse-card"><span>Judge</span><b>{value.judge?.provider ?? '—'} / {value.judge?.model ?? '—'}</b><code>{judgeIdentityDetails(value.judge)}</code></div></div></section>
     <EvaluatorEditor proposal={proposal} job={job} value={value} workspace={workspace} bindingKey={currentState.requestKey} bindingIsCurrent={bindingIsCurrent} reload={load} onSaved={value => setSaveReceipt({ requestKey, value })} t={t}/>{['evaluator', 'rubric'].map(role => <SavedSourceFragment key={role} component={value.components?.[role]} object={value.interactionObjects?.find(ref => ref.sourceRole === role)} contextFor={contextFor} setContext={setContext} askContext={askContext} navigation={navigation} t={t}/>)}
     {[['evaluator', evaluator], ['rubric', rubric]].map(([role, component]) => <section className="hse-section" key={role}><h3>{role === 'evaluator' ? t('evaluator') : t('rubric')} · {component?.id ?? '—'} · {component?.version ?? '—'}</h3><div className="hse-grid"><div className="hse-card"><span>{t('sourceCode')}</span><b>{component?.entry ?? '—'}</b><code>{short(component?.digest)}</code></div><div className="hse-card"><span>Reward semantics</span><b>{component?.reward_affecting ? 'reward-affecting' : 'non-reward'}</b><code>{component?.source?.error ?? 'read-only'}</code></div></div>{component?.source?.text ? <details className="hse-source-details"><summary>{t('sourceCode')}</summary><pre className="hse-source">{component.source.text}</pre></details> : <div className="hse-capability">{component?.source?.error}</div>}</section>)}
     <section className="hse-section hse-upgrade"><h3>{t('upgradeEvaluator')}</h3><p className="hse-muted">{t('upgradeHint')}</p><ol>{[1, 2, 3, 4, 5].map(index => <li key={index}>{t(`upgradeStep${index}`)}</li>)}</ol><div className="hse-grid"><div className="hse-card"><span>{t('freshBaseline')}</span><b>Evaluator / Rubric / Judge identity</b><code>{(workflow.freshBaselineRequiredWhen ?? []).join(' · ')}</code></div><div className="hse-card"><span>{t('metaEvaluation')}</span><b>Independent GT · ESF · SCE · RCR</b><code>No automatic evaluation or Gate</code></div></div><pre className="hse-prompt">{prompt}</pre><div className="hse-prompt-actions"><button className="hse-button" type="button" onClick={() => void copy()}>{copied ? t('copied') : t('copyPrompt')}</button></div></section></>

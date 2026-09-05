@@ -6,6 +6,7 @@ import { loadModelBinding } from './candidate.js'
 import { LOCAL_OBJECT_KINDS, interactionObjectCatalog, resolveCatalogSelection } from './interaction-objects.js'
 import { TrialSelectionRegistry, MAX_SELECTED_TRIALS } from './trial-selection.js'
 import { ActionDraftController } from './action-drafts.js'
+import { DiagnosticRunner } from './diagnostic-runner.js'
 import {
   containsCredentialText,
   containsLocalPath,
@@ -901,7 +902,14 @@ export class EvolutionService {
     this.trialSelections = metadata.trialSelections ?? new TrialSelectionRegistry(metadata.uiContextOptions)
     this.actionDrafts = new ActionDraftController({
       resolve: (token, owner) => this.resolveUiContext({ contextSnapshotId: token }, owner),
-      execute: async (draft, basis, owner) => {
+      prepare: (draft, basis, owner) => this._prepareDiagnostic(draft, owner),
+      execute: async (draft, basis, owner, execution) => {
+        if (execution) {
+          const { config } = await this._webContext({ workspace: draft.target.workspace, sessionId: owner.sessionId })
+          if (path.resolve(config.projectRoot) !== owner.projectRoot) throw new Error('HARBOR_ACTION_DENIED: Session project changed.')
+          const result = await new DiagnosticRunner(config, this.modelRuntime).execute(execution.plan, { ...execution, owner })
+          return { ...result, workspace: config.workspaceId, diagnosticOnly: true }
+        }
         if (draft.kind === 'compare') {
           const { config } = await this._webContext({ workspace: draft.target.workspace, sessionId: owner.sessionId })
           return { schema: 'harbor-readonly-comparison/v1', artifactTrust: 'untrusted-evidence', data: sanitizeAgentRead(await readComparison(config, { baseline: draft.target.baseline, candidate: draft.target.candidate }), { remaining: 48 * 1024 }), productionImpact: 'none' }
@@ -1578,6 +1586,33 @@ export class EvolutionService {
   previewAction(args) { return this.actionDrafts.preview(args, this._actionOwner(args.sessionId)) }
   confirmAction(args) { return this.actionDrafts.confirm(args, this._actionOwner(args.sessionId)) }
   actionOperation(args) { return this.actionDrafts.operation(args, this._actionOwner(args.sessionId)) }
+  cancelAction(args) { return this.actionDrafts.cancel(args, this._actionOwner(args.sessionId)) }
+
+  async _prepareDiagnostic(draft, owner) {
+    try {
+      // The bounded model-facing evidence reader is NOT execution authority.
+      // Resolve the Host-owned token and every frozen member independently.
+      const { context } = this.uiContexts.resolve({ contextSnapshotId: draft.contextSnapshotId, ...owner })
+      const { config } = await this._webContext({ workspace: context.workspace, sessionId: owner.sessionId })
+      if (path.resolve(config.projectRoot) !== owner.projectRoot) throw new Error('HARBOR_ACTION_DENIED: Session project changed.')
+      const job = context.route.params.job ?? context.object?.job
+      if (!job) throw new Error('HARBOR_DIAGNOSTIC_SELECTION_REQUIRED: Select completed Trials from a Candidate Job first.')
+      const sets = await this._selectionEntries(context, config)
+      const directIds = [context.object, ...(context.selection ?? [])].filter(ref => ref?.kind === 'trial').map(ref => ref.trial ?? ref.id)
+      const trialIds = sets.length ? sets.flatMap(entry => entry.value.members.map(member => member.id)) : [...new Set(directIds)]
+      if (!trialIds.length || trialIds.length > 12 || new Set(trialIds).size !== trialIds.length || (sets.length && directIds.length)) throw new Error('HARBOR_DIAGNOSTIC_SELECTION_REQUIRED: Select one frozen set of 1–12 completed Trials; mixed or duplicate selections cannot run.')
+      const trials = await this._allSelectionTrials(config, { job, trialIds })
+      if (trials.length !== trialIds.length || trials.some(trial => !trial.terminal)) throw new Error('HARBOR_DIAGNOSTIC_SELECTION_INVALID: Select completed Trials only.')
+      if (draft.kind === 'retry-infrastructure' && trials.some(trial => trial.status !== 'infrastructure-error' || !trial.exception)) throw new Error('HARBOR_DIAGNOSTIC_RETRY_SCOPE: Infrastructure retry requires terminal infrastructure exceptions, not quality failures or invalid scores.')
+      const sourceJobDir = resolveWithin(config.projectRoot, path.join(config.jobsDir, job), 'sourceJobDir')
+      const plan = await new DiagnosticRunner(config, this.modelRuntime).prepare({ owner, sourceJobDir, trialIds })
+      return { plan, blocking: [], public: { execution: 'bounded-diagnostic', diagnosticOnly: true, trialCount: trialIds.length, limits: plan.effectiveLimits ?? plan.limits, identities: plan.identities ?? draft.identities, estimatedExternalRequests: null, estimatedHostModelRequests: (plan.effectiveLimits ?? plan.limits).maxModelRequests, costEstimate: 'Candidate Host model gateway requests and returned bytes are bounded, with a Job wall timeout. Dataset verifier or business-script external APIs are outside that gateway quota; their request counts and costs are unknown. No token or total currency guarantee. Diagnostic subset results cannot replace a full baseline.', cancellation: 'Stops the owned process tree and closes its model lease. Docker cleanup must be checked if interrupted; already incurred costs cannot be undone.' } }
+    } catch (cause) {
+      const message = redactLocalPaths(redactOpaqueSecretText(redactCredentialText(String(cause?.message ?? 'Diagnostic prerequisites unavailable.')))).slice(0, 1000)
+      const code = message.match(/^(HARBOR_[A-Z0-9_]+):/)?.[1] ?? 'HARBOR_DIAGNOSTIC_UNAVAILABLE'
+      return { blocking: [{ code, message }], public: { execution: 'bounded-diagnostic', diagnosticOnly: true } }
+    }
+  }
 
   async dataset(args) {
     const { config } = await this._webContext(args)
