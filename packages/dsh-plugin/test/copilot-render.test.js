@@ -67,6 +67,7 @@ async function harness({ ui: initialUi = {}, session = {}, prepareQuestion } = {
       return slots[index]
     },
     useCallback: callback => callback,
+    useContext: () => SESSION,
     useMemo: factory => factory(),
     useSyncExternalStore: (_subscribe, getSnapshot) => getSnapshot(),
     // These tests target initial render and explicit handlers. Host async

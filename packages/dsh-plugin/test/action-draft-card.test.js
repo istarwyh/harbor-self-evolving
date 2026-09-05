@@ -254,14 +254,14 @@ test('polling reads one stable operation sequentially every 1.5 seconds and stop
   dispose()
 })
 
-test('unknown status after acceptance is retried read-only, while restart recovery interrupts polling', async () => {
+test('unknown status is retried read-only; recovery checks continue until explicit unlock without resuming work', async () => {
   const errors = []
   const timers = []
   let calls = 0
   const accepted = []
   const dispose = pollActionOperation({
     draft: diagnosticDraft, initialOperation: operation('EXECUTING'),
-    request: async () => { if (++calls === 1) throw new Error('HARBOR_NETWORK_ERROR: unavailable'); return { ...operation('INTERRUPTED', 2), recoveryRequired: true } },
+    request: async () => { if (++calls === 1) throw new Error('HARBOR_NETWORK_ERROR: unavailable'); return { ...operation('INTERRUPTED', 2), recoveryRequired: calls < 3, ...(calls >= 3 ? { recovery: { released: true } } : {}) } },
     onOperation: value => accepted.push(value), onError: error => errors.push(error),
     schedule: callback => { timers.push(callback); return timers.length }, unschedule() {},
   })
@@ -269,6 +269,10 @@ test('unknown status after acceptance is retried read-only, while restart recove
   assert.equal(errors.length, 1)
   await timers.shift()()
   assert.equal(accepted[0].status, 'INTERRUPTED')
+  assert.equal(timers.length, 1)
+  await timers.shift()()
+  assert.equal(accepted[1].status, 'INTERRUPTED')
+  assert.equal(accepted[1].recovery.released, true)
   assert.equal(timers.length, 0)
   dispose()
 })

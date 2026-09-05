@@ -2,12 +2,13 @@ import React, { useEffect, useRef, useState } from 'react'
 import {
   actionDraftAuthorizationExpired, actionDraftCanConfirm, actionDraftComparison,
   actionDraftErrorCode, actionDraftExpiry, actionDraftNeedsReprepare,
-  actionDraftDiagnosticPreview, actionDraftDiagnosticResult, actionDraftDiagnosticSummary, actionOperationActive,
+  actionDraftDiagnosticPreview, actionDraftDiagnosticResult, actionDraftDiagnosticSummary, actionOperationActive, actionOperationNeedsObservation,
   actionOperationFailure, acceptActionOperation, pollActionOperation,
 } from './action-draft-state.js'
 
 export const ACTION_CARD_MESSAGES = {
   zh: {
+    actionStateRecovered: '已核查并解锁；未重试', actionRecoveryReleased: '诊断锁已解除。原运行状态和证据保留，没有自动重试。', actionRecoveryTaskCenter: '打开上方「后台任务」，核查进程与资源后可确认解锁。', actionDiagnosticPartialView: '查看运行／部分证据',
     actionSuggestion: 'AI 建议', actionReviewSource: '审阅并修改',
     actionSourceBoundary: '只在编辑器中打开修改建议，不会改动文件。审阅后保存才会创建新版本。',
     actionSourceBaseline: '修改评测规则后，需要使用新规则建立新的基线，旧结果不会被覆盖。',
@@ -65,6 +66,7 @@ export const ACTION_CARD_MESSAGES = {
     actionCancelFailed: '停止请求未得到确认，运行状态未改变。请恢复操作状态后再处理。',
   },
   en: {
+    actionStateRecovered: 'Inspected and unlocked; not retried', actionRecoveryReleased: 'Diagnostic lock released. Original status and evidence retained; no automatic retry.', actionRecoveryTaskCenter: 'Open Background tasks above to inspect the process and resources before confirming unlock.', actionDiagnosticPartialView: 'View run / partial evidence',
     actionSuggestion: 'AI suggestion', actionReviewSource: 'Review and edit',
     actionSourceBoundary: 'Opens the suggestion in the editor without changing files. Only your reviewed save creates a new version.',
     actionSourceBaseline: 'Changing evaluation rules requires a fresh baseline. Historical results remain unchanged.',
@@ -164,7 +166,7 @@ export function ActionDraftCardView({ draft, onSourceDraft, onReprepare, onViewC
 
   useEffect(() => {
     if (!draft.operationId) return undefined
-    if (state.operation && !actionOperationActive(state.operation)) return undefined
+    if (state.operation && !actionOperationNeedsObservation(state.operation)) return undefined
     setReceipt({ loading: true })
     return pollActionOperation({
       draft, request, initialOperation: state.operation,
@@ -196,11 +198,12 @@ export function ActionDraftCardView({ draft, onSourceDraft, onReprepare, onViewC
   const diagnosticResult = actionDraftDiagnosticResult(state.operation)
   const diagnosticSummary = actionDraftDiagnosticSummary(state.operation)
   const diagnosticStatusKey = { exceptions: 'actionStateDiagnosticExceptions', 'no-valid-scores': 'actionStateDiagnosticNoScores', partial: 'actionStateDiagnosticPartial', unverified: 'actionStateDiagnosticUnknown', finished: 'actionStateDiagnosticComplete' }[diagnosticSummary?.status] ?? 'actionStateDiagnosticUnknown'
-  const interrupted = state.operation?.recoveryRequired === true || state.status === 'INTERRUPTED'
-  const cleanupRequired = state.operation?.cleanupRequired === true || result?.cleanupRequired === true
+  const recovered = state.operation?.recovery?.released === true
+  const interrupted = !recovered && (state.operation?.recoveryRequired === true || state.status === 'INTERRUPTED')
+  const cleanupRequired = !recovered && (state.operation?.cleanupRequired === true || result?.cleanupRequired === true)
   const busy = state.status === 'VALIDATING' || state.status === 'EXECUTING' || activeOperation
   const canConfirm = !receipt.loading && !receipt.error && actionDraftCanConfirm(draft, state, reviewed, clock)
-  const statusKey = interrupted ? 'actionStateInterrupted' : receipt.error && activeOperation ? 'actionStateUnverified' : comparison ? 'actionStateCompared'
+  const statusKey = recovered ? 'actionStateRecovered' : interrupted ? 'actionStateInterrupted' : receipt.error && activeOperation ? 'actionStateUnverified' : comparison ? 'actionStateCompared'
     : state.status === 'COMPLETED' ? diagnostic ? diagnosticStatusKey : 'actionStateSaved'
       : needsReprepare ? 'actionStateExpired'
         : ({ VALIDATING: 'actionStateChecking', READY_FOR_REVIEW: 'actionStateReady', BLOCKED: 'actionStateBlocked', SCHEDULED: 'actionStateScheduled', EXECUTING: diagnostic && state.operation ? 'actionStateRunning' : 'actionStateExecuting', ACTIVE: 'actionStateRunning', CANCELLING: 'actionStateCancelling', CANCELLED: 'actionStateCancelled', FAILED: 'actionStateFailed' })[state.status] ?? 'actionStateDraft'
@@ -300,12 +303,15 @@ export function ActionDraftCardView({ draft, onSourceDraft, onReprepare, onViewC
     </div> : null}
 
     {diagnostic && state.operation ? <section className="hse-action-next-step">
+      {recovered ? <p role="status">{label('actionRecoveryReleased')}</p> : null}
       {interrupted ? <p role="alert">{label('actionInterruptedBoundary')}</p>
         : state.status === 'CANCELLED' ? <p>{label('actionCancelledBoundary')}</p>
           : state.status === 'COMPLETED' ? <><p>{label('actionDiagnosticCompleted')}</p>{diagnosticResult && onViewResult ? <button type="button" disabled={opening} onClick={() => void open(() => onViewResult(diagnosticResult))}>{label('actionDiagnosticView')}</button> : !diagnosticResult ? <p role="alert">{label('actionDiagnosticResultMissing')}</p> : null}</>
             : activeOperation ? <><p>{label(state.status === 'CANCELLING' || cancelPending ? 'actionCancelPending' : 'actionDiagnosticAccepted')}</p><button type="button" disabled={cancelPending || state.status === 'CANCELLING'} onClick={() => void cancel()}>{label(state.status === 'CANCELLING' || cancelPending ? 'actionStateCancelling' : 'actionCancelDiagnostic')}</button></> : null}
       {['FAILED', 'INTERRUPTED'].includes(state.status) || interrupted ? <p className="hse-muted">{actionOperationFailure(state.operation)}</p> : null}
       {cleanupRequired && !interrupted ? <p role="alert">{label('actionCleanupRequired')}</p> : null}
+      {(cleanupRequired || interrupted) ? <p>{label('actionRecoveryTaskCenter')}</p> : null}
+      {state.status !== 'COMPLETED' && diagnosticResult && onViewResult ? <button type="button" disabled={opening} onClick={() => void open(() => onViewResult(diagnosticResult))}>{label('actionDiagnosticPartialView')}</button> : null}
       {diagnosticSummary ? <section className="hse-diagnostic-summary" data-result-status={diagnosticSummary.status}>
         <h4>{label('actionDiagnosticSummary')}</h4><dl>
           {[['trials', 'actionDiagnosticTrials'], ['validScores', 'actionDiagnosticValidScores'], ['invalidScores', 'actionDiagnosticInvalidScores'], ['exceptions', 'actionDiagnosticExceptions'], ['unscored', 'actionDiagnosticUnscored'], ['discovered', 'actionDiagnosticDiscovered']].map(([key, message]) => <React.Fragment key={key}><dt>{label(message)}</dt><dd>{diagnosticSummary.counts[key] ?? '—'}</dd></React.Fragment>)}

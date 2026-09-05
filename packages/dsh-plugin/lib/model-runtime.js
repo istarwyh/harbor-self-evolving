@@ -291,6 +291,8 @@ export class CandidateModelRuntime {
       candidateProvider: CANDIDATE_GATEWAY_PROVIDER,
       modelInfo: binding.model_info,
       limits: { ...limits },
+      // Host-only observation: no gateway URL, token or request content escapes.
+      usage: () => ({ modelRequests: requestCount, maxModelRequests: limits.maxRequests }),
       async close() {
         if (closed) return
         closed = true

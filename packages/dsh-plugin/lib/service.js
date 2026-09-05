@@ -7,6 +7,7 @@ import { LOCAL_OBJECT_KINDS, interactionObjectCatalog, resolveCatalogSelection }
 import { TrialSelectionRegistry, MAX_SELECTED_TRIALS } from './trial-selection.js'
 import { ActionDraftController } from './action-drafts.js'
 import { DiagnosticRunner } from './diagnostic-runner.js'
+import { prepareEvaluatorSaveHistory, readEvaluatorSave, recordEvaluatorSave } from './evaluator-saves.js'
 import {
   containsCredentialText,
   containsLocalPath,
@@ -903,6 +904,16 @@ export class EvolutionService {
     this.actionDrafts = new ActionDraftController({
       resolve: (token, owner) => this.resolveUiContext({ contextSnapshotId: token }, owner),
       prepare: (draft, basis, owner) => this._prepareDiagnostic(draft, owner),
+      observe: async (operation, owner) => {
+        const { config } = await this._webContext({ workspace: operation.target?.workspace, sessionId: owner.sessionId })
+        if (path.resolve(config.projectRoot) !== owner.projectRoot) throw new Error('HARBOR_ACTION_DENIED: Session project changed.')
+        return new DiagnosticRunner(config, this.modelRuntime).observe(operation, { owner })
+      },
+      inspect: async (operation, owner) => {
+        const { config } = await this._webContext({ workspace: operation.target?.workspace, sessionId: owner.sessionId })
+        if (path.resolve(config.projectRoot) !== owner.projectRoot) throw new Error('HARBOR_ACTION_DENIED: Session project changed.')
+        return new DiagnosticRunner(config, this.modelRuntime).inspect(operation, { owner })
+      },
       execute: async (draft, basis, owner, execution) => {
         if (execution) {
           const { config } = await this._webContext({ workspace: draft.target.workspace, sessionId: owner.sessionId })
@@ -1586,6 +1597,9 @@ export class EvolutionService {
   previewAction(args) { return this.actionDrafts.preview(args, this._actionOwner(args.sessionId)) }
   confirmAction(args) { return this.actionDrafts.confirm(args, this._actionOwner(args.sessionId)) }
   actionOperation(args) { return this.actionDrafts.operation(args, this._actionOwner(args.sessionId)) }
+  listActionOperations(args) { return this.actionDrafts.list(args, this._actionOwner(args.sessionId)) }
+  inspectActionOperation(args) { return this.actionDrafts.inspect(args, this._actionOwner(args.sessionId)) }
+  recoverActionOperation(args) { return this.actionDrafts.recover(args, this._actionOwner(args.sessionId)) }
   cancelAction(args) { return this.actionDrafts.cancel(args, this._actionOwner(args.sessionId)) }
 
   async _prepareDiagnostic(draft, owner) {
@@ -1633,9 +1647,10 @@ export class EvolutionService {
     const { config } = await this._webContext(args)
     const governance = await readEvaluatorGovernance(config, args)
     governance.interactionObjects = interactionObjectCatalog(args.job, undefined, undefined, governance).map(item => item.ref)
+    let current
     try {
       const stackPath = await resolveEvaluatorStackPath(config, governance, args.stackPath)
-      const current = await inspectEvaluator(config, { ...args, stackPath })
+      current = await inspectEvaluator(config, { ...args, stackPath })
       const historicalEvaluator = governance.components?.evaluator
       const identityMatches = current.stack?.id === governance.stackIdentity.id
         && current.stack?.version === governance.stackIdentity.version
@@ -1658,12 +1673,32 @@ export class EvolutionService {
       governance.evaluatorInterface = { error: error instanceof Error ? error.message : String(error) }
       governance.editingPolicy.identityMatch = false
     }
+    if (args.sessionId) {
+      try {
+        governance.savedEvaluatorVersion = await readEvaluatorSave(config, { ...args, workspace: config.workspaceId }, governance, current, stackPath => inspectEvaluator(config, { stackPath }))
+      } catch {
+        governance.savedEvaluatorRecovery = { status: 'UNAVAILABLE', code: 'HARBOR_EVALUATOR_SAVE_HISTORY_UNAVAILABLE' }
+      }
+    }
     return governance
   }
 
-  async evaluator(args) {
-    const config = args.workspace ? (await this._webContext(args)).config : this.config
-    return updateEvaluator(config, args)
+  async evaluator(args, { browser = false } = {}) {
+    // Non-browser callers retain the existing CLI behavior. Browser writes are
+    // bound to the actual Session, workspace, and historical source Job; the
+    // submitted stack path alone is never sufficient authorization to associate
+    // a save with that Job's continuation history.
+    if (browser && (!args.sessionId || !args.workspace || !args.job)) throw new Error('HARBOR_EVALUATOR_SOURCE_REQUIRED: Save from an active Session, workspace, and historical source Job.')
+    if (!args.workspace && !args.sessionId) return updateEvaluator(this.config, args)
+    const { config } = await this._webContext(args)
+    if (!args.sessionId || !args.job) throw new Error('HARBOR_EVALUATOR_SOURCE_REQUIRED: Save from an active Session and its historical source Job.')
+    const governance = await this.governance(args)
+    if (!governance.editingPolicy?.identityMatch || !governance.evaluatorInterface?.stack?.path) throw new Error('HARBOR_EVALUATOR_BINDING_STALE: The current Evaluator no longer matches this historical Job; reload before saving.')
+    const scope = { ...args, workspace: config.workspaceId }
+    await prepareEvaluatorSaveHistory(config, scope)
+    const receipt = await updateEvaluator(config, { ...args, stackPath: governance.evaluatorInterface.stack.path })
+    try { return await recordEvaluatorSave(config, scope, governance, receipt) }
+    catch { return { ...receipt, continuation: { verification: 'VERIFIED', durable: false, code: 'HARBOR_EVALUATOR_SAVE_HISTORY_UNAVAILABLE' } } }
   }
 
   async evaluatorInspect(args) {

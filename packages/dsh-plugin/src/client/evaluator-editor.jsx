@@ -225,7 +225,7 @@ export function EvaluatorEditorView({ value, workspace, job, sessionId, bindingK
     const submitted = { key, bindingKey, text: draft }
     setSaveState({ status: 'saving' })
     try {
-      const receipt = await update('evaluator', { workspace, stackPath: active.stack.path, filePath: selected.path, content: draft, expectedDigest: record?.baseDigest ?? selected.digest, newEvaluatorVersion: evaluatorVersion, newStackVersion: stackVersion })
+      const receipt = await update('evaluator', { workspace, job, stackPath: active.stack.path, filePath: selected.path, content: draft, expectedDigest: record?.baseDigest ?? selected.digest, newEvaluatorVersion: evaluatorVersion, newStackVersion: stackVersion })
       // A successful request must not erase edits made while it was in flight.
       if (cache.get(submitted.key)?.text === submitted.text) cache.remove(submitted.key)
       if (bindingIsCurrent(submitted.bindingKey)) {

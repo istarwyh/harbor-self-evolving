@@ -38,6 +38,9 @@ async function harness(overrides = {}) {
     if (args[0] === 'diagnostic-subset') return { code: 0, stdout: JSON.stringify(args[1] === 'plan' ? plan : materialized), stderr: '' }
     if (args[0] === 'docker-check') return { code: 0, stdout: '{"valid":true}', stderr: '' }
     if (args[0] === '--version') return { code: 0, stdout: 'harbor 0.21.3', stderr: '' }
+    if (command === 'ioreg') return { code: 0, stdout: '"IOPlatformUUID" = "00000000-0000-4000-8000-000000000001"', stderr: '' }
+    if (command === 'docker' && args[0] === 'info') return { code: 0, stdout: 'docker-test-daemon-id-1', stderr: '' }
+    if (command === 'docker' && args[0] === 'context') return { code: 0, stdout: args[1] === 'inspect' ? 'unix:///test/docker.sock' : 'test-desktop', stderr: '' }
     if (args[0] === 'run') {
       await options.onSpawn(42)
       const job = args[args.indexOf('--job-name') + 1]
@@ -60,7 +63,7 @@ test('prepare is read-only and does not open a lease, materialize or launch a Jo
   assert.equal(plan.planDigest, h.plan.planDigest)
   assert.deepEqual(await readdir(h.root), [])
   assert.equal(h.leases.length, 0)
-  assert.deepEqual(h.calls.map(call => call.args.slice(0, 2)), [['diagnostic-subset', 'plan'], ['docker-check'], ['--version']])
+  assert.deepEqual(h.calls.filter(call => call.command !== 'docker').map(call => call.args.slice(0, 2)), [['diagnostic-subset', 'plan'], ['docker-check'], ['--version']])
   assert.deepEqual(JSON.parse(h.calls[0].options.input), { projectRoot: h.root, sourceJobDir: path.join(h.root, 'jobs/source'), trialIds: ['trial-1'] })
 })
 
@@ -81,6 +84,10 @@ test('execute uses the fixed bounded CLI and a scoped lease, never promotion fla
   assert.equal(h.closed.length, 1)
   assert.equal(spawns[0].pid, 42)
   assert.equal(spawns[0].detail.job, 'diagnostic-test-1')
+  assert.equal(spawns[0].detail.process.dockerTransport, 'pinned-local-unix/v1')
+  assert.match(spawns[0].detail.process.hostIdentity, /^sha256:[a-f0-9]{64}$/)
+  assert.equal(call.options.env.DOCKER_CONTEXT, undefined)
+  assert.match(call.options.env.DOCKER_HOST, /^unix:\/\/\//)
   assert.equal(result.schema, 'harbor-diagnostic-operation-result/v1')
   assert.equal(result.jobName, 'diagnostic-test-1')
   assert.equal(result.job, result.jobName)
@@ -113,6 +120,13 @@ test('runtime blockers are actionable and cannot start a Job', async () => {
   const h = await harness({ process: (_command, args) => args[0] === 'docker-check' ? { code: 2, stdout: '{"valid":false,"findings":[{"level":"error","code":"DOCKER_DAEMON_UNAVAILABLE","message":"/secret/path"}]}', stderr: '' } : undefined })
   await assert.rejects(h.runner.prepare({ owner: h.owner, sourceJobDir: 'jobs/source', trialIds: ['trial-1'] }), error => /RUNTIME_BLOCKED.*DOCKER_DAEMON_UNAVAILABLE/.test(error.message) && !/secret/.test(error.message))
   assert.equal(h.leases.length, 0)
+})
+
+test('remote Docker transports are blocked in preflight before materialization or model lease', async () => {
+  const h = await harness({ process: (command, args) => command === 'docker' && args[0] === 'context' && args[1] === 'inspect' ? { code: 0, stdout: 'tcp://remote-docker:2376', stderr: '' } : undefined })
+  await assert.rejects(h.runner.prepare({ owner: h.owner, sourceJobDir: 'jobs/source', trialIds: ['trial-1'] }), /RUNTIME_UNSUPPORTED.*local Docker Unix socket/)
+  assert.equal(h.leases.length, 0)
+  assert.equal(h.calls.some(call => call.args[1] === 'materialize' || call.args[0] === 'run'), false)
 })
 
 test('wrong model binding fails closed instead of silently switching models', async () => {

@@ -259,12 +259,15 @@ test('scoped request quota is consumed before execution and cannot be raised by 
   const { value, calls } = runtime({ config: { modelBrokerMaxRequests: 100 } })
   const lease = await value.openLease(await value.resolve(), { maxRequests: 1 })
   try {
+    assert.deepEqual(lease.usage(), { modelRequests: 0, maxModelRequests: 1 })
     const responses = await Promise.all([request(lease, { messages: [], maxRequests: 99999 }), request(lease)])
     assert.deepEqual(responses.map(response => response.status).sort(), [200, 429])
     await Promise.all(responses.map(response => response.text()))
     assert.equal(calls.length, 1)
     assert.equal(calls[0].maxRequests, undefined)
     assert.deepEqual(lease.limits, { maxRequests: 1 })
+    assert.deepEqual(lease.usage(), { modelRequests: 1, maxModelRequests: 1 })
+    assert.deepEqual(Object.keys(lease.usage()).sort(), ['maxModelRequests', 'modelRequests'])
   } finally { await lease.close() }
 })
 

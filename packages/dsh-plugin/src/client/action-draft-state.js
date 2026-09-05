@@ -43,6 +43,10 @@ export function actionOperationActive(operation) {
   return operation?.recoveryRequired !== true && ACTIVE_OPERATION_STATES.has(operation?.status)
 }
 
+export function actionOperationNeedsObservation(operation) {
+  return actionOperationActive(operation) || (!operation?.recovery?.released && (operation?.cleanupRequired === true || operation?.recoveryRequired === true))
+}
+
 export function actionDraftDiagnosticPreview(preview) {
   if (preview?.execution !== 'bounded-diagnostic' || preview?.diagnosticOnly !== true) return undefined
   const { limits, trialCount } = preview
@@ -72,6 +76,9 @@ export function acceptActionOperation(draft, current, incoming) {
   if (!current) return incoming
   if (current.operationId && incoming.operationId !== current.operationId) invalid('The operation identity changed while tracking it.')
   const previousSequence = actionOperationSequence(current)
+  if (previousSequence === nextSequence && current.status === incoming.status && ['progress', 'resultRef', 'recovery'].some(key => Object.hasOwn(incoming, key))) {
+    return { ...current, ...Object.fromEntries(['progress', 'resultRef', 'recovery', 'cleanupRequired', 'recoveryRequired'].filter(key => Object.hasOwn(incoming, key)).map(key => [key, incoming[key]])) }
+  }
   // A late read must not regress an acknowledged cancellation or completion.
   if (previousSequence !== undefined && nextSequence !== undefined && nextSequence <= previousSequence) return current
   if (TERMINAL_OPERATION_STATES.has(current.status) || current.recoveryRequired === true) return current
@@ -79,6 +86,8 @@ export function acceptActionOperation(draft, current, incoming) {
 }
 
 export function actionDraftDiagnosticResult(operation) {
+  const ref = operation?.resultRef
+  if (ref?.verified === true && /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(ref.jobName ?? '')) return { ...ref, diagnosticOnly: true, partial: operation.status !== 'COMPLETED' }
   const result = operation?.events?.at(-1)?.result
   if (operation?.status !== 'COMPLETED' || result?.diagnosticOnly !== true || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(result?.jobName ?? '')) return undefined
   return result
@@ -130,7 +139,7 @@ export function pollActionOperation({ draft, request, initialOperation, getCurre
       if (!alive) return
       current = acceptActionOperation(draft, getCurrent?.() ?? current, incoming)
       onOperation(current)
-      if (actionOperationActive(current)) timer = schedule(poll, Math.min(2000, Math.max(100, intervalMs)))
+      if (actionOperationNeedsObservation(current)) timer = schedule(poll, actionOperationActive(current) ? Math.min(2000, Math.max(100, intervalMs)) : 5000)
     } catch (error) {
       if (!alive) return
       current = getCurrent?.() ?? current
@@ -138,7 +147,7 @@ export function pollActionOperation({ draft, request, initialOperation, getCurre
       if (!current && absent) onAbsent?.()
       else {
         onError?.(error)
-        if (actionOperationActive(current)) timer = schedule(poll, Math.min(2000, Math.max(100, intervalMs)))
+        if (actionOperationNeedsObservation(current)) timer = schedule(poll, actionOperationActive(current) ? Math.min(2000, Math.max(100, intervalMs)) : 5000)
       }
     }
   }

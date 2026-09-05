@@ -3,6 +3,7 @@ import { constants } from 'node:fs'
 import path from 'node:path'
 import { runBoundedProcess } from './bounded-process.js'
 import { buildEvaluationRunReceipt, redactDiagnostic, resolveWithin } from './evolution.js'
+import { inspectDiagnostic, observeDiagnostic, pinDiagnosticEnvironment, readDiagnosticRuntimeIdentity } from './diagnostic-observation.js'
 
 export const DIAGNOSTIC_LIMITS = Object.freeze({ maxTrials: 12, concurrency: 2, attempts: 1, maxRetries: 0, wallTimeoutMs: 900_000, maxModelRequests: 96, maxResponseBytes: 1_048_576 })
 const AGENT = 'harbor_dsh_evolution.agent:DshCandidateAgent'
@@ -43,11 +44,20 @@ async function safeJsonArtifact(root, file, maxBytes = 4 * 1024 * 1024) {
 
 /** Fixed CLI adapter. Authorization, idempotency and persistent Operation state belong to the Host controller. */
 export class DiagnosticRunner {
-  constructor(config, modelRuntime, { runProcess = runBoundedProcess, platform = process.platform } = {}) {
+  constructor(config, modelRuntime, { runProcess = runBoundedProcess, platform = process.platform, processProbe } = {}) {
     this.config = config
     this.modelRuntime = modelRuntime
     this.runProcess = runProcess
     this.platform = platform
+    this.processProbe = processProbe
+  }
+
+  async observe(operation, { owner } = {}) {
+    return observeDiagnostic(this.config, operation, { root: await this._root(owner) })
+  }
+
+  async inspect(operation, { owner } = {}) {
+    return inspectDiagnostic(this.config, operation, { root: await this._root(owner), runProcess: this.runProcess, processProbe: this.processProbe, platform: this.platform })
   }
 
   async _root(owner) {
@@ -96,6 +106,9 @@ export class DiagnosticRunner {
       const codes = (runtime?.findings ?? []).filter(item => item.level === 'error').map(item => String(item.code)).filter(code => /^DOCKER_[A-Z_]+$/.test(code))
       throw failure('HARBOR_DIAGNOSTIC_RUNTIME_BLOCKED', `Docker is not ready (${codes.join(', ') || 'DOCKER_UNAVAILABLE'}). Fix the runtime and check parameters again; no Job was started.`)
     }
+    // This is a read-only capability check. Unsupported remote/TLS transports
+    // must be visible in preflight, not discovered after user confirmation.
+    await pinDiagnosticEnvironment(this.runProcess, this._environment())
     try {
       const version = await this.runProcess(this.config.harborBin, ['--version'], { cwd: root, env: this._environment(), timeoutMs: 10_000, signal, maxOutputBytes: 4096 })
       if (!/\b0\.21\.\d+(?:\b|[-+])/.test(version.stdout)) throw failure('HARBOR_DIAGNOSTIC_RUNTIME_UNSUPPORTED', 'The bounded runner requires the installed Harbor 0.21 adapter contract.')
@@ -103,7 +116,7 @@ export class DiagnosticRunner {
     return { ...plan, effectiveLimits: { ...plan.limits, maxModelRequests: budget.maxRequests, maxResponseBytes: budget.maxResponseBytes } }
   }
 
-  async execute(plan, { owner, operationId, signal, onSpawn } = {}) {
+  async execute(plan, { owner, operationId, signal, onSpawn, onUsage } = {}) {
     if (!OPERATION_ID.test(operationId ?? '')) throw failure('HARBOR_DIAGNOSTIC_OPERATION_INVALID', 'A stable Host Operation ID is required.')
     assertPlan(plan)
     aborted(signal)
@@ -146,8 +159,14 @@ export class DiagnosticRunner {
     ]
     if (binding.reasoning_effort !== undefined) args.push('--ak', `candidate_reasoning_effort=${binding.reasoning_effort}`, '--plugin-kwarg', `candidate_reasoning_effort=${binding.reasoning_effort}`)
     aborted(signal)
+    const environment = await pinDiagnosticEnvironment(this.runProcess, this._environment())
+    const runtimeIdentity = await readDiagnosticRuntimeIdentity({ runProcess: this.runProcess, platform: this.platform, env: environment })
+    aborted(signal)
     const lease = await this.modelRuntime.openLease(binding, { candidateDigest: identity.digest, jobName, maxRequests: fresh.effectiveLimits.maxModelRequests, maxResponseBytes: fresh.effectiveLimits.maxResponseBytes })
     let processStarted = false
+    // A lightweight in-memory counter is sampled by the controller; unlike
+    // lifecycle evidence, request usage cannot be reconstructed after restart.
+    onUsage?.(() => lease.usage?.())
     const executionError = error => {
       const safe = safeProcessError(error)
       if (processStarted) Object.assign(safe, { cleanupRequired: true, jobName, diagnosticOnly: true })
@@ -155,9 +174,9 @@ export class DiagnosticRunner {
     }
     try {
       const result = await this.runProcess(this.config.harborBin, args, {
-        cwd: root, env: { ...this._environment(), HSE_MODEL_GATEWAY_URL: lease.endpoint, HSE_MODEL_GATEWAY_TOKEN: lease.token, HSE_MODEL_GATEWAY_PROVIDER: lease.candidateProvider, HSE_MODEL_GATEWAY_INFO: JSON.stringify(lease.modelInfo), HSE_MODEL_GATEWAY_PROTOCOL: lease.protocol },
+        cwd: root, env: { ...environment, HSE_MODEL_GATEWAY_URL: lease.endpoint, HSE_MODEL_GATEWAY_TOKEN: lease.token, HSE_MODEL_GATEWAY_PROVIDER: lease.candidateProvider, HSE_MODEL_GATEWAY_INFO: JSON.stringify(lease.modelInfo), HSE_MODEL_GATEWAY_PROTOCOL: lease.protocol },
         timeoutMs: DIAGNOSTIC_LIMITS.wallTimeoutMs, maxOutputBytes: 2 * 1024 * 1024, killGraceMs: 30_000, signal,
-        onSpawn: pid => { processStarted = true; return onSpawn?.(pid, { job: jobName, dataset: materialized.datasetIdentity, operationId }) },
+        onSpawn: pid => { processStarted = true; return onSpawn?.(pid, { job: jobName, dataset: materialized.datasetIdentity, operationId, process: { pid, groupId: pid, platform: this.platform, dockerTransport: 'pinned-local-unix/v1', ...runtimeIdentity } }) },
       })
       const summary = await safeJsonArtifact(root, path.join(jobDir, 'evaluation-summary.json'))
       const context = await safeJsonArtifact(root, path.join(jobDir, 'evaluation-context.json'))

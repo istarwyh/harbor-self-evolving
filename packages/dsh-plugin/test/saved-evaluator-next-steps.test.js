@@ -88,6 +88,15 @@ test('read-only version files require a bounded source and digest and never reso
   assert.equal(savedEvaluatorFiles(undefined).length, 0)
 })
 
+test('restored drifted or unavailable versions retain identity display but cannot prepare a plan or show unverified source', () => {
+  for (const verification of ['DRIFTED', 'UNAVAILABLE', 'unknown']) {
+    const value = { ...receipt(), continuation: { verification, durable: true, recovered: true } }
+    assert.equal(buildSavedEvaluatorPlan(value, { historicalJob: 'job-a' }), undefined)
+    assert.deepEqual(savedEvaluatorFiles(value), [])
+  }
+  assert.ok(buildSavedEvaluatorPlan({ ...receipt(), continuation: { verification: 'VERIFIED', durable: true, recovered: true } }, { historicalJob: 'job-a' }))
+})
+
 function harness(initialProps) {
   const values = []
   let cursor = 0
@@ -110,6 +119,16 @@ function harness(initialProps) {
 
 const planLabel = SAVED_EVALUATOR_MESSAGES.en.savedVersionPlan
 const viewLabel = SAVED_EVALUATOR_MESSAGES.en.savedVersionView
+
+test('recovery tells the user when identity drift prevents continuation without hiding the saved version', async () => {
+  const value = { ...receipt(), continuation: { verification: 'DRIFTED', durable: true, recovered: true } }
+  const ui = harness({ receipt: value, historicalJob: 'job-a', onPreparePlan() { throw new Error('must not prepare stale receipt') } })
+  assert.equal(ui.button(planLabel).props.disabled, true)
+  assert.ok(ui.render().some(node => node.props.children === SAVED_EVALUATOR_MESSAGES.en.savedVersionDrifted))
+  await ui.click(viewLabel)
+  assert.ok(ui.render().some(node => node.type === 'code' && node.props.children === value.stack.path))
+  assert.equal(ui.render().some(node => node.type === 'pre'), false)
+})
 
 test('viewing the saved version is local, read-only, and separate from preparing an AI question', async () => {
   let preparations = 0
