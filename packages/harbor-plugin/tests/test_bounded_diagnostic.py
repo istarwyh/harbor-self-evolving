@@ -9,8 +9,10 @@ from types import SimpleNamespace
 import pytest
 from harbor.models.job.config import DatasetConfig
 
+import harbor_dsh_evolution.bounded_diagnostic as diagnostic_module
 from harbor_dsh_evolution.bounded_diagnostic import LIMITS, materialize_diagnostic, plan_diagnostic
-from harbor_dsh_evolution.candidate import load_manifest
+from harbor_dsh_evolution.candidate import load_manifest, snapshot_candidate, verify_candidate
+from harbor_dsh_evolution.candidate_runtime import load_candidate_runtime
 from harbor_dsh_evolution.context import build_evaluation_context
 from harbor_dsh_evolution.dataset import load_validated_dataset, snapshot_dataset
 from harbor_dsh_evolution.diagnostic_plugin import BoundedDiagnosticPlugin
@@ -54,8 +56,61 @@ def test_plan_is_read_only_and_pins_identity_and_quotas(source_job):
     assert plan["selection"][0]["taskId"] == "search-task"
     assert plan["promotionEligible"] is False
     assert plan["candidateModelBinding"] == MODEL_BINDING
+    assert plan["identities"]["candidate"]["runtime"] == load_candidate_runtime(root / plan["candidatePath"], required=True)
     assert before == sorted(path.relative_to(root).as_posix() for path in root.rglob("*"))
     assert plan_diagnostic(**source_job)["planDigest"] == plan["planDigest"]
+
+
+@pytest.mark.parametrize("runtime_error", ["CANDIDATE_RUNTIME_UNBOUND", "CANDIDATE_RUNTIME_INVALID"])
+def test_runtime_is_required_before_plan_or_materialization(source_job, monkeypatch, runtime_error):
+    root = source_job["project_root"]
+    before = sorted(path.relative_to(root).as_posix() for path in root.rglob("*"))
+    calls = []
+
+    def invalid_runtime(candidate, *, required=False):
+        calls.append((candidate, required))
+        raise ValueError(f"{runtime_error}: /secret/runtime-entry.mjs")
+
+    monkeypatch.setattr(diagnostic_module, "load_candidate_runtime", invalid_runtime)
+    for operation in (
+        lambda: plan_diagnostic(**source_job),
+        lambda: materialize_diagnostic(**source_job, expected_plan_digest="unused", operation_id="hop_blocked-runtime"),
+    ):
+        with pytest.raises(ValueError, match="HARBOR_DIAGNOSTIC_RUNTIME_UNAVAILABLE") as caught:
+            operation()
+        assert "/secret" not in str(caught.value)
+        assert "fresh baseline" in str(caught.value)
+
+    assert calls == [(root / "candidate-1.0.0", True)] * 2
+    assert before == sorted(path.relative_to(root).as_posix() for path in root.rglob("*"))
+
+
+def test_real_cli_refuses_historical_unbound_runtime_without_rewriting_evidence(source_job):
+    root = source_job["project_root"]
+    job = source_job["source_job_dir"]
+    candidate = root / "candidate-1.0.0"
+    (candidate / "candidate-runtime.json").unlink()
+    legacy = snapshot_candidate(candidate)
+    context = build_evaluation_context(
+        root / "dataset", candidate=legacy, stack_path=root / ".harbor/evaluation-stack.yml",
+        project_root=root, mode="diagnostic", candidate_model_binding=MODEL_BINDING,
+    )
+    (job / "evaluation-context.json").write_text(json.dumps(context))
+    (job / "candidate-manifest.json").write_text(json.dumps(legacy.to_dict()))
+    before = {path.relative_to(root).as_posix(): path.read_bytes() for path in root.rglob("*") if path.is_file()}
+    assert verify_candidate(candidate).digest == legacy.digest
+    request = {"projectRoot": str(root), "sourceJobDir": str(job), "trialIds": source_job["trial_ids"]}
+
+    result = subprocess.run(
+        [sys.executable, "-m", "harbor_dsh_evolution.cli", "diagnostic-subset", "plan"],
+        input=json.dumps(request), text=True, capture_output=True,
+    )
+
+    assert result.returncode == 2
+    assert json.loads(result.stdout)["error"].startswith("HARBOR_DIAGNOSTIC_RUNTIME_UNAVAILABLE:")
+    assert "fresh baseline" in result.stdout
+    assert before == {path.relative_to(root).as_posix(): path.read_bytes() for path in root.rglob("*") if path.is_file()}
+    assert not (root / ".harbor/diagnostic-datasets").exists()
 
 
 def test_materialized_subset_is_consumed_by_real_harbor_dataset_resolver(source_job):

@@ -40,9 +40,7 @@ def test_snapshot_derives_identity_from_package_json(tmp_path: Path):
     manifest = snapshot_candidate(candidate)
     assert manifest.candidate_id == "business-agent"
     assert manifest.version == "2.1.0"
-    assert manifest.runtime["policy"] == "follow-latest"
-    assert manifest.runtime["version"] == "latest"
-    assert manifest.runtime["package"] == "@deepseek-ai/dsh-acp-demo@latest"
+    assert manifest.runtime == {"kind": "deepseek-harness", "policy": "unbound", "transport": "acp"}
 
 
 def test_verify_detects_candidate_mutation(tmp_path: Path):
@@ -65,6 +63,16 @@ def test_snapshot_requires_lockfile_and_rejects_credential_files(tmp_path: Path)
     candidate = make_candidate(tmp_path)
     (candidate / "package-lock.json").unlink()
     with pytest.raises(ValueError, match="lockfile"):
+        snapshot_candidate(candidate, candidate_id="demo", version="1.0.0")
+
+
+@pytest.mark.parametrize("relative", [".npmrc", "nested/.npmrc"])
+def test_candidate_rejects_project_npm_configuration(tmp_path: Path, relative: str):
+    candidate = make_candidate(tmp_path)
+    npmrc = candidate / relative
+    npmrc.parent.mkdir(parents=True, exist_ok=True)
+    npmrc.write_text("registry=https://example.invalid\n")
+    with pytest.raises(ValueError, match="credential-bearing"):
         snapshot_candidate(candidate, candidate_id="demo", version="1.0.0")
 
 

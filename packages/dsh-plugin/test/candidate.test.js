@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
@@ -27,9 +27,7 @@ test('candidate identity defaults to package.json', async () => {
   assert.equal(manifest.version, '2.1.0')
   assert.deepEqual(manifest.runtime, {
     kind: 'deepseek-harness',
-    policy: 'follow-latest',
-    version: 'latest',
-    package: '@deepseek-ai/dsh-acp-demo@latest',
+    policy: 'unbound',
     transport: 'acp',
   })
 })
@@ -53,6 +51,19 @@ test('candidate snapshot requires a lockfile and rejects credential files', asyn
   await writeFile(path.join(candidate, 'package-lock.json'), '{"name":"demo","lockfileVersion":3}\n')
   await writeFile(path.join(candidate, '.env.local'), 'TOKEN=do-not-store\n')
   await assert.rejects(snapshotCandidate(candidate), /credential-bearing/)
+})
+
+test('Candidate rejects root and nested project npm configuration', async t => {
+  for (const relative of ['.npmrc', 'nested/.npmrc']) {
+    const candidate = await mkdtemp(path.join(os.tmpdir(), 'dsh-candidate-npmrc-'))
+    t.after(() => rm(candidate, { recursive: true, force: true }))
+    await writeFile(path.join(candidate, 'cordis.yml'), '- name: demo\n')
+    await writeFile(path.join(candidate, 'package.json'), '{"name":"demo","version":"1.0.0"}\n')
+    await writeFile(path.join(candidate, 'package-lock.json'), '{"name":"demo","lockfileVersion":3}\n')
+    await mkdir(path.dirname(path.join(candidate, relative)), { recursive: true })
+    await writeFile(path.join(candidate, relative), 'registry=https://example.invalid\n')
+    await assert.rejects(snapshotCandidate(candidate), /credential-bearing/)
+  }
 })
 
 test('model binding is validated, digest-bound, and copied into Candidate metadata', async () => {

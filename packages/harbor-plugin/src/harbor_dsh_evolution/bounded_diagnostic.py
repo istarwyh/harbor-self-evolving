@@ -19,6 +19,8 @@ from pathlib import Path
 from typing import Any
 
 from harbor_dsh_evolution.candidate import verify_candidate
+from harbor_dsh_evolution.candidate_runtime import load_candidate_runtime
+from harbor_dsh_evolution.runtime_binding import render_runtime_config
 from harbor_dsh_evolution.context import normalize_candidate_model_binding
 from harbor_dsh_evolution.dataset import load_validated_dataset, snapshot_dataset
 from harbor_dsh_evolution.identity import canonical_digest, files_under, tree_digest
@@ -150,7 +152,22 @@ def plan_diagnostic(*, project_root: Path, source_job_dir: Path, trial_ids: list
     if len(agents) != 1 or not isinstance(agents[0], dict):
         _fail("SOURCE_UNAVAILABLE", "The source Job must record exactly one local Candidate.")
     candidate = _inside(root, (agents[0].get("kwargs") or {}).get("candidate_path"), directory=True)
-    candidate_manifest = verify_candidate(candidate, expected_digest=context["candidate"].get("digest"))
+    try:
+        candidate_manifest = verify_candidate(candidate, expected_digest=context["candidate"].get("digest"))
+        candidate_runtime = load_candidate_runtime(candidate, required=True)
+        try:
+            render_runtime_config(candidate, gateway_provider="readiness-placeholder", model="readiness-placeholder", config_path=candidate_runtime["config_path"], agent_entry_id=candidate_runtime["agent_entry_id"])
+        except (ValueError, OSError) as error:
+            raise ValueError(f"CANDIDATE_RUNTIME_INVALID: {error}") from error
+    except ValueError as error:
+        if "CANDIDATE_RUNTIME_" not in str(error):
+            raise
+        _fail(
+            "RUNTIME_UNAVAILABLE",
+            "The recorded Candidate has no valid, locked local ACP runtime. "
+            "Create a new Candidate with an explicit runtime descriptor and run a fresh baseline; "
+            "the historical Job is unchanged and no Job was started.",
+        )
     recorded_candidate = _json(root, job / "candidate-manifest.json")
     if recorded_candidate.get("digest") != candidate_manifest.digest:
         _fail("CANDIDATE_CHANGED", "The Candidate no longer matches the source Job.")
@@ -186,7 +203,7 @@ def plan_diagnostic(*, project_root: Path, source_job_dir: Path, trial_ids: list
         "datasetPath": dataset.relative_to(root).as_posix(),
         "stackPath": stack.relative_to(root).as_posix(),
         "candidateModelBinding": model,
-        "identities": {"candidate": {"candidate_id": candidate_manifest.candidate_id, "version": candidate_manifest.version, "digest": candidate_manifest.digest}, "dataset": {key: dataset_manifest[key] for key in ("dataset_id", "version", "source_digest", "task_count")}, "stack": {key: stack_manifest[key] for key in ("stack_id", "version", "digest", "comparison_digest")}, "contextDigest": context["digest"]},
+        "identities": {"candidate": {"candidate_id": candidate_manifest.candidate_id, "version": candidate_manifest.version, "digest": candidate_manifest.digest, "runtime": candidate_runtime}, "dataset": {key: dataset_manifest[key] for key in ("dataset_id", "version", "source_digest", "task_count")}, "stack": {key: stack_manifest[key] for key in ("stack_id", "version", "digest", "comparison_digest")}, "contextDigest": context["digest"]},
         "selection": selection,
         "limits": dict(LIMITS),
         "sourceBytes": byte_count,

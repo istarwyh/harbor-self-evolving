@@ -55,9 +55,8 @@
     }
   },
   "harborEvolution": {
-    "runtimePolicy": "follow-latest",
-    "dshRuntimeVersion": "latest",
-    "candidateAcpPackage": "@deepseek-ai/dsh-acp-demo@latest"
+    "runtimePolicy": "candidate-locked",
+    "dshRuntimeVersion": "latest"
   },
   "peerDependencies": {
     "@deepseek-ai/dsh-skill": ">=0.1.0-rc.6",

@@ -5,7 +5,7 @@ description: Architect, initialize, run, diagnose, compare, and safely improve a
 
 # Evolve Agent With Harbor
 
-Build a maintainable, evidence-bearing improvement loop around four concepts that users can describe in business language. The DSH and Candidate ACP runtime follows the latest published release by default; record that policy honestly and do not block a Job on an older pinned runtime:
+Build a maintainable, evidence-bearing improvement loop around four concepts that users can describe in business language. Host DSH installation is independent of the Candidate runtime. Every executable Candidate owns a content-addressed ACP entrypoint and exact locked dependencies; never inject a demo application or resolve a runtime from `latest`:
 
 - **评测集 (Dataset)** — what should be tested: one Query, a file, a directory of instructions, or an existing Harbor Dataset.
 - **生成器 (Generator)** — who produces the answer or artifact: a curl request, a local Agent entry, or an Agent already found in the workspace.
@@ -135,6 +135,7 @@ Never invent GT labels, business thresholds, credentials, production side-effect
 Require these before every Candidate execution Job:
 
 - `candidate-manifest.json` verified against the Candidate files.
+- `candidate-runtime.json` with schema_version=1, transport=acp, a Candidate-local Node entrypoint/config_path, top-level agent_entry_id, and exact node_version >=22. Require package-lock.json v3 with matching root metadata, exact direct versions and HTTPS/SHA-512 locked archives. Do not ship .npmrc, node_modules, user profiles or credentials. Prepare the Task image with that exact Node and `/opt/harbor-acp-venv` containing agent-client-protocol==0.12.1. Quick diagnostic generates this contract automatically. Never bypass CANDIDATE_RUNTIME_UNBOUND/INVALID or an outdated Adapter; migrate to a new Candidate and fresh baseline instead.
 - `dataset-manifest.json` with unique task ids, non-empty instructions, safe paths, a matching source digest, and the same Task population that Harbor resolves at runtime. A local Dataset contains immediate Task child directories; each Task uses `schema_version = "1.4"`, `[task].name = "org/name"`, `instruction.md`, `environment/`, and `tests/test.sh`.
 - `.harbor/evaluation-stack.yml` with all eight roles, Judge identity, and Evaluation Contract.
 - Evaluation Context v2 preview.
@@ -178,7 +179,7 @@ A fresh baseline is required when any of these change:
 - Integration, Renderer, Evaluator, or Rubric identity.
 - Judge provider, model, version, or parameters.
 - Runner marked `semantic: true`.
-- Harbor or Adapter integration identity. DSH and Candidate ACP themselves follow `latest`; do not reject a Job for an older pinned rc. If latest-runtime drift plausibly changes behavior, recommend a fresh baseline on the current latest runtime instead of restoring and maintaining the old runtime.
+- Harbor or Adapter integration identity. Runtime migration from an unbound/demo Candidate requires a new Candidate and fresh baseline. Intentional changes to an already-bound Candidate runtime are Candidate changes: make them explicit, retain both exact locks, and compare only with the unchanged accepted evaluation Context. Never silently substitute the Host DSH version or latest npm application.
 
 Diagnoser, Optimizer, Reporter, and non-semantic Runner changes remain comparable but change the full audit digest. A Candidate digest must differ from the baseline Candidate digest. Promotion Policy is reapplied as a separately versioned decision contract; changing it does not rewrite Evaluation Context.
 
@@ -312,6 +313,8 @@ The Task verifier must write `/logs/verifier/evaluation-result.json`; `reward.js
 Use the structured diagnostic tail returned by `harbor_eval_run`; never answer with only an exit code. Redact credentials and map common signatures:
 
 - `AgentSetupTimeoutError` → use an image with Python, curl, Node.js, npm, `stdbuf`, ACP, and DSH dependencies preinstalled.
+- `CANDIDATE_RUNTIME_ENVIRONMENT_UNREADY` → prepare the Task image with the Candidate's exact Node and the required pinned ACP Python SDK; do not install a different runtime during the Job.
+- `CANDIDATE_RUNTIME_INSTALL_FAILED` / `CANDIDATE_RUNTIME_HANDSHAKE_FAILED` → inspect the redacted setup evidence. The locked install and initialize/session-new check failed before an evaluation prompt; never treat this as a Candidate quality score or fall back to demo/latest.
 - `evaluation-result.json is missing` → fix the Task verifier to emit `evaluation-result/v1` with reasons and recommendations.
 - `Either datasets or tasks must be provided` / `HARBOR_RUNTIME_NO_TASKS` → repair the Dataset's immediate Harbor 1.4 Task structure and re-snapshot it.
 - `docker-credential-*` → repair the configured helper or use a verified local base image.

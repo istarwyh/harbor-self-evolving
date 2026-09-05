@@ -51,7 +51,7 @@ Candidate 不进入可比较 digest：v1/v2 必须是不同 Candidate digest，�
 
 以下变化必须建立 fresh baseline：Dataset id/version/source、Integration、Renderer、Evaluator、Rubric、Judge、语义 Runner、Candidate provider/model/reasoning effort、Harbor 或 Adapter integration identity。Policy 是独立版本化的决策合同，可以在已有指标足够时重新应用，不会改写 Context。
 
-DSH 与 Candidate ACP runtime 默认使用 `latest`。这是明确的维护性选择：它不会因旧 rc 版本不一致阻断 Job，也不承诺逐字节重放旧运行时。如果最新版变化疑似影响结果，应在当前最新版下补跑 Baseline，而不是回退并长期维护旧运行时。
+Host DSH 的安装版本与 Candidate 运行时分别管理。Candidate 通过 `candidate-runtime.json` 声明自己的 ACP 入口、配置、Agent ID 和精确 Node 版本，完整 npm lockfile 随 Candidate digest 固定。Adapter 不选择 demo 包、不执行 `npx …@latest`，只安装已验证的锁文件并启动该入口。旧未绑定 Candidate 保留历史证据；迁移需要新 Candidate 和 fresh baseline，不能静默替换历史运行时。详见 [Candidate runtime contract](candidate-runtime-contract.md)。
 
 ### Host Model Broker
 

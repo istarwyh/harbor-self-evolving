@@ -12,7 +12,11 @@ function fixturePlan() {
     sourceJob: 'jobs/source', candidatePath: 'candidates/v1', datasetPath: 'dataset', stackPath: '.harbor/evaluation-stack.yml',
     candidateModelBinding: { provider: 'verified-test-provider', model: 'test-model', transport: 'dsh-host-broker', protocol: 'dsh-host-model-gateway/v1' },
     selection: [{ trialId: 'trial-1', taskId: 'task-1', taskPath: 'task-1', taskDigest: digest('a') }],
-    identities: { candidate: { candidate_id: 'candidate', version: '1.0.0', digest: digest('b') }, dataset: { source_digest: digest('c') }, stack: { digest: digest('d') } },
+    identities: { candidate: { candidate_id: 'candidate', version: '1.0.0', digest: digest('b'), runtime: {
+      kind: 'deepseek-harness', policy: 'candidate-locked', transport: 'acp', descriptor: 'candidate-runtime.json',
+      entrypoint: 'run-acp.mjs', config_path: 'cordis.yml', agent_entry_id: 'wiring-agent', node_version: '22.22.2',
+      lockfile: 'package-lock.json', descriptor_digest: digest('1'), entrypoint_digest: digest('2'), lockfile_digest: digest('3'),
+    } }, dataset: { source_digest: digest('c') }, stack: { digest: digest('d') } },
     limits: { ...DIAGNOSTIC_LIMITS }, planDigest: digest('e'),
   }
 }
@@ -120,6 +124,37 @@ test('runtime blockers are actionable and cannot start a Job', async () => {
   const h = await harness({ process: (_command, args) => args[0] === 'docker-check' ? { code: 2, stdout: '{"valid":false,"findings":[{"level":"error","code":"DOCKER_DAEMON_UNAVAILABLE","message":"/secret/path"}]}', stderr: '' } : undefined })
   await assert.rejects(h.runner.prepare({ owner: h.owner, sourceJobDir: 'jobs/source', trialIds: ['trial-1'] }), error => /RUNTIME_BLOCKED.*DOCKER_DAEMON_UNAVAILABLE/.test(error.message) && !/secret/.test(error.message))
   assert.equal(h.leases.length, 0)
+})
+
+test('an unbound Candidate runtime blocks bounded preflight before model resolution or Docker checks', async () => {
+  const h = await harness({
+    process: (_command, args) => args[0] === 'diagnostic-subset' && args[1] === 'plan'
+      ? { code: 2, stdout: JSON.stringify({ error: 'HARBOR_DIAGNOSTIC_RUNTIME_UNAVAILABLE: Create a new Candidate with a locked local ACP runtime and run a fresh baseline.' }), stderr: '' }
+      : undefined,
+    modelRuntime: { async resolve() { assert.fail('An unexecutable Candidate must fail before model resolution') } },
+  })
+
+  await assert.rejects(h.runner.prepare({ owner: h.owner, sourceJobDir: 'jobs/source', trialIds: ['trial-1'] }), /HARBOR_DIAGNOSTIC_RUNTIME_UNAVAILABLE.*fresh baseline/)
+  assert.equal(h.calls.length, 1)
+  assert.equal(h.leases.length, 0)
+  assert.deepEqual(await readdir(h.root), [])
+})
+
+test('old or incomplete Adapter plans fail closed before model resolution and cannot execute', async () => {
+  for (const runtime of [undefined, { policy: 'follow-latest' }, { ...fixturePlan().identities.candidate.runtime, lockfile_digest: undefined }, { ...fixturePlan().identities.candidate.runtime, entrypoint: '../external.mjs' }]) {
+    const h = await harness({
+      process: (_command, args, _options, { plan }) => args[0] === 'diagnostic-subset' && args[1] === 'plan'
+        ? { code: 0, stdout: JSON.stringify({ ...plan, identities: { ...plan.identities, candidate: { ...plan.identities.candidate, runtime } } }), stderr: '' }
+        : undefined,
+      modelRuntime: { async resolve() { assert.fail('Unsupported runtime plans cannot resolve models') } },
+    })
+    await assert.rejects(h.runner.prepare({ owner: h.owner, sourceJobDir: 'jobs/source', trialIds: ['trial-1'] }), /RUNTIME_ADAPTER_UNSUPPORTED.*Update the Python Adapter/)
+    assert.equal(h.calls.length, 1)
+    const stale = { ...h.plan, identities: { ...h.plan.identities, candidate: { ...h.plan.identities.candidate, runtime } } }
+    await assert.rejects(h.runner.execute(stale, { owner: h.owner, operationId: 'hop_stale-runtime' }), /RUNTIME_ADAPTER_UNSUPPORTED/)
+    assert.equal(h.calls.length, 1)
+    assert.equal(h.leases.length, 0)
+  }
 })
 
 test('remote Docker transports are blocked in preflight before materialization or model lease', async () => {

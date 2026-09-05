@@ -16,9 +16,21 @@ function aborted(signal) { if (signal?.aborted) throw failure('HARBOR_PROCESS_AB
 function bindingIdentity(binding) {
   return Object.fromEntries(['provider', 'model', 'transport', 'protocol', 'reasoning_effort'].filter(key => binding?.[key] !== undefined).map(key => [key, binding[key]]))
 }
+function hasLockedRuntime(runtime) {
+  const safeSourcePath = value => typeof value === 'string' && value.length <= 1024 && value.trim() === value && !/[\\:\x00-\x1f\x7f]/.test(value) && !value.split('/').some(part => ['', '.', '..', 'node_modules', '.harbor-runtime', '.git'].includes(part))
+  return runtime?.kind === 'deepseek-harness' && runtime.policy === 'candidate-locked' && runtime.transport === 'acp'
+    && runtime.descriptor === 'candidate-runtime.json' && runtime.lockfile === 'package-lock.json'
+    && safeSourcePath(runtime.entrypoint) && /\.(?:js|mjs|cjs)$/.test(runtime.entrypoint)
+    && safeSourcePath(runtime.config_path) && typeof runtime.agent_entry_id === 'string' && /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(runtime.agent_entry_id)
+    && typeof runtime.node_version === 'string' && /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(runtime.node_version) && Number(runtime.node_version.split('.')[0]) >= 22
+    && ['descriptor_digest', 'entrypoint_digest', 'lockfile_digest'].every(key => /^sha256:[a-f0-9]{64}$/.test(runtime[key] ?? ''))
+}
 function assertPlan(plan) {
   if (plan?.protocol !== PLAN_PROTOCOL || !/^sha256:[a-f0-9]{64}$/.test(plan.planDigest ?? '') || plan.mode !== 'diagnostic' || plan.promotionEligible !== false || !Array.isArray(plan.selection) || !plan.selection.length || plan.selection.length > DIAGNOSTIC_LIMITS.maxTrials || Object.entries(DIAGNOSTIC_LIMITS).some(([key, value]) => plan.limits?.[key] !== value)) {
     throw failure('HARBOR_DIAGNOSTIC_PLAN_INVALID', 'The installed adapter did not produce the bounded diagnostic contract.')
+  }
+  if (!hasLockedRuntime(plan.identities?.candidate?.runtime)) {
+    throw failure('HARBOR_DIAGNOSTIC_RUNTIME_ADAPTER_UNSUPPORTED', 'Update the Python Adapter and review a new plan; it has not verified a locked Candidate-owned ACP runtime. No Job was started.')
   }
 }
 function safeProcessError(error) {

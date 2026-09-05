@@ -505,7 +505,7 @@ export async function readDashboardSnapshot(config, metadata = {}, args = {}) {
     pluginVersion: metadata.pluginVersion ?? 'development',
     workspace: { id: config.workspaceId, label: config.workspaceLabel, root: config.workspaceRoot ?? '.', stackPath: config.stackPath },
     workspaces: metadata.workspaces ?? [],
-    config: { projectRoot, projectRootSource: metadata.projectRootSource ?? 'configured', jobsDir: config.jobsDir, runtimePolicy: config.runtimePolicy ?? 'follow-latest', agentImportPath: config.agentImportPath, pluginImportPath: config.pluginImportPath },
+    config: { projectRoot, projectRootSource: metadata.projectRootSource ?? 'configured', jobsDir: config.jobsDir, runtimePolicy: config.runtimePolicy ?? 'candidate-locked', agentImportPath: config.agentImportPath, pluginImportPath: config.pluginImportPath },
     checks: { projectRoot: projectRootCheck, jobsDir: jobsDirCheck, harbor: harborCheck, harborDsh: harborDshCheck, evaluationStack: stackCheck },
     overview: {
       totalJobs: allJobs.length,

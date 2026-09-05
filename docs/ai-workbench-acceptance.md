@@ -1,8 +1,16 @@
 # AI Workbench implementation and acceptance ledger
 
-Status: implemented interaction slice under review, 2026-09-05. **Not full PRD completion; Phase 1 is partial.**
+Status: implemented interaction/runtime reliability slice, 2026-09-06. **Not full PRD completion; Phase 1 is partial.**
 
 Release scope for **0.9.2**: the user requested publication of the reviewed incremental interaction/usability changes. This does not waive the Candidate/AC-04, Docker cancellation, mobile/keyboard or full lifecycle acceptance gaps recorded below, and is not a complete-PRD release. Historical iteration counts and statements that no package was published describe those iterations, not current registry availability. The release preflight found 0.9.1 absent from npm, PyPI and GitHub Releases; its code baseline remains in Git history.
+
+## Candidate-owned ACP runtime — 2026-09-06
+
+The hard-coded demo/latest dependency blocker recorded in earlier iterations is now removed. Candidate-owned source, explicit runtime identity, exact npm locks and prepared Node/SDK checks replace runtime application discovery. Quick diagnostic generates the new contract; old Candidate evidence is retained and requires an explicit new snapshot before execution. Details and reproducible verification commands are in [Candidate runtime contract](candidate-runtime-contract.md).
+
+Final implementation checks passed **469 Node tests / 301 Python tests**, builds, package contents and installed-wheel generation. A real Linux arm64 `DockerEnvironment → DshCandidateAgent.setup/run → ACP Runner → production Host Broker` run installed the lock afresh, made **0 model requests during readiness**, completed **1 controlled evaluation request**, emitted ATIF and durable session records, and cleaned its owned containers/networks. A real macOS DSH ACP run also verified cancellation, preserved `aborted(user)` and clean EOF disposal. No vendor credential or real provider call was used.
+
+These results supersede only the earlier unresolved runtime-installation/ACP wiring statements. They do **not** establish a business-quality Candidate baseline, successful 12-Trial AC-04, Linux amd64, full Workbench Docker cancellation/recovery or complete PRD acceptance. The dated evidence below remains unchanged.
 
 ## Selection, persistent tasks and saved-version recovery — 2026-09-05
 

@@ -106,7 +106,7 @@ candidateJob = jobs/<v2-job>
 policyPath = examples/deep-research/promotion-policy.json
 ```
 
-Workbench 会跟随 DSH 语言设置展示九个阶段。「候选版本」先展示 Candidate、Dataset、Evaluation Stack、模型身份与“运行时追随最新版”策略；「评测集」展示 Agent 实际收到的 instruction；「产物呈现」会直接展示真实 LLM 生成的 `research-report.md`；「评测器」展示统一接口、三元 Criterion、Evaluator/Rubric/Judge 源码和受控升级入口；「评测器元评测」引导建立独立 Ground Truth 并展示 ESF/SCE/RCR；「评测报告」分页对照产物、分数、原因与建议；「优化器」展示 evidence-linked 单一实验假设；「晋级门禁」展示可比性、逐指标 delta、改善/回归样本和已执行 Gate。完整 JSON 只放在折叠审计区。运行中按 Dataset 顺序增量刷新，历史 Job 仅从 Job 自身快照或安全的旧版回退中读取源码与 Trial 证据。
+Workbench 会跟随 DSH 语言设置展示九个阶段。「候选版本」先展示 Candidate、Dataset、Evaluation Stack、模型身份与 Candidate 自带的锁定运行时；「评测集」展示 Agent 实际收到的 instruction；「产物呈现」会直接展示真实 LLM 生成的 `research-report.md`；「评测器」展示统一接口、三元 Criterion、Evaluator/Rubric/Judge 源码和受控升级入口；「评测器元评测」引导建立独立 Ground Truth 并展示 ESF/SCE/RCR；「评测报告」分页对照产物、分数、原因与建议；「优化器」展示 evidence-linked 单一实验假设；「晋级门禁」展示可比性、逐指标 delta、改善/回归样本和已执行 Gate。完整 JSON 只放在折叠审计区。运行中按 Dataset 顺序增量刷新，历史 Job 仅从 Job 自身快照或安全的旧版回退中读取源码与 Trial 证据。
 
 ## Profile 配置
 

@@ -6,6 +6,7 @@ from harbor_dsh_evolution.dataset import validate_dataset
 from harbor_dsh_evolution.doctor import architecture_doctor
 from harbor_dsh_evolution.quick import initialize_quick_diagnostic
 from harbor_dsh_evolution.runtime_binding import render_runtime_config
+from harbor_dsh_evolution.candidate_runtime import load_candidate_runtime
 from harbor_dsh_evolution.stack import validate_stack
 
 
@@ -35,7 +36,15 @@ def test_quick_diagnostic_generates_runnable_harbor_14_boundaries(tmp_path: Path
     assert doctor["promotion_ready"] is False
     assert "DIAGNOSTIC_ONLY_STACK" in {item["code"] for item in doctor["findings"]}
     assert (candidate / "candidate-manifest.json").is_file()
-    overlay = render_runtime_config(candidate, gateway_provider="dsh-host", model="host-model")
+    runtime = load_candidate_runtime(candidate, required=True)
+    assert runtime["policy"] == "candidate-locked"
+    assert runtime["node_version"] == "22.22.2"
+    assert "dsh-acp-demo" not in (candidate / "package-lock.json").read_text()
+    assert "dsh-agent-spine-demo" not in (candidate / "package-lock.json").read_text()
+    dockerfile = (dataset / "wiring-check/environment/Dockerfile").read_text()
+    assert "node:22.22.2-bookworm-slim@sha256:" in dockerfile
+    assert "agent-client-protocol==0.12.1" in dockerfile
+    overlay = render_runtime_config(candidate, gateway_provider="dsh-host", model="host-model", agent_entry_id=runtime["agent_entry_id"])
     assert "dsh-host" in overlay
     assert "host-model" in overlay
     rubric = (tmp_path / "harbor-diagnostic/evaluators/default/rubric.md").read_text()

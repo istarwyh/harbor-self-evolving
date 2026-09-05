@@ -2,8 +2,10 @@ import json
 from pathlib import Path
 
 import yaml
+import pytest
 import harbor_dsh_evolution.doctor as doctor_module
 
+from harbor_dsh_evolution.candidate import snapshot_candidate, verify_candidate
 from harbor_dsh_evolution.dataset import build_dataset_preview, snapshot_dataset, validate_dataset
 from harbor_dsh_evolution.doctor import architecture_doctor, docker_runtime_check
 from harbor_dsh_evolution.initialize import initialize_project
@@ -77,6 +79,69 @@ def test_doctor_blocks_god_runner_and_direct_promotion(tmp_path: Path):
     codes = {item["code"] for item in result["findings"]}
     assert result["promotion_ready"] is False
     assert {"GOD_RUNNER_HTTP_RUBRIC_JUDGE", "RUNNER_DIRECT_PROMOTION"}.issubset(codes)
+
+
+@pytest.mark.parametrize("runtime_error", ["CANDIDATE_RUNTIME_UNBOUND", "CANDIDATE_RUNTIME_INVALID"])
+def test_doctor_blocks_unexecutable_candidate_without_live_runtime_checks(tmp_path: Path, monkeypatch, runtime_error):
+    candidate = make_candidate(tmp_path)
+    calls = []
+
+    def invalid_runtime(root, *, required=False):
+        calls.append((root, required))
+        raise ValueError(f"{runtime_error}: private source /secret/runtime-entry.mjs")
+
+    monkeypatch.setattr(doctor_module, "load_candidate_runtime", invalid_runtime)
+    monkeypatch.setattr(
+        doctor_module,
+        "_docker_runtime_findings",
+        lambda *_args: pytest.fail("Static Candidate validation must not need Docker"),
+    )
+    result = architecture_doctor(
+        project_root=tmp_path,
+        stack_path=make_stack(tmp_path),
+        dataset_path=make_dataset(tmp_path),
+        candidate_path=candidate,
+        runtime_checks=False,
+    )
+
+    assert calls == [(candidate, True)]
+    assert result["promotion_ready"] is False
+    finding = next(item for item in result["findings"] if item["code"] == runtime_error)
+    assert finding["level"] == "error"
+    assert "new Candidate" in finding["message"]
+    assert "fresh baseline" in finding["message"]
+    assert "/secret" not in json.dumps(result)
+
+
+def test_doctor_rejects_unaddressable_agent_before_runtime_start(tmp_path):
+    candidate = make_candidate(tmp_path)
+    (candidate / "cordis.yml").write_text("- id: another-agent\n  name: ./plugin.mjs\n")
+    snapshot_candidate(candidate)
+    result = architecture_doctor(
+        project_root=tmp_path, stack_path=make_stack(tmp_path),
+        dataset_path=make_dataset(tmp_path), candidate_path=candidate,
+    )
+    assert any(item["code"] == "CANDIDATE_RUNTIME_INVALID" for item in result["findings"])
+    assert not any(item["code"] == "CANDIDATE_RUNTIME_VERIFIED" for item in result["findings"])
+
+
+def test_historical_unbound_candidate_remains_readable_but_doctor_blocks_execution(tmp_path: Path):
+    candidate = make_candidate(tmp_path)
+    (candidate / "candidate-runtime.json").unlink()
+    legacy = snapshot_candidate(candidate)
+    before = (candidate / "candidate-manifest.json").read_bytes()
+
+    assert verify_candidate(candidate).digest == legacy.digest
+    result = architecture_doctor(
+        project_root=tmp_path,
+        stack_path=make_stack(tmp_path),
+        dataset_path=make_dataset(tmp_path),
+        candidate_path=candidate,
+    )
+
+    assert result["promotion_ready"] is False
+    assert any(item["code"] == "CANDIDATE_RUNTIME_UNBOUND" and item["level"] == "error" for item in result["findings"])
+    assert (candidate / "candidate-manifest.json").read_bytes() == before
 
 
 def test_doctor_reports_duplicate_task_implementations_and_runner_semantics(tmp_path: Path):

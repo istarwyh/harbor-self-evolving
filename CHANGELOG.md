@@ -4,7 +4,7 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
-## 0.9.2 - 2026-09-05
+## 0.9.2 - 2026-09-06
 
 - Carry forward the 0.9.0/0.9.1 Workbench changes with evidence-bound AI answers, explicit object follow-ups, typed navigation, and reviewed action drafts.
 - Preserve source-edit buffers across navigation and refresh, keep human edits during AI suggestion review, and reject changed source identities before saving.
@@ -13,8 +13,12 @@ All notable changes to this project are documented in this file.
 - Add read-only resource inspection and separately confirmed recovery with pinned local Docker endpoints and Host/daemon identity checks. Recovery does not delete Docker resources or retry work.
 - Persist saved Evaluator/Stack continuation metadata, reverify identities on reload, and disable stale planning/source display after drift or a failed history recheck without hiding the successful save.
 - Add bounded diagnostic execution with explicit preview/confirmation, request ceilings and truthful separation of infrastructure completion from valid evaluation results.
-- Validation: 418 Node tests and 151 Python tests, generated client and Python builds, shell checks and npm pack dry-run. Real-browser acceptance and remaining boundaries are recorded in `docs/ai-workbench-acceptance.md`.
-- Scope: this is an incremental interaction/usability release, not full PRD completion. The known upstream ACP dependency failure, successful 12-Trial AC-04, a new live Docker cancellation/recovery journey, the full mobile/keyboard matrix, and the complete meta-evaluation/fresh-baseline loop remain unresolved or unverified.
+- Remove the fixed demo/latest ACP application dependency. Executable Candidates now own their local entrypoint, configuration, exact Node version and complete npm v3 lockfile; runtime identity is derived from content-addressed source.
+- Add same-artifact staged installation, isolated script-free `npm ci`, exact prepared Node/ACP SDK checks, and initialize/session-new readiness before evaluation prompts. Quick diagnostic ships a tested, demo-free DSH core/Agent Loop/session/ACP composition and a pinned Task image definition.
+- Fix the Host gateway's prepared-call contract and isolate network abort reasons so completed and cancelled turns retain durable end records. Reject mismatched source/runtime identity, ambiguous model overlays and outdated Adapter execution contracts.
+- Migration: legacy Candidates remain historical evidence, but executing them requires a new Candidate runtime descriptor and snapshot. Do not silently rerun an old baseline with another runtime. Candidate Task images must contain the declared Node version and ACP SDK `0.12.1`; Host credentials and project npm configuration never enter Candidate source.
+- Validation: 469 Node tests and 301 Python tests; generated client, npm package, Python wheel/sdist and installed-wheel Quick diagnostic checks passed. Real macOS ACP completion/cancellation and Linux arm64 Harbor Adapter execution, ATIF, persistence and cleanup passed using controlled model streams with no vendor credentials. See `docs/candidate-runtime-contract.md` and `docs/ai-workbench-acceptance.md`.
+- Scope: this is an incremental interaction/runtime reliability release, not full PRD completion or a new passing business baseline. Successful 12-Trial AC-04, a live full-Workbench Docker cancellation/recovery journey, the full mobile/keyboard matrix, Linux amd64 execution, and the complete meta-evaluation/fresh-baseline loop remain unverified. Controlled model transport evidence is not business quality evidence.
 
 ## 0.9.1 - 2026-09-05
 

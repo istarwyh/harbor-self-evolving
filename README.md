@@ -56,7 +56,7 @@ Skill 会先检查文件，再围绕四个用户可理解的概念补齐必要�
 - Composer Context Capsule：只有用户点击对象旁的 `Ask AI` / “引用后提问”，或在输入框显式选择 `@harbor` 对象时，才把当前 Job、Trial、Criterion 或 Evidence 冻结为本轮一次性上下文；普通发送不会自动携带页面状态，发送后该引用自动清除。
 - 同会话 Harbor Copilot Dock：直接呈现当前 Chat Session 的运行状态、工具进度、最终回答与停止入口，不复制一份消息历史；回答返回的 `harbor.navigate` 只会在对象身份、页面 Session 和 generation 前置条件仍成立时执行 Harbor 内部只读定位，并可通过 Back 恢复原 workspace、分页、Stage、Trial、筛选、排序、Evidence 焦点、Compare Baseline 与滚动位置。
 - `评测最近会话`：在当前工作空间直接预览最多 10 条合格会话；只有用户看完 Evaluator/Judge、成本和保留边界并点击确认，才会后台启动诊断 Job，完成后自动打开结果。
-- Job 工作台：默认以概览、Trials、Pipeline、优化假设、Compare / Gate、Evaluator / Rubric、产物和审计组织；阶段流程收进 Pipeline。先直接展示 Candidate / Dataset / Evaluation Stack / 模型身份和“运行时追随最新版”策略，再展示 Agent 收到的 query 与 instruction、Harbor 收集的页面/文档/结构化产物、评测器 Ground Truth 元评测、逐 Trial 判分、Population 有效覆盖、受控优化假设和 Baseline 回归 Gate。完整 JSON 只留在折叠审计区。
+- Job 工作台：默认以概览、Trials、Pipeline、优化假设、Compare / Gate、Evaluator / Rubric、产物和审计组织；阶段流程收进 Pipeline。先直接展示 Candidate / Dataset / Evaluation Stack / 模型身份和 Candidate 自带的锁定运行时，再展示 Agent 收到的 query 与 instruction、Harbor 收集的页面/文档/结构化产物、评测器 Ground Truth 元评测、逐 Trial 判分、Population 有效覆盖、受控优化假设和 Baseline 回归 Gate。完整 JSON 只留在折叠审计区。
 - 评测器页：直接查看 `script` 或 `llm-as-judge` 的统一接口、三元 Criterion、Rubric 与实现源码；只能受控修改 Descriptor 授权的文件，并强制创建新的 Evaluator / Stack 身份。
 - `harbor-dsh-evaluator/v1`：统一 `script` 与 `llm-as-judge` 的输入、三元 Criteria 输出、实现身份和可编辑文件；详情见 [`docs/evaluator-interface.md`](docs/evaluator-interface.md)。
 - 工具调用中的 Harbor 专属卡片：直接理解初始化、Doctor、Context 预览、评测与 Gate。
@@ -152,6 +152,8 @@ promotion-report.json       # 晋级或拒绝及原因
 Promotion Gate 会先检查 Context v2、Dataset、Integration、Renderer、Evaluator、Rubric、Judge、语义 Runner、产物 Schema、Trial 覆盖、Score Validity 和基础设施异常，再按指标方向判断提升、最小/最大阈值与非回归。Harbor Job 跑完不等于 Candidate 已通过 Gate；Diagnostic Job、Reporter 和 Optimizer 都不能自动 Gate。
 
 ### Candidate 复用当前 DSH 模型
+
+Candidate 的 ACP 程序不由 Host DSH 或 demo 包替代。每个可执行 Candidate 必须包含自己的 `candidate-runtime.json`、本地启动入口和完整 npm v3 锁文件；Adapter 只做锁定安装、模型网关注入、无模型调用的握手检查和 ACP 执行。快速诊断会自动生成这一组合。旧未绑定 Candidate 可继续查看，但执行前必须迁移为新 Candidate；详见 [运行时契约与迁移](docs/candidate-runtime-contract.md)。
 
 通过 Plugin 启动的 Job 会在启动前冻结当前 DSH Agent 的 `provider`、`model` 与 `reasoning_effort`，并为该 Job 创建一个只绑定本机、随机路径与随机 Bearer capability 的 Model Broker：
 
