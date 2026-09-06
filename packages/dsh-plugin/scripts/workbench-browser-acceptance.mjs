@@ -7,31 +7,31 @@ const expression = String.raw`(async () => {
   const job = JOB;
   if (!document.querySelector('.hse-main-panel')?.innerText.startsWith(job)) throw Error('Open the requested synthetic Job first');
   const ids = ['hfq-021', 'hfq-034', ...Array.from({length:98},(_,i)=>'synthetic-'+String(i+3).padStart(3,'0'))];
-  const draft = document.querySelector('textarea[data-phase]')?.value;
-  const turn = () => document.querySelector('.hse-copilot')?.innerText.match(/(?:同一 Turn|Same turn):\s*\d+/)?.[0];
-  const originalTurn = turn();
+  const composer = document.querySelector('textarea[data-phase]');
+  if (!composer) throw Error('Native Composer is not visible');
+  const draft = composer.value;
+  if (document.querySelector('.hse-copilot,.hse-context-dock,.hse-mobile-copilot')) throw Error('Removed panels are still mounted');
   const waitFor = predicate => new Promise((resolve,reject) => {
     if (predicate()) return resolve();
     const observer = new MutationObserver(() => { if (predicate()) { clearTimeout(timer); observer.disconnect(); resolve(); } });
     const timer = setTimeout(()=>{observer.disconnect();reject(Error('UI target timeout'))},2000);
     observer.observe(document.querySelector('.hse-main-panel').parentElement,{subtree:true,childList:true,characterData:true,attributes:true});
-    const dock = document.querySelector('.hse-context-dock'); if (dock) observer.observe(dock,{subtree:true,childList:true,characterData:true});
   });
-  const contextMs = [], detailMs = [];
+  const selectionMs = [], detailMs = [];
   for (const id of ids) {
     const button = [...document.querySelectorAll('.hse-main-panel tbody button')].find(b=>b.innerText===id);
     if (!button) throw Error('Missing row '+id);
     const started = performance.now(); button.click();
-    await waitFor(()=>document.querySelector('.hse-context-line')?.innerText.includes('Trial '+id));
-    contextMs.push(performance.now()-started);
+    await waitFor(()=>button.closest('tr')?.dataset.selected==='true');
+    selectionMs.push(performance.now()-started);
     await waitFor(()=>document.querySelector('.hse-trial-detail')?.innerText.includes(id+':'));
     detailMs.push(performance.now()-started);
   }
   const stats = values => { const s=values.slice().sort((a,b)=>a-b);return {p50:s[49],p95:s[94],max:s[99]}; };
-  return {job,count:ids.length,context:stats(contextMs),detail:stats(detailMs),composerUnchanged:document.querySelector('textarea[data-phase]')?.value===draft,turnBefore:originalTurn,turnAfter:turn(),synthetic:true};
+  return {job,count:ids.length,selection:stats(selectionMs),detail:stats(detailMs),composerUnchanged:document.querySelector('textarea[data-phase]')?.value===draft,synthetic:true,boundary:'Visible selection/detail only; does not measure automatic message context or model execution.'};
 })()`.replace('JOB', JSON.stringify(job))
 const response = await fetch(`http://localhost:3456/eval?target=${target}`, { method: 'POST', body: expression })
 const result = await response.json()
 if (result.error) throw new Error(result.error)
-if (result.value?.count !== 100 || !result.value.composerUnchanged || result.value.turnBefore !== result.value.turnAfter) throw new Error('Selection changed the Composer/turn or did not cover 100 distinct Trials')
+if (result.value?.count !== 100 || !result.value.composerUnchanged) throw new Error('Selection changed the Composer or did not cover 100 distinct Trials')
 console.log(JSON.stringify(result.value, null, 2))

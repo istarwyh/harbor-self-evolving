@@ -131,3 +131,74 @@ test('task list restores on mount without an AI draft and remains readable while
   const restored = harness('OperationTray', props)
   try { restored.render(); await tick(); assert.equal(reads, 2); assert.match(restored.text(restored.render()[0]), /1 records/) } finally { restored.dispose() }
 })
+
+test('inline tasks hide only after a successful empty read and recheck a changed owner', async () => {
+  let resolveList
+  const ui = harness('OperationTray', {
+    sessionId: 'session-a', scopeKey: 'workspace-a', hideWhenEmpty: true,
+    request: () => new Promise(resolve => { resolveList = resolve }),
+  })
+  try {
+    assert.match(ui.text(ui.render()[0]), /Recovering task records/)
+    resolveList({ items: [] }); await tick()
+    assert.deepEqual(ui.render(), [])
+    ui.setProps({ scopeKey: 'workspace-b' })
+    assert.match(ui.text(ui.render()[0]), /Recovering task records/)
+    resolveList({ items: [] }); await tick()
+    assert.deepEqual(ui.render(), [])
+  } finally { ui.dispose() }
+})
+
+test('an empty failed read stays visible and retry can establish that no tasks exist', async () => {
+  let reads = 0
+  const ui = harness('OperationTray', {
+    sessionId: 'session-a', scopeKey: 'workspace-a', hideWhenEmpty: true,
+    request: async () => { if (++reads === 1) throw new Error('offline'); return { items: [] } },
+  })
+  try {
+    ui.render(); await tick()
+    assert.match(ui.text(ui.render()[0]), /Status unavailable/)
+    await ui.click('Read again')
+    ui.render(); await tick()
+    assert.equal(reads, 2)
+    assert.deepEqual(ui.render(), [])
+  } finally { ui.dispose() }
+})
+
+test('inline tasks retain active and historical records and expose stale records after a failed refresh', async () => {
+  const ui = harness('OperationTray', {
+    sessionId: 'session-a', scopeKey: 'workspace-a', hideWhenEmpty: true,
+    request: async () => ({ items: [operation(), operation('COMPLETED', 4, { operationId: 'hop_00000000-0000-4000-8000-000000000002' })] }),
+  })
+  try {
+    ui.render(); await tick()
+    assert.match(ui.text(ui.render()[0]), /1 running.*2 records/)
+    ui.render().find(node => node.type === 'button' && node.props['aria-expanded'] === false).props.onClick()
+    assert.equal(ui.render().filter(node => typeof node.type === 'function' && node.type.name === 'OperationItem').length, 2)
+    ui.setProps({ request: async () => { throw new Error('offline') } })
+    ui.render(); await tick()
+    assert.match(ui.text(ui.render()[0]), /Status unavailable/)
+    const retained = ui.render().filter(node => typeof node.type === 'function' && node.type.name === 'OperationItem')
+    assert.equal(retained.length, 2)
+    assert.ok(retained.every(node => node.props.stale === true))
+  } finally { ui.dispose() }
+})
+
+test('active task cancellation and result navigation remain independent actions', async () => {
+  const writes = [], navigations = []
+  let changes = 0
+  const ui = harness('OperationItem', {
+    operation: operation('ACTIVE', 3, { resultRef: { jobName: 'diagnostic-a', verified: true } }),
+    update: async (route, args) => { writes.push({ route, args }) },
+    onViewResult: (...args) => navigations.push(args), onChanged: () => { changes++ },
+  })
+  try {
+    await ui.click('View run / partial evidence')
+    assert.equal(navigations.length, 1)
+    assert.equal(writes.length, 0)
+    await ui.click('Stop this diagnostic')
+    assert.deepEqual(writes, [{ route: 'action-cancel', args: { operationId: id } }])
+    assert.equal(changes, 1)
+    assert.equal(navigations.length, 1)
+  } finally { ui.dispose() }
+})

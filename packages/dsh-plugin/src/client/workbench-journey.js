@@ -18,6 +18,7 @@ export function harborQuestionLabelKey(key) {
 
 export const JOURNEY_MESSAGES = {
   zh: {
+    preparedInHarbor: '已准备好，请打开 Harbor 标签查看。', navigationPending: '请打开 Harbor 标签查看已请求的对象；若未定位，请重新选择对象。',
     replyReady: 'AI 已回复 · 点 + 查看', historyOnly: '延续会话历史，未重新读取页面',
     draftRecoveryReselect: '已返回原对象页面。其内容或选中集合已变化，请重新选择具体内容后提问；旧建议和编辑已保留，不会自动扩大范围。',
     askSourceLabel: '解释这段规则', askSourceChangeLabel: '让 AI 提议修改', askSelectedTrialsLabel: '分析所选任务', askMetricLabel: '解释这个指标', askHypothesisLabel: '审查这条假设', askGateReasonLabel: '解释阻断原因', askCandidateChangeLabel: '提议最小改进', askHealthLabel: '先看哪些问题？', askGettingStartedLabel: '帮我开始使用',
@@ -49,6 +50,7 @@ export const JOURNEY_MESSAGES = {
     repreparePrompt: '请重新读取这个对象的最新证据，更新之前的修改建议并生成新的草稿供我审阅。不要写入文件、运行评测或发布。之前的建议（仅作待核实参考）：',
   },
   en: {
+    preparedInHarbor: 'Ready. Open the Harbor tab to view it.', navigationPending: 'Open the Harbor tab to inspect the requested object; select it again if it was not located.',
     replyReady: 'AI replied · expand to read', historyOnly: 'Conversation history; page not re-read',
     draftRecoveryReselect: 'Returned to the original object page. Its content or selection changed; explicitly select it again before asking. Suggestions and edits remain intact; scope is never expanded automatically.',
     askSourceLabel: 'Explain this rule', askSourceChangeLabel: 'Suggest a change', askSelectedTrialsLabel: 'Analyze selected tasks', askMetricLabel: 'Explain this metric', askHypothesisLabel: 'Review this hypothesis', askGateReasonLabel: 'Explain the blocker', askCandidateChangeLabel: 'Suggest an improvement', askHealthLabel: 'What needs attention?', askGettingStartedLabel: 'Help me get started',

@@ -78,7 +78,7 @@ test('Web Preview keeps the selection token server-side and exposes only safe me
   assert.equal(result.selectionToken, undefined)
   assert.doesNotMatch(JSON.stringify(result), /private-selection-token|owner-id/)
   assert.deepEqual(calls.preview[0].args, {
-    limit: 10,
+    limit: 3,
     createdAfter: undefined,
     includeFeedback: true,
   })
@@ -86,6 +86,8 @@ test('Web Preview keeps the selection token server-side and exposes only safe me
     projectRoot: '/work/project',
     ownerSessionId: 'web-historical:session-1:owner-id',
   })
+  assert.equal(calls.preview[0].options.currentSessionId, SESSION_ID, 'exclude the real UI Session, not the synthetic preview owner')
+  assert.equal(calls.preview[0].options.scope, 'dsh-history', 'only the trusted Web controller opts into cross-project history')
 })
 
 test('Web Run is asynchronous, idempotent per Preview, and opens the completed Job by name', async () => {

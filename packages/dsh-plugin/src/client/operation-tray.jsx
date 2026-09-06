@@ -31,7 +31,7 @@ export const OPERATION_TRAY_MESSAGES = {
 }
 for (const locale of ['zh', 'en']) Object.assign(OPERATION_TRAY_MESSAGES[locale], Object.fromEntries(Object.entries(PHASES[locale]).map(([key, value]) => [`phase_${key}`, value])))
 
-export function OperationTray({ sessionId, scopeKey, request, update, onViewResult, t }) {
+export function OperationTray({ sessionId, scopeKey, request, update, onViewResult, t, hideWhenEmpty = false }) {
   const label = key => t?.(key) ?? OPERATION_TRAY_MESSAGES.zh[key] ?? key
   const ownerKey = `${sessionId}\n${scopeKey ?? ''}`
   const [stored, setStored] = useState({ ownerKey, items: [], loading: true })
@@ -50,6 +50,9 @@ export function OperationTray({ sessionId, scopeKey, request, update, onViewResu
   }, [sessionId, scopeKey, request, attempt, limit])
   const active = state.items.filter(actionOperationActive).length
   const attention = state.items.filter(operationNeedsRecovery).length
+  // An unconfirmed or stale empty list must remain visible: hiding it would
+  // turn a failed status read into an apparent absence of background work.
+  if (hideWhenEmpty && !state.loading && !state.error && state.items.length === 0) return null
   return <section className="hse-operation-tray" aria-label={label('tasks')}>
     <button type="button" className="hse-operation-toggle" aria-expanded={expanded} onClick={() => setExpanded(value => !value)}>
       {label('tasks')} · <span role="status">{state.loading ? label('loading') : `${active} ${label('active')} · ${attention} ${label('attention')} · ${state.items.length} ${label('records')}`}</span>{expanded ? ' −' : ' +'}

@@ -1,7 +1,8 @@
 import json
 from pathlib import Path
 
-from jsonschema import Draft202012Validator
+import pytest
+from jsonschema import Draft202012Validator, ValidationError
 
 from helpers import make_candidate, make_context, make_dataset, make_stack
 from helpers import make_historical_batch
@@ -28,6 +29,30 @@ def load(name: str):
 def test_all_public_schemas_are_valid_json_schema():
     for path in SCHEMA_ROOT.glob("*.schema.json"):
         Draft202012Validator.check_schema(json.loads(path.read_text()))
+
+
+def test_historical_batch_schema_accepts_history_scope_and_optional_scan_provenance(tmp_path: Path):
+    _, batch, _ = make_historical_batch(tmp_path, count=2)
+    validator = Draft202012Validator(load("historical-generation-batch.schema.json"))
+    validator.validate(batch)
+    batch["selection"]["scan"] = {
+        "scope": "exact-cwd", "listed_count": 2, "candidate_count": 2,
+        "read_count": 2, "unscanned_count": 0, "partial": False,
+        "window_order": "all-candidates", "selection_order": "last-activity-desc",
+    }
+    validator.validate(batch)
+    batch["selection"]["scope"] = "dsh-history"
+    batch["selection"]["scan"] = {
+        "scope": "dsh-history", "listed_count": 20, "candidate_count": 12,
+        "read_count": 4, "unscanned_count": 8, "partial": True,
+        "window_order": "created-at-desc", "selection_order": "last-activity-desc",
+    }
+    for index, record in enumerate(batch["records"]):
+        record["source_project_digest"] = "sha256:" + str(index) * 64
+    validator.validate(batch)
+    batch["records"][0]["source_project_digest"] = "/private/raw-project-path"
+    with pytest.raises(ValidationError):
+        validator.validate(batch)
 
 
 def test_generated_context_and_dataset_match_public_schemas(tmp_path: Path):

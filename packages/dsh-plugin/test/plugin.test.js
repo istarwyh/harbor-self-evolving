@@ -246,6 +246,48 @@ test('Session diagnostic tools remain registered and fail explicitly without Ses
   )
 })
 
+test('registered Session Preview cannot opt into cross-project history through an undeclared scope', async () => {
+  const tools = []
+  const queries = []
+  const reads = []
+  const root = path.resolve('/fixture/harbor-current-project')
+  const sessionQuery = {
+    async filterSessions(filters) {
+      queries.push(filters)
+      // Even a query provider that returns extra projects must not widen scope.
+      return [{ header: { id: 'unrelated-source', cwd: '/fixture/other-project', createdAt: 1000, version: 0 } }]
+    },
+    async readSession(id) {
+      reads.push(id)
+      throw new Error('An unrelated synthetic transcript must not be read')
+    },
+  }
+  apply({
+    skills: { register() {} },
+    tools: { register(tool) { tools.push(tool) } },
+    on() {},
+    get(name) { return name === 'sessionQuery' ? sessionQuery : undefined },
+  }, {
+    projectRoot: root,
+    jobsDir: 'jobs',
+    harborBin: 'harbor',
+    harborDshBin: 'harbor-dsh',
+    agentImportPath: 'harbor_dsh_evolution.agent:DshCandidateAgent',
+    pluginImportPath: 'dsh-evolution',
+    pythonPath: '',
+    timeoutMs: 1000,
+  })
+
+  const preview = tools.find(tool => tool.name === 'harbor_session_diagnostic_preview')
+  assert.equal(preview.parameters.properties.scope, undefined)
+  await assert.rejects(
+    preview.execute({ scope: 'dsh-history' }, toolExecution(root)),
+    /NO_ELIGIBLE_SESSIONS/,
+  )
+  assert.deepEqual(queries, [[{ kind: 'cwd', values: [root] }]])
+  assert.deepEqual(reads, [])
+})
+
 test('Agent Historical Run shares the process lock and releases it on every failure path', async () => {
   const tools = []
   const root = await mkdtemp(path.join(os.tmpdir(), 'harbor-shared-run-lock-'))
