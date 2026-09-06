@@ -4,6 +4,8 @@ Status: implemented interaction/runtime reliability slice, 2026-09-06. **Not ful
 
 Release scope for **0.9.2**: the user requested publication of the reviewed incremental interaction/usability changes. This does not waive the Candidate/AC-04, Docker cancellation, mobile/keyboard or full lifecycle acceptance gaps recorded below, and is not a complete-PRD release. Historical iteration counts and statements that no package was published describe those iterations, not current registry availability. The release preflight found 0.9.1 absent from npm, PyPI and GitHub Releases; its code baseline remains in Git history.
 
+Selected original UI screenshots and newly captured public CI/release pages are archived in the [0.9.2 visual verification gallery](releases/v0.9.2/README.md). Historical captures and newly captured result pages are dated separately; the gallery does not change the acceptance boundaries below.
+
 ## Candidate-owned ACP runtime — 2026-09-06
 
 The hard-coded demo/latest dependency blocker recorded in earlier iterations is now removed. Candidate-owned source, explicit runtime identity, exact npm locks and prepared Node/SDK checks replace runtime application discovery. Quick diagnostic generates the new contract; old Candidate evidence is retained and requires an explicit new snapshot before execution. Details and reproducible verification commands are in [Candidate runtime contract](candidate-runtime-contract.md).
