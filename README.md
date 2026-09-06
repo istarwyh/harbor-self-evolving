@@ -206,6 +206,8 @@ cd harbor-self-evolving
 
 维护者发布流程见 [npm Trusted Publishing 接入与验证](docs/npm-trusted-publishing.md)：通过 GitHub Actions OIDC 发布，不保存长期 npm Token。
 
+直观看每版改动与验证过程：[发布截图图集](docs/releases/README.md)。
+
 仓库结构：
 
 ```text
