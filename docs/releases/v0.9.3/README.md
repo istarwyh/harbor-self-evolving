@@ -1,9 +1,9 @@
 # Harbor 0.9.3：变更与验证过程图
 
-- 归档日期：2026-09-07（Asia/Shanghai）。本记录处于发布准备阶段，不代表已发布或用户已安装版本已更新。
-- 目标发布版本 / tag：`0.9.3` / `v0.9.3`；最终产品提交、归档提交及发布运行待补。
-- 包发布状态：npm、PyPI、GitHub Release 均待本次发布后分别核对。
-- 资料归档状态：8 张截图、本次浏览器操作及本地验证结果已归档；最终提交与在线来源、发布入口、资料包上传仍待补。
+- 归档日期：2026-09-07（Asia/Shanghai）。npm/PyPI 发布、公开 registry 独立核对、Release 软件包与验证资料包核对均已完成。不代表用户已安装版本已更新。
+- 产品版本 / tag：`0.9.3` / `v0.9.3`；产品提交为 [`1a04185f37ecb2d1b63f1e3769dd7505cb239e89`](https://github.com/istarwyh/harbor-self-evolving/commit/1a04185f37ecb2d1b63f1e3769dd7505cb239e89)，来自已合并的 [PR #27](https://github.com/istarwyh/harbor-self-evolving/pull/27)。
+- 包发布状态：npm 与 PyPI 工作流均成功；公开 registry 独立下载的三个软件包、同次 CI 制品及 [GitHub Release](https://github.com/istarwyh/harbor-self-evolving/releases/tag/v0.9.3) 附件逐一比对一致，并与本地 preflight 包的散列相同。
+- 资料归档状态：8 张截图、浏览器操作、本地验证与发布工作流来源已归档；验证资料 ZIP 已上传，重新下载后与本地逐字节一致，说明中的 8 张相对路径图片均存在且匹配原图。
 
 ## 这次改了什么
 
@@ -19,7 +19,7 @@
 
 ## 环境与证据身份
 
-图 01–04：2026-09-07 约 00:14–00:17 +08:00，对包版本字段已为 `0.9.3` 的本次未提交源码重新操作与截图；最终提交 SHA 待提交后补齐。macOS、Chrome，视口 1272 × 898 CSS px，PNG 2544 × 1796 px。原生预览加载真实插件 React 组件、slot 注册与 HTTP / `EvolutionService` 链；宿主标签、Composer、任务进度与取消均为测试替身。临时工作空间含 2 条合成 Trial，Job 为 `harbor-ui-acceptance-1788711203449`。预置建议不是模型生成，建议确认仅向临时工作空间保存草案，不修改 Candidate。
+图 01–04：2026-09-07 约 00:14–00:17 +08:00，对包版本字段已为 `0.9.3`、当时尚未提交的源码重新操作与截图。其产品源码随后纳入 `1a04185f37ecb2d1b63f1e3769dd7505cb239e89`；已逐字节核对，该产品源码 tree 与本地检验/截图使用的源码一致。发布后补录本说明不改变截图日期，也不把后续文档提交作为截图时的运行版本。macOS、Chrome，视口 1272 × 898 CSS px，PNG 2544 × 1796 px。原生预览加载真实插件 React 组件、slot 注册与 HTTP / `EvolutionService` 链；宿主标签、Composer、任务进度与取消均为测试替身。临时工作空间含 2 条合成 Trial，Job 为 `harbor-ui-acceptance-1788711203449`。预置建议不是模型生成，建议确认仅向临时工作空间保存草案，不修改 Candidate。
 
 图 05–08：来自 2026-09-06（Asia/Shanghai）的历史验收原图，源码身份是 `75bb114f812b3660c510e054419c248c1b81d8b8` 加当时未提交修改，**包版本字段仍为 `0.9.2`，不是新发布的 0.9.3 实拍**。macOS、Node `22.22.2`、Python `3.12.14`、Chrome、React / ReactDOM `18.3.1`；原图尺寸 2544 × 1796 px。真实 `HistoricalLauncher`、HTTP handler、`HistoricalWebController`、`SessionDiagnosticService`、选择器与批次物化链参与运行；DSH Session Query、评审模型绑定和最终运行器为测试替身，技术错误组件在隔离页面使用简化替身。
 
@@ -29,7 +29,7 @@
 
 ## 01 · 无任务时不占用工作台空间
 
-- 来源与时间：本次 0.9.3 未提交源码预览，2026-09-07 约 00:14–00:17 +08:00；环境与尺寸见上文。
+- 来源与时间：本次 0.9.3 源码预览，2026-09-07 约 00:14–00:17 +08:00；采集时尚未提交，已确认其产品源码与随后发布的 `1a04185` 一致，环境与尺寸见上文。
 - 证据类型：`synthetic + component/service`；宿主标签和 Composer 为测试替身，不调用真实模型。
 - 操作过程：打开 `?scene=empty`，等待任务读取完成。
 - 预期：工作台单列；旧 Context / Copilot 可见面板不存在；空任务区域完全隐藏，不改变输入草稿。
@@ -110,13 +110,15 @@
 
 ## 测试与发布核对
 
+本地检验源码与发布提交 `1a04185` 的产品源码逐字节一致。[PR CI 34045298656](https://github.com/istarwyh/harbor-self-evolving/actions/runs/34045298656)、[main CI 34045348834](https://github.com/istarwyh/harbor-self-evolving/actions/runs/34045348834)、[tag CI 34045411874](https://github.com/istarwyh/harbor-self-evolving/actions/runs/34045411874) 均成功。
+
 本次统一版本的最终本地结果为 **549/549 Node 测试通过（0 失败、0 跳过），318/318 Python 测试通过**；其中 Historical 启动器定向回归为 **22/22**，包括延迟 reload 导航。其它定向测试文件的结果已包含在 549 项全量运行中，不另行编造本次独立执行数量。
 
 此前原生改动曾有 487/487、共享整合前 532/533（1 项失败），后续有 542/542 Node 与 318/318 Python 的历史整合记录；原验收文档保留这些旧结果，不能与本次收尾修复后的结果混淆。
 
 | 项目 | 命令或来源 | 本次实际结果与边界 |
 | --- | --- | --- |
-| 客户端构建与全量 Node 回归 | `packages/dsh-plugin` 中执行 `npm run check` | 549/549 通过，0 失败、0 跳过；源码提交 SHA 待补 |
+| 客户端构建与全量 Node 回归 | `packages/dsh-plugin` 中执行 `npm run check` | 549/549 通过，0 失败、0 跳过；已匹配发布源码 `1a04185` |
 | 原生组件、工具卡与任务区 | 定向复现：`node --test test/native-tool-render.test.js test/operation-tray.test.js test/documentation.test.js` | 本次结果已包含于全量 549 项；不代替真实 Host 验收 |
 | Historical 范围、服务与批次链 | 定向复现：`node --test test/session-selection.test.js test/session-diagnostic.test.js test/historical-web.test.js test/historical-quickstart.test.js` | 已包含于全量 549 项；公开 preview 固定 `exact-cwd`，只有 Web 内部可跨项目 |
 | Historical 完成与延迟 reload | `node --test test/historical-launcher.test.js` | 22/22 通过；旧图 07 不证明该修复 |
@@ -124,36 +126,45 @@
 | 当前原生组件与服务旅程 | 本次浏览器图 01–04、DOM 检查和真实 HTTP / Service 操作 | 空态、任务控制、预览审阅和草案保存符合预期；宿主与任务执行仍为测试替身 |
 | 锁定依赖与本地制品 | `npm ci`、`npm pack`、`uv build` | npm 当次报告 0 个漏洞，打包 50 个文件；Python wheel/sdist 构建成功；不等于公开发布已完成 |
 | 同步与可重复构建 | schema `cmp`、shell 语法、`git diff --check`、客户端重新构建 | 均通过；重建客户端 SHA256 与打包前一致，见下文 |
-| npm 包与对应发布运行 | 版本、提交、原生工作流链接待补 | 待核对公开版本、可下载制品及对应关系 |
-| PyPI wheel/sdist 与对应发布运行 | 版本、提交、原生工作流链接待补 | 待核对公开版本、可下载制品及对应关系 |
-| GitHub Release 与附件 | 版本发布页、资料包与制品链接待补 | 待核对图片、链接、下载与制品一致性 |
+| npm 包与对应发布运行 | [npm 34045411919](https://github.com/istarwyh/harbor-self-evolving/actions/runs/34045411919)，`v0.9.3` / `1a04185` | 工作流成功；公开 tarball 的 50 个文件匹配 tag，SHA1/SHA512 正确；与同次 CI、Release、本地包散列一致 |
+| PyPI wheel/sdist 与对应发布运行 | [PyPI 34045411860](https://github.com/istarwyh/harbor-self-evolving/actions/runs/34045411860)，`v0.9.3` / `1a04185` | 工作流成功；公开 wheel/sdist 下载与同次 CI、Release、本地包散列一致；38/71 个源码文件匹配 tag，公开 wheel 三入口及 16 项 loader smoke 通过 |
+| GitHub Release 与附件 | [Harbor 0.9.3](https://github.com/istarwyh/harbor-self-evolving/releases/tag/v0.9.3) | 三个软件包及图集资料 ZIP 下载比对通过；附有 SHA256SUMS，ZIP 内说明与 8 张图片完整 |
 
-客户端 `packages/dsh-plugin/lib/client.js` 的本次重建 SHA256：`a4ffdec4d7044c8d4720b5dcfbae456d4bc17e9e44ac265398843fe538ff05ba`。这是本地构建内容的一致性记录，不是待发布 npm/PyPI 制品的散列。
+客户端 `packages/dsh-plugin/lib/client.js` 的本次重建 SHA256：`a4ffdec4d7044c8d4720b5dcfbae456d4bc17e9e44ac265398843fe538ff05ba`。这是客户端文件的一致性记录，不是 npm/PyPI 制品自身的散列。
 
 本地制品 preflight：npm 包的 50 个文件已逐字节与预期内容匹配；wheel 共 43 个文件，其中 38 个源码文件匹配；sdist 共 73 个文件，对应源码匹配。在新的临时目录从 wheel 导入实际版本 `0.9.3`，3 个入口均可加载；合成 v1 `exact-cwd` / `dsh-history` loader 定向 smoke 为 **16 项通过、23 项 deselected**。23 项未被该定向命令选中，不是全量测试出现 23 项跳过。制品不含真实凭据；sdist 包含刻意构造的假凭据脱敏测试样例，wheel 不包含这些测试样例。
 
-| 本地 preflight 制品 | SHA256 |
+| 已比对的本地 / 同次 CI / 公开 registry / Release 制品 | SHA256 |
 | --- | --- |
 | npm tarball | `b1eae6aa80f4471921096e507d99db73dadb41d9a96026979f05a861f7db44f6` |
 | Python wheel | `ff0eb05021ec9e804dda4b21fb491f5390db2f8340cb3ed5e0bcfa8bf0125d42` |
 | Python sdist | `d53fdeaaf3b480cbcd22fc6f1c8e339be07289a97d11e9ace5d85d0627dda19f` |
 
-这些散列仅属于本地 preflight 制品，**不是公开 registry 或 GitHub Release 附件的验证结果**。CI 会重新构建，特别是 Python 制品不预期必然逐字节相同；公开包需要与其对应发布运行的实际制品另行核对。
+以上散列最初来自本地 preflight；发布后已实际下载对应 npm/PyPI 工作流产物、Release 的三个软件包以及公开 registry 文件，逐个比较后确认均与上表一致，**不是假定 CI 重建必然逐字节相同**。
 
-原始验收账本：`docs/verification/native-conversation/README.md`、`docs/verification/historical-quickstart/README.md`。归档提交确定后补上可追溯在线链接；原始日期、环境、曾失败的结果和范围均保留，不把早期记录改写成本次实测。
+公开包来源：[npm 0.9.3 tarball](https://registry.npmjs.org/dsh-harbor-evolution/-/dsh-harbor-evolution-0.9.3.tgz)、[PyPI 0.9.3](https://pypi.org/project/harbor-dsh-evolution/0.9.3/)。npm 包的 50 个文件匹配 tag，声明的 SHA1/SHA512 校验正确；PyPI wheel 的 38 个源码文件与 sdist 的 71 个源码文件匹配 tag。公开 wheel 在独立临时目录导入成功，3 个入口均可加载，16 项合成 loader 测试通过；这仍不是实际 Host 或真实模型质量验收。
+
+默认版本传播：首次读取 PyPI 未指定版本的项目 JSON 时仍返回 `0.9.2`，明确版本 `0.9.3` 的文件已可下载；随后复查，npm `/latest` 与 PyPI 默认 JSON 均已返回 `0.9.3`，PyPI simple index 的两个文件摘要匹配且均未撤回。没有把首次的索引延迟误报为缺包，也没有只凭工作流成功结束验证。
+
+[npm provenance](https://registry.npmjs.org/-/npm/v1/attestations/dsh-harbor-evolution@0.9.3) 已独立完成 Sigstore 密码学验签，限定 GitHub issuer 与 `publish-npm.yml@refs/tags/v0.9.3` 身份，subject、产品提交、发布 run 与 Rekor 条目 `2741291796` 均匹配。PyPI 证明仅核对了身份和摘要对应关系，**未独立做密码学验签，不宣称完整 SLSA 验证**。
+
+保留的非阻塞提醒：[Python 发布运行 34045411860](https://github.com/istarwyh/harbor-self-evolving/actions/runs/34045411860) 的实际测试日志为 **318 passed、18 warnings**。提醒来自 Harbor 上游 `config.py` 对 `/logs/artifacts` 与 `/logs/artifacts/session-observation.json` 的重叠收集，冲突时保留第一项；测试与发布成功不等于没有警告。
+
+原始验收账本：[原生对话精简](https://github.com/istarwyh/harbor-self-evolving/blob/1a04185f37ecb2d1b63f1e3769dd7505cb239e89/docs/verification/native-conversation/README.md)、[历史会话快速体验](https://github.com/istarwyh/harbor-self-evolving/blob/1a04185f37ecb2d1b63f1e3769dd7505cb239e89/docs/verification/historical-quickstart/README.md)。链接固定在产品提交；原始日期、环境、曾失败的结果和范围均保留，不把早期记录改写成本次实测。
 
 ## 未完成项与验证边界
 
 - 普通消息的自动页面上下文尚未实现。已检查的本机 DSH rc.8 公开 `IConversation`、`SessionInput` 和 input-trigger 合约没有通用的发送前原子挂载入口；本次未使用私有 Host 状态、发送后注入或自动插入引用模拟该能力。可选 Ask AI / `@harbor` 仍需用户明确操作，浏览页面不会自动发送或改写草稿。
 - 原生工具卡的导航提示是打开 Harbor 标签，不宣称可自动切换真实宿主标签。新旧隔离预览的宿主标签和 Composer 均为测试替身。
 - 未进行真实 Host 安装/刷新、真实 Session Query 历史读取、真实模型与 Candidate 质量评测、Host Broker/Harbor CLI/Docker 完整执行、真实取消恢复、完整键盘/屏幕尺寸矩阵或原有 100-Trial 实机验收。本次组件/服务证据不等于正式安装包端到端验收。
-- 源码修复、单项测试通过、截图可见与包发布是不同事实；本版不能据此宣称完整 PRD 或新的业务基线通过。本地测试已通过，包制品公开状态与资料发布状态仍须分别核对。
+- 源码修复、单项测试通过、截图可见与包发布是不同事实；本版不能据此宣称完整 PRD 或新的业务基线通过。本地测试、发布工作流、公开 registry、Release 软件包和验证资料包均已分别核对。
 - 历史原生预览曾遇本机 ReactDOM 19 / React 18 不匹配，改用既有 18.3.1 配对依赖，并在预览脚本建立临时目录或监听之前检查主版本。此记录是验收环境修正，不是产品运行故障已通过截图解决。
 
 ## 发布入口与资料包
 
-- 版本发布页：待发布后填写。
-- 完整验收记录 / 相关提交或 PR：待最终提交后填写在线链接。
-- 验证资料包：8 张图与本地说明已齐，待打包为 `harbor-0.9.3-verification.zip`，上传后填写下载链接。
+- 版本发布页：[Harbor 0.9.3](https://github.com/istarwyh/harbor-self-evolving/releases/tag/v0.9.3)。
+- 相关实现：[PR #27](https://github.com/istarwyh/harbor-self-evolving/pull/27)、[产品提交 `1a04185`](https://github.com/istarwyh/harbor-self-evolving/commit/1a04185f37ecb2d1b63f1e3769dd7505cb239e89)；完整原始验收记录见上方固定提交链接。
+- 验证资料包：[harbor-0.9.3-verification.zip](https://github.com/istarwyh/harbor-self-evolving/releases/download/v0.9.3/harbor-0.9.3-verification.zip)，含本说明与 8 张图，上传后已重新下载核对。
+- 下载校验：[SHA256SUMS](https://github.com/istarwyh/harbor-self-evolving/releases/download/v0.9.3/SHA256SUMS)，包含三个软件包与验证资料 ZIP 的 SHA256。
 
 资料包包含 `v0.9.3/README.md` 与引用的 `v0.9.3/screenshots/` 图片，解压后可离线看图；源码、日志与发布来源使用在线链接。归档提交完成后，在 Release 与当次交付说明中放上指向该提交的图集永久链接，本说明无需自链。补录资料不移动已公开 tag、不覆盖安装包、不重发同版本，也不增加发布校验脚本、CI 门禁或审批。
