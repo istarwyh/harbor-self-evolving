@@ -116,6 +116,220 @@ test('selection is bounded before exact Session reads', async () => {
   )
 })
 
+test('DSH history discovers completed sessions independently of the output workspace', async () => {
+  const otherRoot = '/tmp/dsh-business-project'
+  const completed = snapshot('business-history', { cwd: otherRoot, lastAt: 4_000 })
+  const current = snapshot('active-conversation', { cwd: otherRoot, lastAt: 5_000 })
+  const query = queryFor([completed, current])
+  const filters = []
+  const filterSessions = query.filterSessions
+  query.filterSessions = async applied => {
+    filters.push(applied)
+    return filterSessions()
+  }
+
+  const result = await selectRecentSessions({
+    sessionQuery: query, projectRoot: ROOT, currentSessionId: current.session.id, scope: 'dsh-history',
+  })
+
+  assert.deepEqual(filters, [[]])
+  assert.deepEqual(result.selected.map(item => item.rawSessionId), [completed.session.id])
+  assert.equal(result.selected[0].header.cwd, otherRoot)
+  assert.equal(result.excludedCounts.currentSession, 1)
+  assert.equal(result.excludedCounts.outsideWorkspace, 0)
+  assert.equal(result.scan.partial, false)
+  assert.equal(verifySessionSnapshot(result.selected[0], completed, otherRoot), true)
+  assert.equal(verifySessionSnapshot(result.selected[0], completed, ROOT), false)
+  assert.doesNotMatch(JSON.stringify(result.publicSelected), /business-history|dsh-business-project|active-conversation|goal|done/)
+
+  const defaultResult = await selectRecentSessions({ sessionQuery: query, projectRoot: ROOT })
+  assert.equal(defaultResult.selected.length, 0)
+  assert.equal(defaultResult.excludedCounts.outsideWorkspace, 2)
+  assert.deepEqual(filters[1], [{ kind: 'cwd', values: [ROOT] }])
+})
+
+test('DSH history can use list-only query services without losing cross-project discovery', async () => {
+  const value = snapshot('other-workspace', { cwd: '/tmp/other-workspace' })
+  const query = queryFor([value])
+  query.listSessions = query.filterSessions
+  delete query.filterSessions
+
+  const result = await selectRecentSessions({ sessionQuery: query, projectRoot: ROOT, scope: 'dsh-history' })
+  assert.equal(result.selected[0].rawSessionId, value.session.id)
+})
+
+test('DSH history bounds the newest-created window and ranks exact activity only inside it', async () => {
+  const values = [
+    snapshot('old-recently-active', { createdAt: 100, lastAt: 30_000 }),
+    snapshot('newest-created', { createdAt: 400, lastAt: 5_000 }),
+    snapshot('older-created', { createdAt: 200, lastAt: 10_000 }),
+    snapshot('window-most-active', { createdAt: 300, lastAt: 20_000 }),
+  ]
+  const query = queryFor(values)
+  const reads = []
+  const readSession = query.readSession
+  query.readSession = async id => { reads.push(id); return readSession(id) }
+
+  const result = await selectRecentSessions({ sessionQuery: query, projectRoot: ROOT, scope: 'dsh-history', maxSessionReads: 2 })
+
+  assert.deepEqual(reads, ['newest-created', 'window-most-active'])
+  assert.deepEqual(result.selected.map(item => item.rawSessionId), ['window-most-active', 'newest-created'])
+  assert.deepEqual(result.scan, {
+    scope: 'dsh-history', listedCount: 4, candidateCount: 4, readCount: 2, unscannedCount: 2,
+    partial: true, windowOrder: 'created-at-desc', selectionOrder: 'last-activity-desc',
+  })
+  assert.match(result.warnings.join(' '), /2 older candidate\(s\) were not read/)
+  assert.match(result.warnings.join(' '), /not across all DSH history/)
+})
+
+test('an exhausted DSH history window is explicitly partial even with no eligible result', async () => {
+  const values = [
+    snapshot('older-completed', { createdAt: 100 }),
+    snapshot('newer-open', { createdAt: 200, open: true }),
+    snapshot('newest-aborted', { createdAt: 300, reason: 'aborted' }),
+  ]
+  const result = await selectRecentSessions({
+    sessionQuery: queryFor(values), projectRoot: ROOT, scope: 'dsh-history', maxSessionReads: 2,
+  })
+  assert.equal(result.selected.length, 0)
+  assert.equal(result.scan.partial, true)
+  assert.equal(result.scan.unscannedCount, 1)
+  assert.equal(result.excludedCounts.openTurn, 1)
+  assert.equal(result.excludedCounts.userAborted, 1)
+  assert.match(result.warnings.join(' '), /older candidate\(s\) were not read/)
+})
+
+test('quick experience stops after enough eligible history instead of reading the entire budget', async () => {
+  const values = Array.from({ length: 150 }, (_, index) => snapshot(`history-${index}`, {
+    createdAt: 1_000 + index, lastAt: 5_000 + index,
+  }))
+  const query = queryFor(values)
+  const reads = []
+  const readSession = query.readSession
+  query.readSession = async id => { reads.push(id); return readSession(id) }
+  const result = await selectRecentSessions({
+    sessionQuery: query, projectRoot: ROOT, scope: 'dsh-history', limit: 3,
+    maxSessionReads: 100, concurrency: 4,
+  })
+  assert.equal(reads.length, 4)
+  assert.deepEqual(reads, ['history-149', 'history-148', 'history-147', 'history-146'])
+  assert.equal(result.selected.length, 3)
+  assert.equal(result.scan.readCount, 4)
+  assert.equal(result.scan.unscannedCount, 146)
+  assert.equal(result.scan.partial, true)
+})
+
+test('history skips a rejected batch and continues until enough eligible samples are found', async () => {
+  const values = [
+    snapshot('oldest-complete', { createdAt: 100 }),
+    snapshot('older-complete', { createdAt: 200 }),
+    snapshot('newer-open', { createdAt: 300, open: true }),
+    snapshot('newest-internal', { createdAt: 400, harbor: true }),
+  ]
+  const result = await selectRecentSessions({
+    sessionQuery: queryFor(values), projectRoot: ROOT, scope: 'dsh-history', limit: 1, concurrency: 2,
+  })
+  assert.equal(result.selected.length, 1)
+  assert.equal(result.scan.readCount, 4)
+  assert.equal(result.scan.partial, false)
+  assert.equal(result.excludedCounts.openTurn, 1)
+  assert.equal(result.excludedCounts.harborInternal, 1)
+})
+
+test('DSH history retains lineage, direct-input and internal evaluation exclusions across workspaces', async () => {
+  const values = [
+    snapshot('sub', { header: { origin: 'subagent' } }),
+    snapshot('fork', { header: { parentSession: 'parent', seedLength: 2 } }),
+    snapshot('child', { header: { delegationDepth: 1 } }),
+    snapshot('open', { open: true }),
+    snapshot('aborted', { reason: 'aborted' }),
+    snapshot('no-human', { human: false }),
+    snapshot('no-assistant', { assistant: false }),
+    snapshot('harbor', { harbor: 'harbor_eval_run' }),
+    snapshot('harbor-preset', { selectedPresets: ['harbor-internal-evaluator'] }),
+    snapshot('valid'),
+  ].map(value => ({ ...value, session: { ...value.session, cwd: '/tmp/another-business-project' } }))
+  const result = await selectRecentSessions({ sessionQuery: queryFor(values), projectRoot: ROOT, scope: 'dsh-history' })
+  assert.deepEqual(result.selected.map(item => item.rawSessionId), ['valid'])
+  assert.equal(result.excludedCounts.subagent, 1)
+  assert.equal(result.excludedCounts.forkOrChild, 2)
+  assert.equal(result.excludedCounts.openTurn, 1)
+  assert.equal(result.excludedCounts.userAborted, 1)
+  assert.equal(result.excludedCounts.noDirectHumanInput, 1)
+  assert.equal(result.excludedCounts.noAssistantOutput, 1)
+  assert.equal(result.excludedCounts.harborInternal, 2)
+})
+
+test('invalid and duplicate listed metadata cannot consume the history read window', async () => {
+  const values = [
+    snapshot('relative-root', { cwd: 'relative/project' }),
+    snapshot('nul-root', { cwd: '/tmp/bad\0root' }),
+    snapshot('missing-root', { cwd: null }),
+    snapshot('invalid-time', { createdAt: NaN }),
+    snapshot('overflow-time', { createdAt: Number.MAX_SAFE_INTEGER }),
+    snapshot(''),
+    snapshot('valid'),
+    snapshot('valid'),
+  ]
+  const query = queryFor(values)
+  const reads = []
+  const readSession = query.readSession
+  query.readSession = async id => { reads.push(id); return readSession(id) }
+  const result = await selectRecentSessions({ sessionQuery: query, projectRoot: ROOT, scope: 'dsh-history', maxSessionReads: 1 })
+  assert.deepEqual(reads, ['valid'])
+  assert.equal(result.selected.length, 1)
+  assert.equal(result.scan.partial, false)
+  assert.equal(result.excludedCounts.invalidHeader, 6)
+  assert.equal(result.excludedCounts.duplicate, 1)
+  assert.match(result.warnings.join(' '), /invalid metadata/)
+})
+
+test('history read identity drift and malformed snapshots are isolated without exposing source details', async () => {
+  for (const patch of [
+    { id: 'replacement-session' }, { cwd: '/tmp/different-project' }, { cwd: 'relative-path' },
+    { createdAt: 3_000 }, { origin: 'subagent' }, { parentSession: 'parent' },
+    { seedLength: 1 }, { delegationDepth: 1 }, { version: 1 },
+  ]) {
+    const original = snapshot('stable', { cwd: '/tmp/original-business-project' })
+    const query = queryFor([original])
+    query.readSession = async () => ({ ...original, session: { ...original.session, ...patch } })
+    const result = await selectRecentSessions({ sessionQuery: query, projectRoot: ROOT, scope: 'dsh-history' })
+    assert.equal(result.selected.length, 0, JSON.stringify(patch))
+    assert.equal(result.excludedCounts.unreadable, 1)
+    assert.doesNotMatch(JSON.stringify(result.warnings), /replacement-session|original-business-project|different-project/)
+  }
+  const original = snapshot('malformed')
+  const query = queryFor([original])
+  query.readSession = async () => ({ ...original, events: null })
+  const result = await selectRecentSessions({ sessionQuery: query, projectRoot: ROOT, scope: 'dsh-history' })
+  assert.equal(result.excludedCounts.unreadable, 1)
+})
+
+test('history selection does not interpret malformed query results as empty history', async () => {
+  const query = queryFor([])
+  query.filterSessions = async () => null
+  await assert.rejects(selectRecentSessions({ sessionQuery: query, projectRoot: ROOT, scope: 'dsh-history' }), /DSH_SESSION_QUERY_INVALID/)
+})
+
+test('selection rejects invalid scope and unbounded or unusable read limits', async () => {
+  const base = { sessionQuery: queryFor([]), projectRoot: ROOT }
+  await assert.rejects(selectRecentSessions({ ...base, scope: 'all-files' }), /SESSION_SELECTION_SCOPE_INVALID/)
+  for (const value of [0, -1, 1.5, Infinity, NaN]) {
+    await assert.rejects(selectRecentSessions({ ...base, maxSessionReads: value }), /SESSION_READ_BUDGET_INVALID/)
+    await assert.rejects(selectRecentSessions({ ...base, concurrency: value }), /SESSION_READ_CONCURRENCY_INVALID/)
+  }
+})
+
+test('an aborted history scan rejects instead of misreporting unreadable or empty history', async () => {
+  const controller = new AbortController()
+  const value = snapshot('valid')
+  const query = queryFor([value])
+  query.readSession = async () => { controller.abort(); return value }
+  await assert.rejects(selectRecentSessions({
+    sessionQuery: query, projectRoot: ROOT, scope: 'dsh-history', signal: controller.signal,
+  }), { name: 'AbortError' })
+})
+
 test('blank-stage business preset selection overrides a stale Harbor header everywhere', async () => {
   const switched = snapshot('preset-switched', {
     header: { agentPreset: 'harbor-creation-preset' },

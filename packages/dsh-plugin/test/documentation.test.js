@@ -101,10 +101,11 @@ test('public documentation matches the released Historical Session surface', asy
 
   for (const document of [rootReadme, pluginReadme]) {
     assert.match(document, /@harbor/);
-    assert.match(document, /Ask AI/);
+    assert.match(document, /Ask AI|问 AI/);
     assert.match(document, /one-shot|一次性/);
     assert.match(document, /same-session|同会话/);
-    assert.match(document, /Copilot Dock/);
+    assert.match(document, /native Tool|原生工具结果卡/);
+    assert.match(document, /without a Context Capsule or Copilot panel|不再在其上方展示 Context Capsule 或 Copilot 面板/);
     assert.match(document, /harbor\.navigate/);
     assert.match(document, /read-only|只读/);
     assert.match(document, /ordinary sends|普通发送/);

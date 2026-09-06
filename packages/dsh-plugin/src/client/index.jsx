@@ -2,7 +2,8 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 
 import { hasHarborReference, rawHarborReferenceRanges } from '../../lib/composer-context.js'
 import { ATTENTION_FILTERS, jobAttention } from '../../lib/workbench-health.js'
-import { harborQuestionKeys, harborQuestionLabelKey, JOURNEY_MESSAGES } from './workbench-journey.js'
+import { JOURNEY_MESSAGES } from './workbench-journey.js'
+import { HISTORICAL_MESSAGES, historicalErrorHint } from './historical-launcher-state.js'
 import { ActionDraftCardView, ACTION_CARD_MESSAGES } from './action-draft-card.jsx'
 import { OperationTray, OPERATION_TRAY_MESSAGES } from './operation-tray.jsx'
 import { harborConversationProjection } from './conversation-projection.js'
@@ -27,7 +28,7 @@ const dictionaries = {
     tab: 'Harbor', settings: 'Harbor 自进化', eyebrow: 'EVALUATION WORKBENCH',
     heroTitle: '看见 Agent 的每一次进步，也看见分数是否值得相信',
     heroBody: 'Harbor 固定实验边界；Trial Lifecycle 展示真实运行过程；Score Validity 阻止基础设施故障伪装成业务 0 分。',
-    refresh: '刷新', jobs: '评测批次', jobsHint: '点击 Job 后，最多再点一次即可进入对应 Trial 的证据。', workspace: '工作空间', workspaceSelect: '选择 Harbor 工作空间', empty: '还没有 Harbor Job。可以先评测这个工作空间最近完成的真实会话。',
+    refresh: '刷新', jobs: '评测批次', jobsHint: '点击 Job 后，最多再点一次即可进入对应 Trial 的证据。', workspace: '工作空间', workspaceSelect: '选择 Harbor 工作空间', empty: '还没有评测结果。可以先试试「评测最近会话」，自动查找当前 DSH 的近期真实会话，确认后开始。',
     askAi: 'Ask AI', askAboutThis: '引用后提问', currentPage: '当前页面', turnContext: '本轮上下文', noTurnContext: '尚未绑定；普通发送不会自动附带 Harbor 页面', clearContext: '清除', updateContext: '更新为当前对象', bindingContext: '正在校验上下文…', contextBindFailed: '上下文绑定失败', oneShot: '发送后清除', contextLegacy: 'Legacy', contextNonComparable: '不可比较', contextInvalidScore: '分数无效', copilot: 'Harbor Copilot', copilotIdle: '绑定对象并发送问题后，AI 结果会在这里出现。', copilotReading: '正在读取 Harbor 对象与证据…', copilotAnalyzing: '正在分析…', copilotFailed: '本轮 AI 运行失败', stopAgent: '停止', collapse: '收起', expand: '展开', fullConversation: '完整历史仍保存在同一个 Chat 会话', viewInHarbor: '在 Harbor 中查看', preparedInHarbor: '已定位；打开 Harbor Tab 查看', back: '返回上一状态', backToJobs: '返回 Job 列表', contextStale: '回答基于旧状态', suggestedQuestion1: '为什么这个 Trial 失分？', suggestedQuestion2: '这个分数是否有效？', suggestedQuestion3: '给我查看支持该结论的证据。', suggestedQuestion4: '下一步最小可验证动作是什么？',
     contextExpired: '已过期', contextExpiredHint: '该快照已过期；请显式更新为当前对象。', chooseCriterionEvidence: '该证据无法唯一归属评分维度；请从 Criterion 行选择。',
     contextFreshness: '上下文新鲜度', reanalyzeLatest: '基于最新状态重新分析', reanalyzeLatestPrompt: '请基于这个对象的最新状态重新分析，并明确说明与上一版结论的变化。', copilotTurn: '同一 Turn',
@@ -35,7 +36,7 @@ const dictionaries = {
     basedOn: '回答依据', revision: '快照版本', currentRevision: '当前版本', observedAt: '观测时间', evidenceRefs: '证据引用', objectRefs: '对象引用', evidenceUnavailable: '证据内容不可用',
     errorCode: '错误码', errorAt: '发生时间', nextStep: '下一步', clearFilters: '清除筛选', noFilteredTrials: '当前筛选没有 Trial。', selectTrialHint: '从左侧选择一个 Trial 查看证据。', loadingTrial: '正在读取 Trial…',
     errorNextRetry: '重试读取；如仍失败，请检查网络与 Harbor 运行状态。', errorNextPermission: '检查当前 Session 的工作空间与访问权限。', errorNextMissing: '刷新列表并确认对象仍然存在。', errorNextArtifact: '检查 Job 的 Artifact / Audit，修复产物后重试。',
-    historicalLaunch: '评测最近会话', historicalLaunchShort: '开始评测', historicalLaunchHint: '最多 10 条 · 先预览再运行', historicalLaunchBody: '用当前 DSH Agent 已完成的真实任务做诊断，不重新运行 Candidate。', historicalPreparing: '正在查找可评测会话…', historicalPreparingShort: '读取中…', historicalPreviewTitle: '确认历史会话评测', historicalPreviewHint: '这里只展示安全元数据。确认前不会写入 Batch，也不会启动 Harbor Job。', historicalConfirm: '确认并开始评测', historicalStarting: '正在启动…', historicalRunning: '历史会话评测运行中', historicalRunningHint: '可以关闭此窗口继续工作。Harbor 会在后台运行，完成后自动打开 Job。', historicalActive: '查看运行状态', historicalActiveShort: '查看状态', historicalCompleted: '评测完成，正在打开 Job…', recentSessions: '本次会话样本', selectedSessions: '选中会话', requestEstimate: '预计 Judge 请求', tokenExpiry: '预览有效期', generatorRole: '生成器', generatorRoleValue: '产生这些会话的 DSH Agent', evaluatorIdentity: '评测器身份', judgeIdentity: 'Judge 身份', coupling: '模型耦合', evidenceRetention: '证据保留', historicalBoundaries: '本次运行边界', historicalBoundaryDetail: '不运行 Candidate · 不做评测器元评测 · 不进入 Gate / 晋级', feedbackCounts: '反馈', turnCounts: '轮次', toolCounts: '工具调用', previewAgain: '重新预览', recent30Days: '仅看最近 30 天', noEligibleHint: '当前工作空间没有符合条件的已完成顶层会话。先在这个目录完成一个有用户输入和 Agent 输出的真实任务，或改用显式 Dataset。', narrowScanHint: '这个工作空间的会话太多。可以把扫描范围缩到最近 30 天后重试。', changedSessionHint: '预览后会话、反馈或工作空间发生了变化。为了避免评错证据，请重新预览。', historicalGenericError: '没有启动 Job。请检查提示后重新预览。', cancel: '取消',
+    ...HISTORICAL_MESSAGES.zh,
     completed: '已完成', partial: '完成但有异常', failed: '读取失败', pending: '等待运行', running: '运行中',
     candidate: '候选版本', dataset: '评测集', integration: '集成', renderer: '产物呈现', judge: '评测器', meta: '评测器元评测', reporter: '评测报告', optimizer: '优化器', gate: '晋级门禁',
     historicalTarget: '历史生成记录', generationRecords: '会话记录', generationSource: '生成来源', generatorPopulation: '生成器群体', executionMode: '执行方式', observationMode: '只观察已有结果', batch: '批次', scoredTrials: '已评分 Trials', unscoredTrials: '未评分 Trials', homogeneousPopulation: '同构生成器群体', mixedPopulation: '混合生成器群体',
@@ -71,7 +72,7 @@ const dictionaries = {
     tab: 'Harbor', settings: 'Harbor Evolution', eyebrow: 'EVALUATION WORKBENCH',
     heroTitle: 'See every Agent improvement—and whether the score is trustworthy',
     heroBody: 'Harbor fixes the experiment boundary. Trial Lifecycle shows real execution, while Score Validity keeps infrastructure failures out of quality metrics.',
-    refresh: 'Refresh', jobs: 'Evaluation jobs', jobsHint: 'Open a Job, then reach Trial evidence in at most one more interaction.', workspace: 'Workspace', workspaceSelect: 'Select Harbor workspace', empty: 'No Harbor Jobs yet. Start by evaluating recent completed Sessions in this workspace.',
+    refresh: 'Refresh', jobs: 'Evaluation jobs', jobsHint: 'Open a Job, then reach Trial evidence in at most one more interaction.', workspace: 'Workspace', workspaceSelect: 'Select Harbor workspace', empty: 'No evaluation results yet. Try “Evaluate recent Sessions” to find recent real conversations in this DSH automatically, then confirm to begin.',
     askAi: 'Ask AI', askAboutThis: 'Ask about this', currentPage: 'Current page', turnContext: 'Turn context', noTurnContext: 'Not bound; ordinary sends do not automatically attach the Harbor page', clearContext: 'Clear', updateContext: 'Update to current', bindingContext: 'Validating context…', contextBindFailed: 'Context binding failed', oneShot: 'Clears after send', contextLegacy: 'Legacy', contextNonComparable: 'Non-comparable', contextInvalidScore: 'Score invalid', copilot: 'Harbor Copilot', copilotIdle: 'Bind an object and send a question to see the AI result here.', copilotReading: 'Reading Harbor objects and evidence…', copilotAnalyzing: 'Analyzing…', copilotFailed: 'This AI turn failed', stopAgent: 'Stop', collapse: 'Collapse', expand: 'Expand', fullConversation: 'The complete history remains in the same Chat session', viewInHarbor: 'View in Harbor', preparedInHarbor: 'Located; open the Harbor tab to view', back: 'Back to previous state', backToJobs: 'Back to Jobs', contextStale: 'Answer is based on older state', suggestedQuestion1: 'Why did this Trial lose points?', suggestedQuestion2: 'Is this score valid?', suggestedQuestion3: 'Show the evidence supporting this conclusion.', suggestedQuestion4: 'What is the smallest verifiable next step?',
     contextExpired: 'Expired', contextExpiredHint: 'This snapshot expired. Explicitly update it to the current object.', chooseCriterionEvidence: 'This evidence does not have one unique criterion owner. Choose it from a Criterion row.',
     contextFreshness: 'Context freshness', reanalyzeLatest: 'Reanalyze from latest state', reanalyzeLatestPrompt: 'Reanalyze this object from its latest state and state what changed from the previous conclusion.', copilotTurn: 'Same turn',
@@ -79,7 +80,7 @@ const dictionaries = {
     basedOn: 'Answer basis', revision: 'Snapshot revision', currentRevision: 'Current revision', observedAt: 'Observed at', evidenceRefs: 'Evidence references', objectRefs: 'Object references', evidenceUnavailable: 'Evidence content unavailable',
     errorCode: 'Error code', errorAt: 'Occurred at', nextStep: 'Next step', clearFilters: 'Clear filters', noFilteredTrials: 'No Trials match the current filters.', selectTrialHint: 'Select a Trial on the left to inspect its evidence.', loadingTrial: 'Loading Trial…',
     errorNextRetry: 'Retry the read. If it still fails, check the network and Harbor runtime.', errorNextPermission: 'Check the active Session workspace and its access permissions.', errorNextMissing: 'Refresh the list and confirm that the object still exists.', errorNextArtifact: 'Inspect the Job Artifact / Audit, repair the artifact, and retry.',
-    historicalLaunch: 'Evaluate recent Sessions', historicalLaunchShort: 'Start evaluation', historicalLaunchHint: 'Up to 10 · preview before running', historicalLaunchBody: 'Diagnose real tasks already completed by the current DSH Agent without rerunning a Candidate.', historicalPreparing: 'Finding eligible Sessions…', historicalPreparingShort: 'Loading…', historicalPreviewTitle: 'Confirm Historical Session evaluation', historicalPreviewHint: 'Only safe metadata is shown. No Batch is written and no Harbor Job starts until you confirm.', historicalConfirm: 'Confirm and start evaluation', historicalStarting: 'Starting…', historicalRunning: 'Historical Session evaluation is running', historicalRunningHint: 'You can close this window and keep working. Harbor runs in the background and opens the Job when it completes.', historicalActive: 'View run status', historicalActiveShort: 'View status', historicalCompleted: 'Evaluation complete. Opening the Job…', recentSessions: 'Session sample', selectedSessions: 'Selected Sessions', requestEstimate: 'Estimated Judge requests', tokenExpiry: 'Preview expires', generatorRole: 'Generator', generatorRoleValue: 'The DSH Agent that produced these Sessions', evaluatorIdentity: 'Evaluator identity', judgeIdentity: 'Judge identity', coupling: 'Model coupling', evidenceRetention: 'Evidence retention', historicalBoundaries: 'Run boundaries', historicalBoundaryDetail: 'No Candidate run · no Evaluator meta-evaluation · no Gate or promotion', feedbackCounts: 'Feedback', turnCounts: 'Turns', toolCounts: 'Tool calls', previewAgain: 'Preview again', recent30Days: 'Only last 30 days', noEligibleHint: 'No eligible completed top-level Sessions were found in this workspace. Complete a real task here with direct user input and Agent output, or use an explicit Dataset.', narrowScanHint: 'This workspace has too many Sessions to scan safely. Narrow the scan to the last 30 days and try again.', changedSessionHint: 'A Session, its feedback, or the workspace changed after Preview. Preview again so Harbor cannot evaluate stale evidence.', historicalGenericError: 'No Job was started. Review the message and preview again.', cancel: 'Cancel',
+    ...HISTORICAL_MESSAGES.en,
     completed: 'Completed', partial: 'Completed with errors', failed: 'Read failed', pending: 'Queued', running: 'Running',
     candidate: 'Candidate', dataset: 'Dataset', integration: 'Integration', renderer: 'Renderer', judge: 'Judge', meta: 'Evaluator meta-evaluation', reporter: 'Reporter', optimizer: 'Optimizer', gate: 'Gate',
     historicalTarget: 'Historical generation records', generationRecords: 'Session records', generationSource: 'Generation source', generatorPopulation: 'Generator population', executionMode: 'Execution mode', observationMode: 'Observe existing results only', batch: 'Batch', scoredTrials: 'Scored Trials', unscoredTrials: 'Unscored Trials', homogeneousPopulation: 'Homogeneous generator population', mixedPopulation: 'Mixed generator population',
@@ -115,23 +116,23 @@ Object.assign(dictionaries.zh, { prepareDiagnostic: '规划选中项的诊断实
 Object.assign(dictionaries.en, { prepareDiagnostic: 'Plan a diagnostic for this selection', askDiagnostic: 'Read this frozen Trial selection and explain the common cause and uncertainty, then use harbor_propose_action to propose a diagnostic-evaluation. Use only these selected tasks, without changing Candidate or scoring rules. I will review the parameters and confirm execution. Do not run evaluations, retries, Gate, or deployment now.' })
 
 const CSS = `
-.hse-copilot .hse-operation-tray button{color:#dcecff;border-color:#70cfff77}
+
 .hse-selection-bar .hse-local-actions button{color:inherit}
-.hse-operation-tray{margin:10px 0;border:1px solid #70cfff55;border-radius:9px;font-size:11px;overflow-wrap:anywhere}.hse-operation-tray button{padding:7px 9px;background:transparent;color:inherit;border:1px solid #70cfff55;border-radius:7px;font:inherit;cursor:pointer}.hse-operation-tray button:disabled{opacity:.5;cursor:not-allowed}.hse-operation-tray .hse-operation-toggle{border:0;width:100%;text-align:left}.hse-operation-list{padding:0 9px 9px;max-height:45vh;overflow:auto}.hse-operation-item{border-top:1px solid #70cfff35;padding:10px 0;line-height:1.6}.hse-operation-item header{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px}.hse-operation-item p{margin:6px 0}.hse-operation-item code{font-size:9px}.hse-operation-inspection{padding:8px;border:1px solid #e4a23b55;border-radius:7px;margin:8px 0}.hse-operation-inspection label{display:block}.hse-operation-tray button:focus-visible{outline:2px solid #ffca68;outline-offset:2px}@container(max-width:1050px){.hse-layout>.hse-copilot[data-collapsed=true]:has(.hse-operation-tray){max-height:140px}.hse-layout>.hse-copilot[data-collapsed=true]:has(.hse-operation-toggle[aria-expanded=true]){max-height:45vh}}
-.hse-journey{padding:18px;margin-bottom:18px;border:1px solid #2875ff35;border-radius:14px;background:#2875ff08}.hse-journey h2{margin:0;font-size:20px}.hse-journey p,.hse-journey li{font-size:13px;line-height:1.7}.hse-journey ol{padding:0;list-style:none}.hse-journey details summary{cursor:pointer}.hse-question{font-size:12px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}.hse-discussion-history{margin:10px 0;font-size:12px}.hse-discussion-history button{display:block;width:100%;margin:5px 0;padding:7px;text-align:left;color:inherit;border:1px solid #70cfff55;background:transparent;border-radius:6px;cursor:pointer}.hse-draft-notice{padding:10px;border:1px solid #2875ff44;border-radius:8px;font-size:12px;line-height:1.6}.hse-editor-tab[data-dirty=true]:after{content:' •';color:#c78312}.hse-local-actions{flex-wrap:wrap}.hse-answer-unverified>p{font-size:11px;color:#f3c779}.hse-copilot details>summary{cursor:pointer;font-size:11px}.hse-copilot-actions{flex-wrap:wrap}.hse-context-questions{max-height:70px;overflow:auto}.hse-job-identities>summary{cursor:pointer;font-size:12px}.hse-job-identities[open]>.hse-identity-tags{margin-top:12px}
+.hse-operation-tray{margin:10px 0;border:1px solid #70cfff55;border-radius:9px;font-size:11px;overflow-wrap:anywhere}.hse-operation-tray button{padding:7px 9px;background:transparent;color:inherit;border:1px solid #70cfff55;border-radius:7px;font:inherit;cursor:pointer}.hse-operation-tray button:disabled{opacity:.5;cursor:not-allowed}.hse-operation-tray .hse-operation-toggle{border:0;width:100%;text-align:left}.hse-operation-list{padding:0 9px 9px;max-height:45vh;overflow:auto}.hse-operation-item{border-top:1px solid #70cfff35;padding:10px 0;line-height:1.6}.hse-operation-item header{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px}.hse-operation-item p{margin:6px 0}.hse-operation-item code{font-size:9px}.hse-operation-inspection{padding:8px;border:1px solid #e4a23b55;border-radius:7px;margin:8px 0}.hse-operation-inspection label{display:block}.hse-operation-tray button:focus-visible{outline:2px solid #ffca68;outline-offset:2px}@container(max-width:1050px){}
+.hse-journey{padding:18px;margin-bottom:18px;border:1px solid #2875ff35;border-radius:14px;background:#2875ff08}.hse-journey h2{margin:0;font-size:20px}.hse-journey p,.hse-journey li{font-size:13px;line-height:1.7}.hse-journey ol{padding:0;list-style:none}.hse-journey details summary{cursor:pointer}.hse-question{font-size:12px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}.hse-discussion-history{margin:10px 0;font-size:12px}.hse-discussion-history button{display:block;width:100%;margin:5px 0;padding:7px;text-align:left;color:inherit;border:1px solid #70cfff55;background:transparent;border-radius:6px;cursor:pointer}.hse-draft-notice{padding:10px;border:1px solid #2875ff44;border-radius:8px;font-size:12px;line-height:1.6}.hse-editor-tab[data-dirty=true]:after{content:' •';color:#c78312}.hse-local-actions{flex-wrap:wrap}.hse-answer-unverified>p{font-size:11px;color:#f3c779}.hse-job-identities>summary{cursor:pointer;font-size:12px}.hse-job-identities[open]>.hse-identity-tags{margin-top:12px}
 .hse-root{--ocean-950:#03152f;--ocean-800:#07366f;--ocean-600:#1464c8;--ocean-300:#75b7ff;--foam-50:#f4fbff;--whale-500:#2875ff;--coral-500:#ee6478;--amber-500:#e4a23b;--kelp-500:#1f9b72;height:100%;min-height:0;overflow:auto;color:var(--dsw-alias-label-primary,#142038);background:var(--dsw-alias-bg-layer-1,#f2f7fc);font-family:inherit}.hse-page{width:min(1320px,calc(100% - 36px));margin:auto;padding:24px 0 56px}
 .hse-dashboard-back{margin-bottom:10px}
-.hse-action-draft button{padding:7px 10px;border:1px solid #70cfff55;border-radius:7px;background:transparent;color:inherit;cursor:pointer;font:inherit}.hse-action-draft>.hse-primary{background:#2875ff;color:#fff;border-color:#2875ff}.hse-action-draft header{flex-wrap:wrap}.hse-action-draft header>span{font-size:10px;color:#a8d9ff}.hse-action-recovery,.hse-action-next-step{padding:8px;margin:8px 0;border:1px solid #e4a23b55;border-radius:8px}.hse-action-comparison{overflow:auto}.hse-action-comparison table{width:100%;border-collapse:collapse}.hse-action-comparison th,.hse-action-comparison td{padding:6px;border-bottom:1px solid #70cfff35;text-align:left}.hse-action-collapsed{display:flex;gap:10px;align-items:center}.hse-copilot-answer{font-size:12px}.hse-copilot-status{font-size:11px}.hse-editor-actions{flex-wrap:wrap}
+.hse-action-draft button{padding:7px 10px;border:1px solid #70cfff55;border-radius:7px;background:transparent;color:inherit;cursor:pointer;font:inherit}.hse-action-draft>.hse-primary{background:#2875ff;color:#fff;border-color:#2875ff}.hse-action-draft header{flex-wrap:wrap}.hse-action-draft header>span{font-size:10px;color:#a8d9ff}.hse-action-recovery,.hse-action-next-step{padding:8px;margin:8px 0;border:1px solid #e4a23b55;border-radius:8px}.hse-action-comparison{overflow:auto}.hse-action-comparison table{width:100%;border-collapse:collapse}.hse-action-comparison th,.hse-action-comparison td{padding:6px;border-bottom:1px solid #70cfff35;text-align:left}.hse-action-collapsed{display:flex;gap:10px;align-items:center}.hse-editor-actions{flex-wrap:wrap}
 .hse-root-switch{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin:16px 0 8px;padding:14px;border:1px solid #2875ff42;border-radius:12px;background:#2875ff0b}.hse-root-switch label{grid-column:1/-1;font-size:11px;font-weight:700}.hse-root-switch input{min-width:0;padding:10px 12px;border:1px solid #c8d6e7;border-radius:8px;color:inherit;background:var(--dsw-alias-bg-layer-2,#fff);font:11px ui-monospace,SFMono-Regular,Menlo,monospace}.hse-root-switch button{padding:9px 13px;border:0;border-radius:8px;color:#fff;background:var(--ocean-600);cursor:pointer}.hse-root-switch small{grid-column:1/-1;color:var(--dsw-alias-label-secondary,#748096)}
 .hse-hero{position:relative;isolation:isolate;overflow:hidden;min-height:225px;padding:32px;border-radius:24px;color:#fff;background:var(--ocean-950) var(--ocean-image) center/cover no-repeat;box-shadow:0 22px 65px #03152f38}.hse-hero:before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,#02132fea,#062b62d6 55%,#0e6dc42e)}.hse-hero:after{content:"";position:absolute;width:220px;height:220px;right:8%;bottom:-170px;border:1px solid #8be9ff66;border-radius:50%;box-shadow:0 0 0 28px #68dfff0b,0 0 0 60px #68dfff08;animation:hse-ripple 5s ease-out infinite}.hse-hero h1{max-width:780px;margin:15px 0 10px;font-size:clamp(28px,4vw,46px);line-height:1.08;letter-spacing:-.04em}.hse-hero p{max-width:760px;margin:0;color:#d9eeff;font-size:14px;line-height:1.75}.hse-eyebrow{color:#86e8ff;font-size:11px;font-weight:800;letter-spacing:.17em}.hse-whale{margin-right:8px;font-size:17px}.hse-refresh{position:absolute;right:22px;top:22px;padding:8px 13px;border:1px solid #ffffff52;border-radius:999px;color:#fff;background:#06245eb8;cursor:pointer}.hse-stats{display:flex;gap:9px;margin-top:24px;flex-wrap:wrap}.hse-stat{min-width:130px;padding:11px 13px;border:1px solid #ffffff29;border-radius:13px;background:#031a41a8;backdrop-filter:blur(8px)}.hse-stat span{display:block;color:#cde7fb;font-size:10px}.hse-stat b{display:block;margin-top:4px;font-size:20px}.hse-head{margin:28px 0 12px}.hse-head h2{margin:0;font-size:18px}.hse-head p{margin:4px 0 0;color:#728097;font-size:12px}
 .hse-list{display:grid;gap:10px}.hse-job{display:block;width:100%;padding:0;border:1px solid var(--dsw-alias-border-l1,#d7e2ef);border-radius:16px;color:inherit;background:var(--dsw-alias-bg-layer-2,#fff);text-align:left;cursor:pointer;overflow:hidden;box-shadow:0 5px 18px #1736600d;transition:.18s ease}.hse-job:hover,.hse-job:focus-visible{border-color:var(--ocean-300);transform:translateY(-1px);outline:3px solid #2875ff20}.hse-job-body{padding:16px 18px}.hse-job-top{display:flex;justify-content:space-between;gap:14px}.hse-job-title{min-width:0}.hse-job-title strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}.hse-job-title small{display:block;margin-top:4px;color:#7b879c;font-size:10px}.hse-status{flex:none;padding:5px 9px;border-radius:999px;color:#126d50;background:#23ba8318;font-size:10px;font-weight:700}.hse-status:before{content:"✓ ";}.hse-status[data-status=running],.hse-status[data-status=pending]{color:#245dcc;background:#2875ff18}.hse-status[data-status=running]:before{content:"● ";animation:hse-pulse 1.6s ease-in-out infinite}.hse-status[data-status=partial],.hse-status[data-status=attention]{color:#8e5b0c;background:#e4a23b1b}.hse-status[data-status=partial]:before,.hse-status[data-status=attention]:before{content:"△ "}.hse-status[data-status=failed]{color:#b52f45;background:#ee647818}.hse-status[data-status=failed]:before{content:"× "}.hse-meta-grid{display:grid;grid-template-columns:1.35fr 1fr .9fr .65fr .75fr .75fr;gap:7px;margin-top:13px}.hse-meta{min-width:0;padding:8px 9px;border-radius:9px;background:var(--dsw-alias-bg-layer-1,#f3f7fb)}.hse-meta span{display:block;color:#7b879c;font-size:9px}.hse-meta b,.hse-meta code{display:block;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.hse-progress{height:5px;margin-top:11px;border-radius:99px;background:#dbe8f5;overflow:hidden}.hse-progress i{display:block;height:100%;background:linear-gradient(90deg,var(--ocean-600),#54d7f5);transition:width .3s}.hse-metrics{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.hse-pill{padding:5px 7px;border:1px solid var(--dsw-alias-border-l1,#dce4f0);border-radius:7px;font-size:10px}.hse-pill b{margin-left:5px;color:var(--ocean-600)}
 .hse-empty,.hse-error{padding:34px;border:1px dashed #c4d3e5;border-radius:16px;text-align:center;background:var(--dsw-alias-bg-layer-2,#fff);color:var(--dsw-alias-label-secondary,#728097);font-size:12px}.hse-spin{width:25px;height:25px;margin:0 auto 10px;border:3px solid #2875ff22;border-top-color:var(--whale-500);border-radius:50%;animation:hse-spin .8s linear infinite}.hse-button,.hse-close,.hse-ask{border:0;border-radius:9px;padding:8px 11px;color:#fff;background:var(--whale-500);cursor:pointer}.hse-drawer{width:100%;min-height:0;background:var(--dsw-alias-bg-layer-1,#f2f7fc)}.hse-drawer-head{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;gap:15px;padding:14px 0;border-bottom:1px solid var(--dsw-alias-border-l1,#dce4f0);background:color-mix(in srgb,var(--dsw-alias-bg-layer-1,#f2f7fc) 94%,transparent);backdrop-filter:blur(12px)}.hse-drawer-head h2{margin:0;font-size:18px}.hse-drawer-head p{margin:5px 0 0;color:var(--dsw-alias-label-secondary,#748096);font-size:10px}.hse-drawer-actions{display:flex;align-items:flex-start;gap:7px}.hse-close{align-self:flex-start;background:var(--ocean-950)}.hse-workbench{padding:14px 0 48px}.hse-stage-nav{position:sticky;top:68px;z-index:4;display:grid;grid-template-columns:repeat(9,minmax(88px,1fr));gap:5px;margin:-1px -1px 14px;padding:8px;border:1px solid var(--dsw-alias-border-l1,#d7e2ef);border-radius:13px;background:color-mix(in srgb,var(--dsw-alias-bg-layer-2,#fff) 94%,transparent);backdrop-filter:blur(10px);overflow:auto}.hse-stage-nav button{padding:9px 7px;border:0;border-radius:8px;color:var(--dsw-alias-label-secondary,#52627b);background:transparent;font:inherit;font-size:10px;cursor:pointer;white-space:nowrap}.hse-stage-nav button[data-active=true]{color:#fff;background:var(--ocean-600)}.hse-stage-nav button:focus-visible{outline:3px solid #2875ff2f}.hse-capability{margin-bottom:12px;padding:10px 12px;border-left:3px solid var(--amber-500);border-radius:8px;background:#e4a23b14;color:var(--dsw-alias-label-primary,#75500f);font-size:11px}.hse-section{margin-bottom:13px;padding:16px;border:1px solid var(--dsw-alias-border-l1,#d7e2ef);border-radius:14px;background:var(--dsw-alias-bg-layer-2,#fff)}.hse-section h3{margin:0 0 11px;font-size:14px}.hse-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.hse-kpi{padding:11px;border-radius:10px;background:color-mix(in srgb,var(--dsw-alias-bg-layer-1,#edf7ff) 88%,var(--ocean-600) 12%)}.hse-kpi span{display:block;color:var(--dsw-alias-label-secondary,#748096);font-size:9px}.hse-kpi b{display:block;margin-top:4px;font-size:17px}.hse-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.hse-card{min-width:0;padding:11px;border-radius:10px;background:var(--dsw-alias-bg-layer-1,#f3f7fb)}.hse-card span,.hse-card b,.hse-card code{display:block}.hse-card span{color:var(--dsw-alias-label-secondary,#748096);font-size:9px}.hse-card b,.hse-card code{margin-top:4px;overflow-wrap:anywhere;font-size:10px}.hse-valid{color:var(--kelp-500)}.hse-invalid{color:#bd3148}.hse-muted{color:var(--dsw-alias-label-secondary,#75839a)}.hse-findings{display:grid;gap:6px}.hse-finding{padding:9px 10px;border-left:3px solid var(--ocean-300);border-radius:7px;background:#2875ff0c;font-size:10px}.hse-finding[data-level=error]{border-color:var(--coral-500);background:#ee64780d}.hse-finding[data-level=warning]{border-color:var(--amber-500);background:#e4a23b0d}.hse-components{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.hse-component{padding:10px;border-radius:9px;background:#0b4c9c12}.hse-component span{display:block;color:var(--dsw-alias-label-secondary,#748096);font-size:9px}.hse-component b,.hse-component code{display:block;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px}
-.hse-trial-layout{display:grid;grid-template-columns:minmax(380px,1fr) minmax(360px,.9fr);gap:10px;align-items:start}.hse-trial-list,.hse-trial-detail{min-width:0}.hse-trial-tools{display:grid;grid-template-columns:minmax(150px,1fr) auto auto auto;gap:6px;margin-bottom:9px}.hse-input,.hse-select{min-width:0;padding:8px 9px;border:1px solid #c8d6e7;border-radius:8px;color:inherit;background:transparent;font:inherit;font-size:10px}.hse-table-wrap{overflow:auto}.hse-table{width:100%;border-collapse:collapse;font-size:10px}.hse-table th,.hse-table td{padding:8px;border-bottom:1px solid #e2eaf3;text-align:left;white-space:nowrap}.hse-table button{border:0;color:var(--ocean-600);background:none;cursor:pointer;font:inherit}.hse-table tr[data-selected=true]{background:#2875ff0c}.hse-pager{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:9px;font-size:10px}.hse-pager button{padding:5px 8px;border:1px solid #c8d6e7;border-radius:7px;background:transparent;color:inherit;cursor:pointer}.hse-trial-detail{position:sticky;top:132px;max-height:calc(100vh - 160px);overflow:auto;padding:14px;border-radius:12px;color:#dcecff;background:var(--ocean-950)}.hse-trial-score{display:flex;justify-content:space-between;gap:12px;padding-bottom:12px;border-bottom:1px solid #ffffff1f}.hse-trial-score b{font-size:25px}.hse-trial-score span{font-size:10px}.hse-detail-group{padding:11px 0;border-bottom:1px solid #ffffff16}.hse-detail-group h4{margin:0 0 7px;color:#8fe8ff;font-size:10px;text-transform:uppercase;letter-spacing:.08em}.hse-detail-group pre{max-height:280px;overflow:auto;margin:0;white-space:pre-wrap;word-break:break-word;font-size:9px;line-height:1.55}.hse-detail-group ul{margin:0;padding-left:17px;font-size:10px;line-height:1.6}.hse-criteria{display:grid;gap:5px}.hse-criterion{display:flex;justify-content:space-between;gap:8px;padding:7px;border-radius:6px;background:#ffffff0b;font-size:10px}.hse-provenance{display:flex;gap:5px;flex-wrap:wrap}.hse-provenance span{padding:5px 7px;border:1px solid #70cfff4a;border-radius:999px;font-size:9px}.hse-audit summary{cursor:pointer;font-size:11px;font-weight:700}.hse-audit pre,.hse-source{max-height:360px;overflow:auto;white-space:pre-wrap;word-break:break-word;font-size:9px;line-height:1.55}.hse-compare-select{display:flex;gap:7px;margin-bottom:10px}.hse-compare-select select{flex:1}.hse-delta{font-variant-numeric:tabular-nums}.hse-delta[data-positive=true]{color:var(--kelp-500)}.hse-delta[data-positive=false]{color:var(--coral-500)}.hse-source{padding:10px;border-radius:8px;color:#d9edff;background:var(--ocean-950)}.hse-settings{width:min(850px,calc(100% - 32px));margin:auto;padding:28px 0}.hse-checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:16px}.hse-check{padding:12px;border:1px solid #dce4f0;border-radius:10px;background:var(--dsw-alias-bg-layer-2,#fff)}.hse-check b,.hse-check small{display:block}.hse-check small{margin-top:4px;color:#748096}.hse-tool{border:1px solid #dce4f0;border-radius:11px;background:var(--dsw-alias-bg-layer-2,#fff);overflow:hidden}.hse-tool button{display:flex;gap:8px;width:100%;padding:10px;border:0;color:inherit;background:transparent;text-align:left;cursor:pointer}.hse-tool strong{font-size:11px}.hse-tool small{margin-left:auto}.hse-tool pre{max-height:260px;overflow:auto;margin:0;padding:11px;border-top:1px solid #e3e9f1;white-space:pre-wrap;font-size:9px}
-.hse-trial-layout{display:grid;grid-template-columns:minmax(380px,1fr) minmax(360px,.9fr);gap:10px;align-items:start}.hse-trial-list,.hse-trial-detail{min-width:0}.hse-trial-tools{display:grid;grid-template-columns:minmax(150px,1fr) auto auto auto;gap:6px;margin-bottom:9px}.hse-trial-list-state{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px;padding:9px 11px;border-left:3px solid var(--amber-500);border-radius:8px;background:#e4a23b14;font-size:10px}.hse-trial-list-state[data-stale=false]{border-color:var(--coral-500);background:#ee647812}.hse-trial-list-state div{min-width:0}.hse-trial-list-state b,.hse-trial-list-state small{display:block}.hse-trial-list-state small{margin-top:3px;overflow-wrap:anywhere;color:var(--dsw-alias-label-secondary,#748096)}.hse-trial-list-state button{flex:none;padding:5px 9px;border:1px solid currentColor;border-radius:7px;color:var(--ocean-600);background:transparent;cursor:pointer;font:inherit}.hse-input,.hse-select{min-width:0;padding:8px 9px;border:1px solid #c8d6e7;border-radius:8px;color:inherit;background:transparent;font:inherit;font-size:10px}.hse-table-wrap{overflow:auto}.hse-table{width:100%;border-collapse:collapse;font-size:10px}.hse-table th,.hse-table td{padding:8px;border-bottom:1px solid #e2eaf3;text-align:left;white-space:nowrap}.hse-table button{border:0;color:var(--ocean-600);background:none;cursor:pointer;font:inherit}.hse-table tr[data-selected=true]{background:#2875ff0c}.hse-pager{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:9px;font-size:10px}.hse-pager button{padding:5px 8px;border:1px solid #c8d6e7;border-radius:7px;background:transparent;color:inherit;cursor:pointer}.hse-trial-detail{position:sticky;top:132px;max-height:calc(100vh - 160px);overflow:auto;padding:14px;border-radius:12px;color:#dcecff;background:var(--ocean-950)}.hse-trial-score{display:flex;justify-content:space-between;gap:12px;padding-bottom:12px;border-bottom:1px solid #ffffff1f}.hse-trial-score b{font-size:25px}.hse-trial-score span{font-size:10px}.hse-detail-group{padding:11px 0;border-bottom:1px solid #ffffff16}.hse-detail-group h4{margin:0 0 7px;color:#8fe8ff;font-size:10px;text-transform:uppercase;letter-spacing:.08em}.hse-detail-group pre{max-height:280px;overflow:auto;margin:0;white-space:pre-wrap;word-break:break-word;font-size:9px;line-height:1.55}.hse-detail-group ul{margin:0;padding-left:17px;font-size:10px;line-height:1.6}.hse-criteria{display:grid;gap:5px}.hse-criterion{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px;border-radius:6px;background:#ffffff0b;font-size:10px}.hse-criterion[data-highlight=true]{outline:2px solid #86e8ff;background:#1464c84a;animation:hse-focus-flash 2.2s ease-out}.hse-inline-ask{flex:none;padding:4px 7px;border:1px solid #70cfff66;border-radius:999px;color:#dcecff;background:transparent;cursor:pointer;font:inherit;font-size:8px}.hse-provenance{display:flex;gap:5px;flex-wrap:wrap}.hse-provenance button{padding:5px 7px;border:1px solid #70cfff4a;border-radius:999px;color:#dcecff;background:transparent;cursor:pointer;font:inherit;font-size:9px}.hse-audit summary{cursor:pointer;font-size:11px;font-weight:700}.hse-audit pre,.hse-source{max-height:360px;overflow:auto;white-space:pre-wrap;word-break:break-word;font-size:9px;line-height:1.55}.hse-compare-select{display:flex;gap:7px;margin-bottom:10px}.hse-compare-select select{flex:1}.hse-delta{font-variant-numeric:tabular-nums}.hse-delta[data-positive=true]{color:var(--kelp-500)}.hse-delta[data-positive=false]{color:var(--coral-500)}.hse-source{padding:10px;border-radius:8px;color:#d9edff;background:var(--ocean-950)}.hse-settings{width:min(850px,calc(100% - 32px));margin:auto;padding:28px 0}.hse-checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:16px}.hse-check{padding:12px;border:1px solid #dce4f0;border-radius:10px;background:var(--dsw-alias-bg-layer-2,#fff)}.hse-check b,.hse-check small{display:block}.hse-check small{margin-top:4px;color:#748096}.hse-tool{border:1px solid #dce4f0;border-radius:11px;background:var(--dsw-alias-bg-layer-2,#fff);overflow:hidden}.hse-tool button{display:flex;gap:8px;width:100%;padding:10px;border:0;color:inherit;background:transparent;text-align:left;cursor:pointer}.hse-tool strong{font-size:11px}.hse-tool small{margin-left:auto}.hse-tool pre{max-height:260px;overflow:auto;margin:0;padding:11px;border-top:1px solid #e3e9f1;white-space:pre-wrap;font-size:9px}.hse-tool-action{border-top:1px solid #e3e9f1!important;color:var(--ocean-600)!important;font-weight:700}
+.hse-trial-layout{display:grid;grid-template-columns:minmax(380px,1fr) minmax(360px,.9fr);gap:10px;align-items:start}.hse-trial-list,.hse-trial-detail{min-width:0}.hse-trial-tools{display:grid;grid-template-columns:minmax(150px,1fr) auto auto auto;gap:6px;margin-bottom:9px}.hse-input,.hse-select{min-width:0;padding:8px 9px;border:1px solid #c8d6e7;border-radius:8px;color:inherit;background:transparent;font:inherit;font-size:10px}.hse-table-wrap{overflow:auto}.hse-table{width:100%;border-collapse:collapse;font-size:10px}.hse-table th,.hse-table td{padding:8px;border-bottom:1px solid #e2eaf3;text-align:left;white-space:nowrap}.hse-table button{border:0;color:var(--ocean-600);background:none;cursor:pointer;font:inherit}.hse-table tr[data-selected=true]{background:#2875ff0c}.hse-pager{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:9px;font-size:10px}.hse-pager button{padding:5px 8px;border:1px solid #c8d6e7;border-radius:7px;background:transparent;color:inherit;cursor:pointer}.hse-trial-detail{position:sticky;top:132px;max-height:calc(100vh - 160px);overflow:auto;padding:14px;border-radius:12px;color:#dcecff;background:var(--ocean-950)}.hse-trial-score{display:flex;justify-content:space-between;gap:12px;padding-bottom:12px;border-bottom:1px solid #ffffff1f}.hse-trial-score b{font-size:25px}.hse-trial-score span{font-size:10px}.hse-detail-group{padding:11px 0;border-bottom:1px solid #ffffff16}.hse-detail-group h4{margin:0 0 7px;color:#8fe8ff;font-size:10px;text-transform:uppercase;letter-spacing:.08em}.hse-detail-group pre{max-height:280px;overflow:auto;margin:0;white-space:pre-wrap;word-break:break-word;font-size:9px;line-height:1.55}.hse-detail-group ul{margin:0;padding-left:17px;font-size:10px;line-height:1.6}.hse-criteria{display:grid;gap:5px}.hse-criterion{display:flex;justify-content:space-between;gap:8px;padding:7px;border-radius:6px;background:#ffffff0b;font-size:10px}.hse-provenance{display:flex;gap:5px;flex-wrap:wrap}.hse-provenance span{padding:5px 7px;border:1px solid #70cfff4a;border-radius:999px;font-size:9px}.hse-audit summary{cursor:pointer;font-size:11px;font-weight:700}.hse-audit pre,.hse-source{max-height:360px;overflow:auto;white-space:pre-wrap;word-break:break-word;font-size:9px;line-height:1.55}.hse-compare-select{display:flex;gap:7px;margin-bottom:10px}.hse-compare-select select{flex:1}.hse-delta{font-variant-numeric:tabular-nums}.hse-delta[data-positive=true]{color:var(--kelp-500)}.hse-delta[data-positive=false]{color:var(--coral-500)}.hse-source{padding:10px;border-radius:8px;color:#d9edff;background:var(--ocean-950)}.hse-settings{width:min(850px,calc(100% - 32px));margin:auto;padding:28px 0}.hse-checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:16px}.hse-check{padding:12px;border:1px solid #dce4f0;border-radius:10px;background:var(--dsw-alias-bg-layer-2,#fff)}.hse-check b,.hse-check small{display:block}.hse-check small{margin-top:4px;color:#748096}.hse-tool{border:1px solid #dce4f0;border-radius:11px;background:var(--dsw-alias-bg-layer-2,#fff);overflow:hidden}.hse-tool>button{display:flex;gap:8px;width:100%;padding:10px;border:0;color:inherit;background:transparent;text-align:left;cursor:pointer}.hse-tool strong{font-size:11px}.hse-tool small{margin-left:auto}.hse-tool>pre{max-height:260px;overflow:auto;margin:0;padding:11px;border-top:1px solid #e3e9f1;white-space:pre-wrap;font-size:9px}
+.hse-trial-layout{display:grid;grid-template-columns:minmax(380px,1fr) minmax(360px,.9fr);gap:10px;align-items:start}.hse-trial-list,.hse-trial-detail{min-width:0}.hse-trial-tools{display:grid;grid-template-columns:minmax(150px,1fr) auto auto auto;gap:6px;margin-bottom:9px}.hse-trial-list-state{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px;padding:9px 11px;border-left:3px solid var(--amber-500);border-radius:8px;background:#e4a23b14;font-size:10px}.hse-trial-list-state[data-stale=false]{border-color:var(--coral-500);background:#ee647812}.hse-trial-list-state div{min-width:0}.hse-trial-list-state b,.hse-trial-list-state small{display:block}.hse-trial-list-state small{margin-top:3px;overflow-wrap:anywhere;color:var(--dsw-alias-label-secondary,#748096)}.hse-trial-list-state button{flex:none;padding:5px 9px;border:1px solid currentColor;border-radius:7px;color:var(--ocean-600);background:transparent;cursor:pointer;font:inherit}.hse-input,.hse-select{min-width:0;padding:8px 9px;border:1px solid #c8d6e7;border-radius:8px;color:inherit;background:transparent;font:inherit;font-size:10px}.hse-table-wrap{overflow:auto}.hse-table{width:100%;border-collapse:collapse;font-size:10px}.hse-table th,.hse-table td{padding:8px;border-bottom:1px solid #e2eaf3;text-align:left;white-space:nowrap}.hse-table button{border:0;color:var(--ocean-600);background:none;cursor:pointer;font:inherit}.hse-table tr[data-selected=true]{background:#2875ff0c}.hse-pager{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:9px;font-size:10px}.hse-pager button{padding:5px 8px;border:1px solid #c8d6e7;border-radius:7px;background:transparent;color:inherit;cursor:pointer}.hse-trial-detail{position:sticky;top:132px;max-height:calc(100vh - 160px);overflow:auto;padding:14px;border-radius:12px;color:#dcecff;background:var(--ocean-950)}.hse-trial-score{display:flex;justify-content:space-between;gap:12px;padding-bottom:12px;border-bottom:1px solid #ffffff1f}.hse-trial-score b{font-size:25px}.hse-trial-score span{font-size:10px}.hse-detail-group{padding:11px 0;border-bottom:1px solid #ffffff16}.hse-detail-group h4{margin:0 0 7px;color:#8fe8ff;font-size:10px;text-transform:uppercase;letter-spacing:.08em}.hse-detail-group pre{max-height:280px;overflow:auto;margin:0;white-space:pre-wrap;word-break:break-word;font-size:9px;line-height:1.55}.hse-detail-group ul{margin:0;padding-left:17px;font-size:10px;line-height:1.6}.hse-criteria{display:grid;gap:5px}.hse-criterion{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px;border-radius:6px;background:#ffffff0b;font-size:10px}.hse-criterion[data-highlight=true]{outline:2px solid #86e8ff;background:#1464c84a;animation:hse-focus-flash 2.2s ease-out}.hse-inline-ask{flex:none;padding:4px 7px;border:1px solid #70cfff66;border-radius:999px;color:#dcecff;background:transparent;cursor:pointer;font:inherit;font-size:8px}.hse-provenance{display:flex;gap:5px;flex-wrap:wrap}.hse-provenance button{padding:5px 7px;border:1px solid #70cfff4a;border-radius:999px;color:#dcecff;background:transparent;cursor:pointer;font:inherit;font-size:9px}.hse-audit summary{cursor:pointer;font-size:11px;font-weight:700}.hse-audit pre,.hse-source{max-height:360px;overflow:auto;white-space:pre-wrap;word-break:break-word;font-size:9px;line-height:1.55}.hse-compare-select{display:flex;gap:7px;margin-bottom:10px}.hse-compare-select select{flex:1}.hse-delta{font-variant-numeric:tabular-nums}.hse-delta[data-positive=true]{color:var(--kelp-500)}.hse-delta[data-positive=false]{color:var(--coral-500)}.hse-source{padding:10px;border-radius:8px;color:#d9edff;background:var(--ocean-950)}.hse-settings{width:min(850px,calc(100% - 32px));margin:auto;padding:28px 0}.hse-checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:16px}.hse-check{padding:12px;border:1px solid #dce4f0;border-radius:10px;background:var(--dsw-alias-bg-layer-2,#fff)}.hse-check b,.hse-check small{display:block}.hse-check small{margin-top:4px;color:#748096}.hse-tool{border:1px solid #dce4f0;border-radius:11px;background:var(--dsw-alias-bg-layer-2,#fff);overflow:hidden}.hse-tool>button{display:flex;gap:8px;width:100%;padding:10px;border:0;color:inherit;background:transparent;text-align:left;cursor:pointer}.hse-tool strong{font-size:11px}.hse-tool small{margin-left:auto}.hse-tool>pre{max-height:260px;overflow:auto;margin:0;padding:11px;border-top:1px solid #e3e9f1;white-space:pre-wrap;font-size:9px}.hse-tool-action{border-top:1px solid #e3e9f1!important;color:var(--ocean-600)!important;font-weight:700}
 .hse-inline-ask[data-highlight=true],.hse-provenance button[data-highlight=true]{outline:2px solid #86e8ff;background:#1464c84a;animation:hse-focus-flash 2.2s ease-out}
-.hse-context-dock{display:grid;gap:7px;width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #2875ff48;border-radius:12px;background:color-mix(in srgb,var(--dsw-alias-bg-layer-2,#fff) 95%,#2875ff 5%);box-shadow:0 6px 20px #17366014}.hse-context-line{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:10px}.hse-context-line>strong{min-width:78px}.hse-context-chip{display:inline-flex;align-items:center;gap:6px;max-width:min(520px,70vw);padding:5px 8px;border:1px solid #2875ff42;border-radius:999px;background:#2875ff10}.hse-context-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hse-context-chip button,.hse-context-link{padding:0;border:0;color:var(--ocean-600);background:transparent;cursor:pointer;font:inherit;font-size:9px}.hse-context-flags{display:flex;gap:5px}.hse-context-flags em{padding:3px 6px;border-radius:999px;color:#8e5b0c;background:#e4a23b1b;font-size:8px;font-style:normal}.hse-context-error{color:#bd3148}.hse-context-questions{display:flex;gap:5px;flex-wrap:wrap}.hse-context-questions button{padding:5px 8px;border:1px solid #c8d6e7;border-radius:999px;color:inherit;background:transparent;cursor:pointer;font:inherit;font-size:9px}
-.hse-copilot{margin:14px 0;padding:14px;border:1px solid #2875ff45;border-radius:14px;background:linear-gradient(145deg,#03152f,#07366f);color:#dcecff}.hse-copilot-head,.hse-copilot-controls{display:flex;align-items:center;justify-content:space-between;gap:10px}.hse-copilot-head h3{margin:0;font-size:13px}.hse-copilot-head button{padding:5px 8px;border:1px solid #70cfff55;border-radius:7px;color:#dcecff;background:transparent;cursor:pointer}.hse-copilot-toggle{min-width:30px;font-weight:800}.hse-copilot-status{margin:9px 0;color:#a8d9ff;font-size:10px}.hse-copilot-tools{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}.hse-copilot-tools span{padding:4px 7px;border:1px solid #70cfff42;border-radius:999px;font-size:8px}.hse-copilot-answer{max-height:360px;overflow:auto;margin:0;padding:12px;border-radius:9px;background:#ffffff0b;white-space:pre-wrap;word-break:break-word;font:inherit;font-size:11px;line-height:1.65}.hse-copilot-actions{display:flex;align-items:center;gap:8px;margin-top:9px}.hse-copilot-actions button{padding:6px 9px;border:0;border-radius:8px;color:#fff;background:var(--whale-500);cursor:pointer}.hse-copilot-actions small{color:#a8c7df}
-.hse-copilot-basis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:8px 0;padding:9px;border:1px solid #70cfff36;border-radius:9px;background:#ffffff0a}.hse-copilot-basis>strong{grid-column:1/-1;color:#8fe8ff;font-size:9px;text-transform:uppercase;letter-spacing:.06em}.hse-copilot-basis span{min-width:0;font-size:9px}.hse-copilot-basis span b,.hse-copilot-basis span code,.hse-copilot-basis span time{display:block;margin-top:2px;overflow-wrap:anywhere;color:#dcecff;font:inherit}.hse-copilot-refs{display:grid;gap:6px;margin-top:9px}.hse-copilot-refs>strong{color:#a8d9ff;font-size:9px}.hse-copilot-ref{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 10px;width:100%;padding:8px 10px;border:1px solid #70cfff45;border-radius:8px;color:#dcecff;background:#ffffff0a;text-align:left;cursor:pointer;font:inherit}.hse-copilot-ref b{font-size:10px}.hse-copilot-ref span{grid-row:1/3;grid-column:2;color:#8fe8ff;font-size:8px}.hse-copilot-ref code{overflow-wrap:anywhere;color:#a8c7df;font-size:8px}.hse-copilot-ref[data-available=false]{border-color:#e4a23b73}.hse-copilot-ref[data-available=false] span{color:#f3c779}
+.hse-context-flags{display:flex;gap:5px}.hse-context-flags em{padding:3px 6px;border-radius:999px;color:#8e5b0c;background:#e4a23b1b;font-size:8px;font-style:normal}.hse-context-error{color:#bd3148}
+
+
 .hse-error-state{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:13px;border-left:4px solid var(--coral-500);border-radius:10px;background:#ee647812;text-align:left}.hse-error-state>div{min-width:0}.hse-error-state b,.hse-error-state span,.hse-error-state small{display:block;overflow-wrap:anywhere}.hse-error-state b{color:#bd3148;font-size:11px}.hse-error-state span{margin-top:4px;font-size:10px}.hse-error-state small{margin-top:5px;color:var(--dsw-alias-label-secondary,#748096);font-size:9px;line-height:1.5}.hse-error-state button,.hse-filter-empty button{flex:none;padding:6px 9px;border:1px solid currentColor;border-radius:7px;color:var(--ocean-600);background:transparent;cursor:pointer;font:inherit;font-size:9px}.hse-error-state[data-category=permission]{border-color:var(--amber-500);background:#e4a23b14}.hse-error-state[data-category=permission] b{color:#8e5b0c}
 .hse-skeleton{display:grid;gap:9px;min-height:150px;padding:16px;border:1px solid var(--dsw-alias-border-l1,#d7e2ef);border-radius:14px;background:var(--dsw-alias-bg-layer-2,#fff)}.hse-skeleton i{display:block;height:17px;border-radius:7px;background:linear-gradient(90deg,#dce6f2 20%,#eef4fa 45%,#dce6f2 70%);background-size:240% 100%;animation:hse-skeleton 1.3s ease-in-out infinite}.hse-skeleton i:first-child{height:30px;width:44%}.hse-skeleton i:nth-child(3n){width:72%}.hse-skeleton[data-kind=dashboard]{grid-template-columns:repeat(2,minmax(0,1fr));min-height:230px}.hse-skeleton[data-kind=dashboard] i:first-child{grid-column:1/-1;width:52%;height:38px}.hse-skeleton[data-kind=trial-detail]{min-height:420px;background:var(--ocean-950);border-color:#70cfff32}.hse-skeleton[data-kind=trial-detail] i{background:linear-gradient(90deg,#ffffff0d 20%,#ffffff20 45%,#ffffff0d 70%);background-size:240% 100%}.hse-filter-empty{display:grid;justify-items:center;gap:9px;min-height:120px;padding:24px;border:1px dashed #c4d3e5;border-radius:12px;color:var(--dsw-alias-label-secondary,#728097);background:var(--dsw-alias-bg-layer-2,#fff);text-align:center;font-size:10px}
 .hse-job{position:relative;cursor:default}.hse-job-open{display:block;width:100%;padding:0;border:0;color:inherit;background:transparent;text-align:left;cursor:pointer}.hse-job-open:focus-visible{outline:3px solid #2875ff20;outline-offset:-3px}.hse-job-body{padding-right:104px}.hse-job-ask{position:absolute;right:16px;bottom:14px;padding:7px 10px;border:0;border-radius:8px;color:#fff;background:var(--whale-500);cursor:pointer;font:inherit;font-size:9px;font-weight:800}.hse-trial-name{display:flex;align-items:center;gap:7px}.hse-trial-name .hse-trial-ask{padding:3px 6px;border:1px solid #2875ff42;border-radius:999px;font-size:8px}.hse-criterion{flex-wrap:wrap}.hse-criterion>span{margin-right:auto}.hse-context-link:disabled,.hse-job-ask:disabled{opacity:.5;cursor:wait}
@@ -147,13 +148,13 @@ const CSS = `
 @media(max-width:520px){.hse-hero{min-height:auto;padding:22px}.hse-hero h1{font-size:30px}.hse-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%}.hse-stat{min-width:0}.hse-launch-card{display:grid;grid-template-columns:38px minmax(0,1fr) 108px;align-items:center;flex-wrap:nowrap}.hse-launch-copy span{display:none}.hse-launch-button{width:100%;margin:0;padding:9px;white-space:normal}.hse-launch-button-full{display:none}.hse-launch-button-short{display:inline}}
 @media(prefers-reduced-motion:reduce){.hse-spin,.hse-skeleton i,.hse-status:before,.hse-hero:after,.hse-criterion[data-highlight=true],.hse-inline-ask[data-highlight=true],.hse-provenance button[data-highlight=true]{animation:none}.hse-job{transition:none}.hse-job:hover{transform:none}}
 @media(max-width:900px){.hse-report-compare,.hse-meta-flow{grid-template-columns:1fr}.hse-meta-flow div:after{display:none}}
-.hse-root{container-type:inline-size;overflow:visible}.hse-layout{display:grid;grid-template-columns:minmax(0,1fr) 320px;align-items:start;gap:18px;max-width:1600px}.hse-main-panel{grid-column:1;grid-row:1;min-width:0}.hse-layout>.hse-copilot{grid-column:2;grid-row:1;position:sticky;top:12px;margin:0;max-height:calc(100vh - 220px);overflow:auto}.hse-layout .hse-drawer{width:100%;max-width:none}.hse-layout .hse-drawer-head{position:static}.hse-copilot-basis{grid-template-columns:1fr}.hse-copilot-answer{max-height:45vh}
+.hse-root{container-type:inline-size;overflow:visible}.hse-layout{display:grid;grid-template-columns:minmax(0,1fr);align-items:start;gap:18px;max-width:1600px}.hse-main-panel{grid-column:1;grid-row:1;min-width:0}.hse-layout .hse-drawer{width:100%;max-width:none}.hse-layout .hse-drawer-head{position:static}
 .hse-health-summary{padding:20px;margin-bottom:16px;border:1px solid var(--dsw-alias-border-l1,#d7e2ef);border-radius:16px;background:var(--dsw-alias-bg-layer-2,#fff)}.hse-health-summary h1{margin:6px 0;font-size:22px}.hse-health-summary small{letter-spacing:.07em;color:var(--ocean-600);font-size:10px}.hse-health-filters{display:flex;gap:8px;flex-wrap:wrap}.hse-health-filters button{display:grid;gap:7px;min-width:104px;flex:1;padding:12px;border:1px solid var(--dsw-alias-border-l1,#d7e2ef);border-radius:10px;background:transparent;color:inherit;cursor:pointer;text-align:left}.hse-health-filters button[aria-pressed=true]{border-color:var(--ocean-600);background:#2875ff12}.hse-health-filters span{font-size:11px}.hse-health-filters b{font-size:21px}.hse-attention-label{display:block;font-size:11px;color:var(--ocean-600);margin:5px 0}.hse-attention-label[data-kind=blocked],.hse-attention-label[data-kind=invalid]{color:var(--coral-500)}
 .hse-object-nav{display:flex;flex-wrap:wrap;gap:5px;padding:8px 0 14px;border-bottom:1px solid var(--dsw-alias-border-l1,#d7e2ef);margin-bottom:16px}.hse-object-nav button{padding:9px 12px;border:0;border-radius:8px;color:inherit;background:transparent;cursor:pointer;font:inherit;font-size:12px}.hse-object-nav button[aria-current=page]{color:#fff;background:var(--ocean-600);font-weight:700}.hse-job-identities{padding:12px 20px;border-bottom:1px solid var(--dsw-alias-border-l1,#d7e2ef)}.hse-identity-tags{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.hse-identity-tags span{display:grid;gap:4px;min-width:0}.hse-identity-tags small{font-size:10px;color:var(--dsw-alias-label-secondary,#748096)}.hse-identity-tags b{font-size:11px;overflow-wrap:anywhere}.hse-identity-tags code{font-size:9px;overflow-wrap:anywhere}.hse-identity-flags{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;font-size:10px}.hse-summary-status{display:flex;justify-content:space-between;align-items:start;gap:12px}.hse-summary-status p{font-size:12px;line-height:1.6;color:var(--dsw-alias-label-secondary,#748096)}.hse-summary-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:15px 0}.hse-summary-metric{padding:14px;border-radius:10px;background:#2875ff0a}.hse-summary-metric>span{display:block;font-size:11px}.hse-summary-metric>strong{display:block;margin:8px 0;font-size:24px}.hse-summary-links{display:flex;gap:8px;flex-wrap:wrap}
-.hse-local-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px}.hse-local-actions button{border:1px solid #2875ff45;border-radius:6px;padding:5px 7px;background:transparent;color:var(--ocean-600);cursor:pointer;font-size:10px}.hse-local-actions code{font-size:9px;overflow-wrap:anywhere}.hse-root [data-highlight=true]{outline:2px solid #2896ff;outline-offset:3px;background:#2875ff14}.hse-capsule-parts{display:flex;gap:5px;flex-wrap:wrap;margin:8px 0}.hse-context-identity{max-width:100%;font-size:10px}.hse-context-identity pre{max-height:180px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}.hse-source-fragment textarea{width:100%;min-height:180px;padding:12px;border:1px solid #2875ff45;border-radius:8px;background:var(--dsw-alias-bg-layer-1,#f3f7fb);color:inherit;font:11px/1.6 monospace}.hse-diff-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.hse-diff-grid pre{max-height:280px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}.hse-answer-unverified{padding:8px;border:1px solid #e4a23b73;border-radius:8px;font-size:11px}.hse-answer-unverified button{margin-top:8px;border:1px solid #70cfff55;border-radius:6px;background:transparent;color:inherit;padding:6px;cursor:pointer}
-@container(max-width:1050px){.hse-layout{grid-template-columns:minmax(0,1fr)}.hse-layout>.hse-copilot{grid-column:1;grid-row:2;position:sticky;bottom:0;z-index:10;max-height:45vh}.hse-layout>.hse-copilot[data-collapsed=true]{max-height:60px}.hse-identity-tags{grid-template-columns:repeat(2,minmax(0,1fr))}.hse-trial-layout,.hse-output-layout,.hse-report-compare{grid-template-columns:1fr}.hse-trial-detail{position:static;max-height:none}.hse-meta-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.hse-diff-grid{grid-template-columns:1fr}}
-.hse-input-dock{position:relative;width:100%;min-width:0}.hse-mobile-copilot{position:absolute;bottom:calc(100% + 6px);left:12px;right:12px;z-index:10}.hse-mobile-copilot>.hse-copilot{box-sizing:border-box;margin:0;max-height:min(40dvh,420px);overflow:auto}.hse-capsule-parts .hse-context-chip{max-width:42%;font-size:11px;display:inline-flex;align-items:center}.hse-capsule-parts .hse-context-chip>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hse-context-identity summary{font-size:10px;cursor:pointer}.hse-context-dock{padding:8px 12px}.hse-answer-text h4{margin:12px 0 6px;color:#a8d9ff;font-size:12px}.hse-answer-text p{margin:5px 0;white-space:pre-wrap}.hse-answer-text code{padding:1px 3px;border-radius:4px;background:#70cfff18;font-size:10px}.hse-answer-text pre{margin:0;font-size:10px;white-space:pre-wrap}.hse-answer-bullet{padding-left:8px}.hse-selection-bar{padding:10px;margin:8px 0;border:1px solid #2875ff25;border-radius:8px;font-size:11px}.hse-selection-bar code{font-size:9px;overflow-wrap:anywhere}.hse-saved-source textarea{min-height:180px}
-.hse-action-draft{padding:12px;margin:10px 0;border:1px solid #70cfff55;border-radius:10px;font-size:11px}.hse-action-draft header{display:flex;justify-content:space-between;gap:8px}.hse-action-draft dl{display:grid;grid-template-columns:80px minmax(0,1fr);gap:5px;margin:10px 0}.hse-action-draft dd{margin:0;overflow-wrap:anywhere}.hse-action-draft code{font-size:9px;overflow-wrap:anywhere}.hse-action-draft pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto}.hse-action-preview{padding:10px;margin:8px 0;border:1px solid #e4a23b55;border-radius:7px;font-size:11px}.hse-action-preview>code{display:block;overflow-wrap:anywhere;font-size:9px}.hse-copilot .hse-action-draft .hse-local-actions button{color:#a8d9ff;border-color:#70cfff55}.hse-action-draft button:disabled{opacity:.45;cursor:not-allowed}
+.hse-local-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px}.hse-local-actions button{border:1px solid #2875ff45;border-radius:6px;padding:5px 7px;background:transparent;color:var(--ocean-600);cursor:pointer;font-size:10px}.hse-local-actions code{font-size:9px;overflow-wrap:anywhere}.hse-root [data-highlight=true]{outline:2px solid #2896ff;outline-offset:3px;background:#2875ff14}.hse-source-fragment textarea{width:100%;min-height:180px;padding:12px;border:1px solid #2875ff45;border-radius:8px;background:var(--dsw-alias-bg-layer-1,#f3f7fb);color:inherit;font:11px/1.6 monospace}.hse-diff-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.hse-diff-grid pre{max-height:280px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}.hse-answer-unverified{padding:8px;border:1px solid #e4a23b73;border-radius:8px;font-size:11px}.hse-answer-unverified button{margin-top:8px;border:1px solid #70cfff55;border-radius:6px;background:transparent;color:inherit;padding:6px;cursor:pointer}
+@container(max-width:1050px){.hse-layout{grid-template-columns:minmax(0,1fr)}.hse-identity-tags{grid-template-columns:repeat(2,minmax(0,1fr))}.hse-trial-layout,.hse-output-layout,.hse-report-compare{grid-template-columns:1fr}.hse-trial-detail{position:static;max-height:none}.hse-meta-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.hse-diff-grid{grid-template-columns:1fr}}
+.hse-selection-bar{padding:10px;margin:8px 0;border:1px solid #2875ff25;border-radius:8px;font-size:11px}.hse-selection-bar code{font-size:9px;overflow-wrap:anywhere}.hse-saved-source textarea{min-height:180px}
+.hse-action-draft{padding:12px;margin:10px 0;border:1px solid #70cfff55;border-radius:10px;font-size:11px}.hse-action-draft header{display:flex;justify-content:space-between;gap:8px}.hse-action-draft dl{display:grid;grid-template-columns:80px minmax(0,1fr);gap:5px;margin:10px 0}.hse-action-draft dd{margin:0;overflow-wrap:anywhere}.hse-action-draft code{font-size:9px;overflow-wrap:anywhere}.hse-action-draft pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto}.hse-action-preview{padding:10px;margin:8px 0;border:1px solid #e4a23b55;border-radius:7px;font-size:11px}.hse-action-preview>code{display:block;overflow-wrap:anywhere;font-size:9px}.hse-action-draft button:disabled{opacity:.45;cursor:not-allowed}
 `
 
 function installStyles() {
@@ -756,10 +757,6 @@ export function harborTurnProjection(nodes, token) {
   return { nodes: projected, active: boundaryIndex === values.length, anchorSeq, turn }
 }
 
-function assistantText(node) {
-  return Array.isArray(node?.blocks) ? node.blocks.filter(block => block?.kind === 'text').map(block => block.text).join('\n') : ''
-}
-
 function toolResultValue(node) {
   if (!node || node.kind !== 'tool-result' || node.isError) return undefined
   if (isRecord(node.value)) return node.value
@@ -990,46 +987,23 @@ export function removeContextPart(context, part) {
   return next
 }
 
-function ContextDock({ bridge, sessionId, useInput, useSession, stop, inputActions, replaceHarborReference, clearHarborReferences, t }) {
+// Keep explicit native references in sync without adding a visible input panel.
+// Page changes never edit the Composer or inject queued Agent context.
+function HarborInputSync({ bridge, sessionId, useInput, replaceHarborReference }) {
   const ui = useHarborUi(bridge, sessionId)
-  const dockNode = useRef()
   const draft = useInput(state => state?.draft ?? '')
   const phase = useInput(state => state?.phase ?? 'plain')
-  const phaseRef = useRef(phase)
-  phaseRef.current = phase
   const occurrences = useInput(state => state?.occurrences ?? [])
   const submitted = useRef()
   const observedTokens = useRef(new Set())
-  const [clock, setClock] = useState(Date.now)
   const explicit = ui.explicit
   const token = explicit?.contextSnapshotId
   const hasReference = hasHarborReference(draft, occurrences, token)
-  const expiry = Date.parse(explicit?.expiresAt ?? '')
-  const expired = isExplicitContextExpired(explicit?.expiresAt, clock)
-
-  useEffect(() => {
-    const measure = () => {
-      const top = dockNode.current?.getBoundingClientRect().top
-      if (Number.isFinite(top) && bridge.getSnapshot(sessionId).composerTop !== Math.floor(top)) bridge.update(sessionId, { composerTop: Math.floor(top) })
-    }
-    const frame = window.requestAnimationFrame(measure)
-    const observer = new ResizeObserver(measure)
-    if (dockNode.current) observer.observe(dockNode.current)
-    window.addEventListener('resize', measure)
-    return () => { window.cancelAnimationFrame(frame); observer.disconnect(); window.removeEventListener('resize', measure) }
-  }, [bridge, sessionId, draft, phase, token])
 
   useEffect(() => {
     if (!explicit || isHarborInputBusy(phase) || !needsStructuredHarborNormalization(draft, occurrences, explicit, observedTokens.current.has(token))) return
     replaceHarborReference?.(explicit, '')
   }, [draft, explicit, occurrences, phase, replaceHarborReference, token])
-  useEffect(() => {
-    setClock(Date.now())
-    if (!Number.isFinite(expiry) || expiry <= Date.now()) return undefined
-    const timer = window.setTimeout(() => setClock(Date.now()), Math.min(expiry - Date.now() + 25, 2_147_483_647))
-    return () => window.clearTimeout(timer)
-  }, [expiry])
-
   useEffect(() => {
     if (token && hasReference) observedTokens.current.add(token)
     const wasObserved = Boolean(token && observedTokens.current.has(token))
@@ -1044,66 +1018,7 @@ function ContextDock({ bridge, sessionId, useInput, useSession, stop, inputActio
       observedTokens.current.delete(token)
     }
   }, [bridge, explicit, hasReference, phase, sessionId, token])
-
-  const bind = async context => {
-    if (!context || !inputActions) return undefined
-    return bridge.issue(sessionId, context, { forceNew: true })
-  }
-  const update = async context => {
-    try {
-      const issued = await bind(context)
-      commitIssuedDraft(bridge, sessionId, issued, replaceHarborReference, '', phaseRef.current, true)
-      return issued
-    } catch {
-      return undefined
-    }
-  }
-  const clear = () => {
-    if (clearHarborReferences?.() !== true) return
-    bridge.clearExplicit(sessionId, token)
-  }
-  const removePart = async part => {
-    const context = removeContextPart(explicit?.context, part)
-    if (!context) { clear(); return }
-    await update(context)
-  }
-  const capsuleContext = explicit?.context
-  const capsuleParts = capsuleContext ? [
-    { key: 'job', label: capsuleContext.object?.job ? `Job ${capsuleContext.object.job}` : `Harbor ${capsuleContext.workspace}` },
-    ...(capsuleContext.object?.trial ? [{ key: 'trial', label: `Trial ${capsuleContext.object.trial}` }] : []),
-    ...(capsuleContext.selection ?? []).map((ref, index) => ({ key: `selection-${index}`, label: `${ref.kind}${ref.selectionCount ? ` (${ref.selectionCount})` : ''} · ${ref.criterion ?? ref.evidenceRef ?? short(ref.id)}${ref.startLine ? ` · L${ref.startLine}–${ref.endLine}` : ''}` })),
-  ] : []
-  const ask = async (prompt, context) => {
-    if (expired) return
-    try {
-      const reusingExplicit = Boolean(explicit && !context)
-      const issued = reusingExplicit ? explicit : await bind(context ?? ui.current)
-      if (!issued) return
-      commitIssuedDraft(bridge, sessionId, issued, replaceHarborReference, prompt, phaseRef.current, !reusingExplicit)
-    } catch {}
-  }
-
-  return <HarborSessionContext.Provider value={sessionId}><div className="hse-input-dock" ref={dockNode}>{ui.workbenchDock?.narrow ? <aside className="hse-mobile-copilot"><CopilotDock bridge={bridge} sessionId={sessionId} useSession={useSession} stop={stop} resolveLatest={ui.workbenchDock.resolveLatest} reanalyzeLatest={ui.workbenchDock.reanalyzeLatest} prepareQuestion={ui.workbenchDock.prepareQuestion} t={t}/></aside> : null}<section className="hse-context-dock" aria-live="polite">
-    <div className="hse-context-line"><strong>{t('currentPage')}</strong>{ui.current ? <><span className="hse-context-chip"><span>{contextLabel(ui.current)}</span></span><ContextFlags context={ui.current} t={t}/><button type="button" className="hse-context-link" disabled={ui.status === 'binding'} onClick={() => void update(ui.current)}>{explicit ? t('updateContext') : t('askAboutThis')}</button></> : <span className="hse-muted">Harbor —</span>}</div>
-    <div className="hse-context-line"><strong>{t('turnContext')}</strong>{explicit ? <><span className="hse-context-chip"><span>{explicit.context.route?.params?.stage ?? 'Harbor'}</span><button type="button" aria-label={t('clearContext')} disabled={isHarborInputBusy(phase)} onClick={clear}>{t('clearContext')} ×</button></span><ContextFlags context={explicit.context} t={t}/>{expired ? <><em className="hse-context-error">{t('contextExpired')}</em><small>{t('contextExpiredHint')}</small><button type="button" className="hse-context-link" disabled={!ui.current || ui.status === 'binding'} onClick={() => void update(ui.current)}>{t('updateContext')}</button></> : <small>{t('oneShot')}</small>}</> : <span className="hse-muted">{ui.status === 'binding' ? t('bindingContext') : t('noTurnContext')}</span>}</div>
-    {explicit ? <div className="hse-capsule-parts">{capsuleParts.map(part => <span className="hse-context-chip" key={part.key}><span>{part.label}</span><button type="button" aria-label={`${t('clearContext')} ${part.label}`} disabled={isHarborInputBusy(phase) || ui.status === 'binding'} onClick={() => void removePart(part.key)}>×</button></span>)}<details className="hse-context-identity"><summary>{t('contextIdentity')}</summary><pre>{pretty({ ...capsuleContext, contextSnapshotId: explicit.contextSnapshotId, expiresAt: explicit.expiresAt })}</pre></details></div> : null}
-    {ui.error ? <HarborErrorState error={ui.error} title={t('contextBindFailed')} t={t}/> : null}
-    {ui.current ? <div className="hse-context-questions" aria-label={t('questionSuggestions')}>{harborQuestionKeys(explicit?.context ?? ui.current).map(key => <button type="button" key={key} disabled={expired || isHarborInputBusy(phase) || ui.status === 'binding'} onClick={() => void ask(t(key))}>{t(harborQuestionLabelKey(key))}</button>)}{ui.lastSent?.context && !explicit ? <button type="button" disabled={isHarborInputBusy(phase) || ui.status === 'binding'} title={t('followupHint')} onClick={() => void ask('', ui.lastSent.context)}>{t('continueObject')}</button> : null}</div> : null}
-  </section></div></HarborSessionContext.Provider>
-}
-
-function AnswerText({ text }) {
-  // Render model prose as text nodes, never HTML or executable navigation.
-  const lines = String(text ?? '').split('\n')
-  let code = false
-  const inline = line => line.split(/(`[^`]+`)/g).map((part, i) => part.startsWith('`') && part.endsWith('`') ? <code key={i}>{part.slice(1, -1)}</code> : part)
-  return <div className="hse-answer-text">{lines.map((line, index) => {
-    if (line.startsWith('```')) { code = !code; return <hr key={index}/> }
-    if (code) return <pre key={index}>{line || ' '}</pre>
-    if (/^#{1,4} /.test(line)) return <h4 key={index}>{inline(line.replace(/^#{1,4} /, ''))}</h4>
-    if (/^[-*] /.test(line)) return <p className="hse-answer-bullet" key={index}>• {inline(line.slice(2))}</p>
-    return line.trim() ? <p key={index}>{inline(line)}</p> : null
-  })}</div>
+  return null
 }
 
 function ActionDraftCard({ draft, onSourceDraft, onReprepare, onViewComparison, onViewResult, t }) {
@@ -1167,41 +1082,19 @@ export function actionDraftContext(draft, sessionId, pageSessionId) {
   return context
 }
 
-function CopilotDock({ bridge, sessionId, useSession, stop, resolveLatest, reanalyzeLatest, prepareQuestion, t }) {
-  const request = useHarborApi()
-  const update = useHarborMutation()
-  const [expanded, setExpanded] = useState(() => !bridge.getSnapshot(sessionId).workbenchDock?.narrow)
-  const [selectedSeq, setSelectedSeq] = useState()
-  const [latest, setLatest] = useState({ status: 'idle' })
-  const latestSequence = useRef(0)
-  const ui = useHarborUi(bridge, sessionId)
-  const nodes = useSession(state => state?.nodes ?? [])
-  useEffect(() => {
-    if (bridge.getSnapshot(sessionId).lastSent) return
-    const recovered = recoverHarborTurn(nodes, sessionId)
-    if (recovered) bridge.update(sessionId, { lastSent: recovered })
-  }, [bridge, nodes, sessionId])
-  const partial = useSession(state => state?.partial ?? null)
-  const runningCalls = useSession(state => state?.runningCalls ?? [])
-  const running = useSession(state => Boolean(state?.running))
-  const lastAgentError = useSession(state => state?.lastAgentError ?? null)
-  // Display ordinary follow-ups without merging earlier evidence or actions.
-  const projection = harborConversationProjection(nodes, ui.lastSent?.contextSnapshotId, selectedSeq)
-  const recent = projection.nodes
-  const completed = [...recent].reverse().find(node => node?.kind === 'assistant')
-  const answer = projection.active && running && partial ? assistantText(partial) : assistantText(completed)
-  const settledTools = recent.filter(node => node?.kind === 'tool-result').map(node => node.call?.name ?? node.callId).filter(Boolean)
-  const references = trustedHarborReferences(recent)
-  const action = toolUiAction(recent) ?? ui.pendingAction
-  const resolved = trustedHarborResolvedContext(recent)
-  const actionDrafts = recent.filter(node => node?.call?.name === 'harbor_propose_action').map(toolResultValue).filter(value => value?.schema === 'harbor-action-draft/v1' && value?.draftId)
+export function createHarborActionHandlers({ bridge, sessionId, prepareQuestion, onNavigate, t }) {
+  const navigate = action => {
+    const accepted = bridge.navigate(sessionId, action, { force: true })
+    onNavigate?.(accepted)
+    return accepted
+  }
   const openSourceDraft = draft => {
     bridge.update(sessionId, { evaluatorProposal: { ...draft, reviewRequestId: pageSessionIdentity() } })
     const ref = draft.proposal?.sourceRef
-    if (ref) bridge.navigate(sessionId, { kind: 'harbor.navigate', actionId: `draft-source-${draft.draftId}`, target: { route: 'harbor.evaluator', workspace: draft.target.workspace, job: ref.job, stage: 'judge' } }, { force: true })
+    if (ref) navigate({ kind: 'harbor.navigate', actionId: `draft-source-${draft.draftId}`, target: { route: 'harbor.evaluator', workspace: draft.target.workspace, job: ref.job, stage: 'judge' } })
   }
   const reprepare = async draft => {
-    const original = actionDraftContext(draft, sessionId, ui.current?.pageSessionId ?? ui.lastSent?.context?.pageSessionId)
+    const original = actionDraftContext(draft, sessionId, bridge.getSnapshot(sessionId).current?.pageSessionId ?? bridge.getSnapshot(sessionId).lastSent?.context?.pageSessionId ?? pageSessionIdentity())
     if (!original) return false
     const prepared = await prepareQuestion?.(original, `${t('repreparePrompt')}\n${draft.proposal?.summary ?? ''}`)
     const error = bridge.getSnapshot(sessionId).error
@@ -1210,75 +1103,13 @@ function CopilotDock({ bridge, sessionId, useSession, stop, resolveLatest, reana
       // selection. Return to its page and ask for a new explicit selection.
       const source = draft.proposal?.sourceRef
       bridge.update(sessionId, { error: { ...error, nextStep: t('draftRecoveryReselect') } })
-      bridge.navigate(sessionId, { kind: 'harbor.navigate', actionId: `reselect-${draft.draftId}`, target: { route: source ? 'harbor.evaluator' : 'harbor.job', workspace: draft.target.workspace, job: draft.target.job, stage: source || draft.selection?.some(ref => /trial-set/.test(ref.kind)) ? 'judge' : original.route.params.stage, ...(draft.target.trial ? { trial: draft.target.trial } : {}) } }, { force: true })
+      navigate({ kind: 'harbor.navigate', actionId: `reselect-${draft.draftId}`, target: { route: source ? 'harbor.evaluator' : 'harbor.job', workspace: draft.target.workspace, job: draft.target.job, stage: source || draft.selection?.some(ref => /trial-set/.test(ref.kind)) ? 'judge' : original.route.params.stage, ...(draft.target.trial ? { trial: draft.target.trial } : {}) } })
     }
     return prepared === true
   }
-  const viewComparison = draft => bridge.navigate(sessionId, { kind: 'harbor.navigate', actionId: `comparison-${draft.draftId}`, target: { route: 'harbor.compare', workspace: draft.target.workspace, job: draft.target.job, stage: 'gate', baseline: draft.target.baseline, candidate: draft.target.candidate } }, { force: true })
-  const viewDiagnostic = (draft, result) => bridge.navigate(sessionId, { kind: 'harbor.navigate', actionId: `diagnostic-result-${draft.operationId}`, target: { route: 'harbor.job', workspace: draft.target.workspace, job: result.jobName, stage: 'judge' } }, { force: true })
-  const activeCalls = projection.active ? runningCalls : []
-  const activeRunning = projection.active && running
-  const relevantError = projection.active ? lastAgentError : null
-  const turnId = projection.turn ?? projection.anchorSeq
-  const token = resolved?.contextSnapshotId ?? projection.contextToken ?? ui.lastSent?.contextSnapshotId
-  const completionId = completed?.messageId ?? completed?.seq
-  const refreshLatest = useCallback(async () => {
-    if (!token || !resolveLatest) return
-    const sequence = ++latestSequence.current
-    try {
-      const value = await resolveLatest(token, sessionId)
-      if (sequence === latestSequence.current) setLatest({ status: 'ready', token, turnId, value })
-    } catch (error) {
-      if (sequence !== latestSequence.current) return
-      const expired = /(?:^|_)EXPIRED\b|\bexpired\b/i.test(`${error?.code ?? ''} ${error?.message ?? ''}`)
-      setLatest({ status: 'error', token, turnId, freshness: expired ? 'EXPIRED' : 'UNAVAILABLE', error: normalizeHarborUiError(error) })
-    }
-  }, [resolveLatest, sessionId, token, turnId])
-  useEffect(() => {
-    latestSequence.current += 1
-    if (!token || !completionId || activeRunning || !resolveLatest || !resolved) {
-      setLatest({ status: 'idle' })
-      return undefined
-    }
-    void refreshLatest()
-    const timer = window.setInterval(() => void refreshLatest(), 15_000)
-    return () => { window.clearInterval(timer); latestSequence.current += 1 }
-  }, [activeRunning, completionId, refreshLatest, resolveLatest, token, resolved?.contextSnapshotId])
-  const currentLatest = latest.token === token ? latest : undefined
-  const origin = trustedHarborResolvedContext(projection.originNodes ?? [])
-  const discussionContext = resolvedUiContext(resolved ?? origin, sessionId) ?? (token === ui.lastSent?.contextSnapshotId ? ui.lastSent?.context : undefined)
-  const freshness = resolved ? currentLatest?.value?.freshness ?? currentLatest?.freshness ?? resolved.freshness : 'UNVERIFIED'
-  const contextSummary = resolved?.context ?? (projection.continuation ? undefined : discussionContext)
-  const basis = harborDisplayedAnswerBasis(resolved, references, projection.continuation, currentLatest?.value, discussionContext)
-  const stale = freshness === 'DRIFTED_READ_ONLY' || freshness === 'DRIFTED' || freshness === 'EXPIRED'
-
-  const status = relevantError ? t('copilotFailed') : activeCalls.length ? t('copilotReading') : activeRunning ? t('copilotAnalyzing') : ui.lastSent ? t('fullConversation') : t('copilotIdle')
-  return <section className="hse-copilot" style={!ui.workbenchDock?.narrow && ui.composerTop ? { maxHeight: Math.max(80, ui.composerTop - 120), boxSizing: 'border-box' } : undefined} data-collapsed={String(!expanded)} aria-live="polite">
-    <div className="hse-copilot-head"><h3>🐳 {t('copilot')}</h3><div className="hse-copilot-controls">{activeRunning && stop ? <button type="button" onClick={() => void stop()}>{t('stopAgent')}</button> : null}<button type="button" className="hse-copilot-toggle" aria-expanded={expanded} aria-label={expanded ? t('collapse') : t('expand')} onClick={() => setExpanded(value => !value)}>{expanded ? '−' : '+'}</button></div></div>
-    {!expanded ? <p className="hse-copilot-status">{activeRunning ? status : answer ? t('replyReady') : t('copilotIdle')}</p> : null}
-    <OperationTray {...{ sessionId, request, update }} scopeKey={ui.current?.workspace} t={key => t(`operationTray_${key}`)} onViewResult={(operation, result) => viewDiagnostic(operation, result)}/>
-    {expanded ? <>
-      <p className="hse-copilot-status">{status}</p>
-      {projection.turns?.length > 1 ? <details className="hse-discussion-history"><summary>{t('discussionHistory')} · {projection.turns.length}</summary>{projection.turns.map(item => <button type="button" key={item.seq} aria-current={item.seq === projection.selectedSeq ? 'true' : undefined} onClick={() => setSelectedSeq(item.seq)}>{item.question || t('aiQuestion')}</button>)}<button type="button" onClick={() => setSelectedSeq(undefined)}>{t('latestReply')}</button></details> : null}
-      {projection.question ? <div className="hse-question"><strong>{t('aiQuestion')}</strong><p>{projection.question}</p></div> : null}
-      {projection.continuation ? <p className="hse-copilot-status">{t('followupUnbound')}</p> : null}
-      {token ? <div className="hse-hook-state"><b>{t('copilotTurn')}: {turnId ?? '—'}</b><br/>{contextSummary ? contextLabel(contextSummary) : basis?.job ? `Job ${basis.job}` : t('historyOnly')}{stale ? <p>{t('contextStale')}</p> : null}</div> : null}
-      {answer ? <div className="hse-copilot-answer"><AnswerText text={answer}/></div> : null}
-      {answer && !activeRunning && !references.some(ref => ref.kind === 'evidence' && ref.available) ? <div className="hse-answer-unverified" role="status"><p>{t('evidenceNotChecked')}</p></div> : null}
-      {references.length ? <div className="hse-copilot-refs"><strong>{references.some(reference => reference.kind === 'evidence') ? t('evidenceRefs') : t('objectRefs')}</strong>{references.map(reference => <button type="button" className="hse-copilot-ref" data-available={String(reference.available)} key={reference.action.actionId} onClick={() => bridge.navigate(sessionId, reference.action, { force: true })}><b>{reference.label ?? t('viewInHarbor')}</b><span>{reference.kind === 'evidence' ? t('evidence') : t('objectRefs')}</span><code>{harborReferenceIdentity(reference)}{reference.available ? '' : ` · ${t('evidenceUnavailable')}`}</code></button>)}</div> : null}
-      {actionDrafts.map(draft => <ActionDraftCard key={draft.draftId} draft={draft} onSourceDraft={openSourceDraft} onReprepare={reprepare} onViewComparison={viewComparison} onViewResult={result => viewDiagnostic(draft, result)} t={t}/>)}
-      {discussionContext && prepareQuestion ? <div className="hse-copilot-actions"><button type="button" disabled={activeRunning || ui.status === 'binding'} onClick={() => void prepareQuestion(discussionContext, '')}>{t('continueObject')}</button><small>{t('followupHint')}</small></div> : null}
-      {basis || activeCalls.length || settledTools.length ? <details className="hse-answer-details"><summary>{t('answerDetails')}</summary>
-        <p>{t('contextFreshness')}: {freshness ?? '—'}</p>
-        {activeCalls.length || settledTools.length ? <div className="hse-copilot-tools">{[...activeCalls.map(call => call.name ?? call.toolName ?? call.callId), ...settledTools].filter(Boolean).map((name, index) => <span key={`${name}-${index}`}>{name}</span>)}</div> : null}
-        {basis ? <div className="hse-copilot-basis"><strong>{t('basedOn')}</strong>{basis.job ? <span>Job<b>{basis.job}</b></span> : null}{basis.artifactRevision ? <span>{t('revision')}<code>{short(basis.artifactRevision)}</code></span> : null}{basis.currentRevision && basis.currentRevision !== basis.artifactRevision ? <span>{t('currentRevision')}<code>{short(basis.currentRevision)}</code></span> : null}{basis.observedAt ? <span>{t('observedAt')}<time dateTime={basis.observedAt}>{new Date(basis.observedAt).toLocaleString()}</time></span> : null}</div> : null}
-      </details> : null}
-      {relevantError ? <div className="hse-context-error">{relevantError}</div> : null}
-      {currentLatest?.status === 'error' && freshness !== 'EXPIRED' ? <HarborErrorState error={currentLatest.error} t={t}/> : null}
-      {stale && reanalyzeLatest ? <div className="hse-copilot-actions"><button type="button" onClick={() => void reanalyzeLatest(discussionContext)}>{t('reanalyzeLatest')}</button></div> : null}
-      {!references.length && action ? <div className="hse-copilot-actions"><button type="button" onClick={() => bridge.navigate(sessionId, action, { force: true })}>{t('viewInHarbor')}</button></div> : null}
-    </> : null}
-  </section>
+  const viewComparison = draft => navigate({ kind: 'harbor.navigate', actionId: `comparison-${draft.draftId}`, target: { route: 'harbor.compare', workspace: draft.target.workspace, job: draft.target.job, stage: 'gate', baseline: draft.target.baseline, candidate: draft.target.candidate } })
+  const viewDiagnostic = (draft, result) => navigate({ kind: 'harbor.navigate', actionId: `diagnostic-result-${draft.operationId}`, target: { route: 'harbor.job', workspace: draft.target.workspace, job: result.jobName, stage: 'judge' } })
+  return { openSourceDraft, reprepare, viewComparison, viewDiagnostic }
 }
 
 function MetricPills({ metrics }) {
@@ -2465,32 +2296,29 @@ function historicalError(value) {
   return { code, message: message.replace(new RegExp(`^${code}:\\s*`), ''), observedAt: new Date().toISOString() }
 }
 
-function historicalErrorHint(code, t) {
-  if (code === 'NO_ELIGIBLE_SESSIONS') return t('noEligibleHint')
-  if (code === 'SESSION_SELECTION_TOO_EXPENSIVE') return t('narrowScanHint')
-  if (/SESSION_(?:SAMPLE|FEEDBACK)_CHANGED|WORKSPACE_MISMATCH|TOKEN_(?:INVALID|EXPIRED)|PREVIEW_(?:INVALID|WORKSPACE_MISMATCH)/.test(code)) return t('changedSessionHint')
-  return t('historicalGenericError')
-}
-
 function HistoricalLauncher({ snapshot, reload, onCompleted, t }) {
   const request = useHarborApi()
   const update = useHarborMutation()
   const [state, setState] = useState({ status: 'idle' })
   const [open, setOpen] = useState(false)
+  const previewSequence = useRef(0)
+  const workspaceGeneration = useRef(0)
   const workspace = snapshot?.workspace?.id
   const operationId = state.operation?.operationId
 
   useEffect(() => {
     let alive = true
+    previewSequence.current += 1
+    workspaceGeneration.current += 1
     setState({ status: 'idle' })
     setOpen(false)
-    if (!workspace) return () => { alive = false }
+    if (!workspace) return () => { alive = false; workspaceGeneration.current += 1 }
     void request('historical-operation', { workspace }).then(operation => {
       if (alive && ['queued', 'running'].includes(operation?.status)) {
         setState({ status: 'running', operation })
       }
     }).catch(() => {})
-    return () => { alive = false }
+    return () => { alive = false; previewSequence.current += 1; workspaceGeneration.current += 1 }
   }, [request, workspace])
 
   useEffect(() => {
@@ -2502,10 +2330,15 @@ function HistoricalLauncher({ snapshot, reload, onCompleted, t }) {
         const operation = await request('historical-operation', { workspace, operationId })
         if (!alive) return
         if (operation.status === 'completed') {
+          const generation = workspaceGeneration.current
+          const sequence = previewSequence.current
           setState({ status: 'completed', operation })
           setOpen(false)
           await reload(true)
-          if (alive) onCompleted(operation)
+          // The terminal state disposes this poll effect while reload is in
+          // flight. That is not an owner change: only another workspace,
+          // unmount, or a newer user interaction should cancel this handoff.
+          if (generation === workspaceGeneration.current && sequence === previewSequence.current) onCompleted(operation)
           return
         }
         if (operation.status === 'failed') {
@@ -2525,6 +2358,7 @@ function HistoricalLauncher({ snapshot, reload, onCompleted, t }) {
     if (!open) return undefined
     const escape = event => {
       if (event.key !== 'Escape') return
+      previewSequence.current += 1
       setOpen(false)
       if (!['running', 'starting'].includes(state.status)) setState({ status: 'idle' })
     }
@@ -2532,77 +2366,89 @@ function HistoricalLauncher({ snapshot, reload, onCompleted, t }) {
     return () => window.removeEventListener('keydown', escape)
   }, [open, state.status])
 
-  const preview = async days => {
+  const preview = async () => {
+    const sequence = ++previewSequence.current
     setOpen(true)
     setState({ status: 'previewing' })
     try {
       const value = await update('historical-preview', {
         workspace,
-        limit: 10,
+        limit: 3,
         includeFeedback: true,
-        ...(days ? { createdAfter: new Date(Date.now() - days * 86_400_000).toISOString() } : {}),
       })
+      if (sequence !== previewSequence.current) return
       setState({ status: 'ready', preview: value })
     } catch (error) {
+      if (sequence !== previewSequence.current) return
       setState({ status: 'error', error: historicalError(error) })
     }
   }
 
   const confirm = async () => {
     if (!state.preview) return
+    const generation = workspaceGeneration.current
     setState(current => ({ ...current, status: 'starting' }))
     try {
       const operation = await update('historical-run', { workspace, previewId: state.preview.previewId })
+      if (generation !== workspaceGeneration.current) return
       setState({ status: 'running', operation })
     } catch (error) {
+      if (generation !== workspaceGeneration.current) return
       const normalized = historicalError(error)
       if (normalized.code === 'HISTORICAL_JOB_ALREADY_RUNNING') {
         try {
           const operation = await request('historical-operation', { workspace })
+          if (generation !== workspaceGeneration.current) return
           if (['queued', 'running'].includes(operation?.status)) {
             setState({ status: 'running', operation })
             return
           }
         } catch {}
       }
+      if (generation !== workspaceGeneration.current) return
       setState({ status: 'error', error: normalized })
     }
   }
 
   const close = () => {
+    previewSequence.current += 1
     setOpen(false)
     if (!['running', 'starting'].includes(state.status)) setState({ status: 'idle' })
   }
   const previewValue = state.preview
-  const evaluator = previewValue?.evaluation?.evaluator
   const judge = previewValue?.evaluation?.judge
   const active = ['running', 'starting'].includes(state.status)
   const buttonLabel = active ? t('historicalActive') : state.status === 'previewing' ? t('historicalPreparing') : t('historicalLaunch')
   const buttonShort = active ? t('historicalActiveShort') : state.status === 'previewing' ? t('historicalPreparingShort') : t('historicalLaunchShort')
+  const dialogTitle = state.status === 'error' ? t('historicalErrorTitle') : state.status === 'running' ? t('historicalRunning') : state.status === 'starting' ? t('historicalStarting') : t('historicalPreviewTitle')
+  const dialogHint = state.status === 'error' ? t('historicalErrorBody') : state.status === 'running' ? t('historicalRunningHint') : state.status === 'starting' ? t('historicalStartingHint') : t('historicalPreviewHint')
 
   return <>
     <section className="hse-launch-card" aria-live="polite">
       <div className="hse-launch-mark" aria-hidden="true">✦</div>
-      <div className="hse-launch-copy"><b>{active ? t('historicalRunning') : t('historicalLaunch')}</b><span>{active ? t('historicalRunningHint') : t('historicalLaunchBody')}</span><small>{active ? `${state.operation?.selectedCount ?? '—'} Trials` : t('historicalLaunchHint')}</small></div>
+      <div className="hse-launch-copy"><b>{active ? t('historicalRunning') : t('historicalLaunch')}</b><span>{active ? t('historicalRunningHint') : t('historicalLaunchBody')}</span><small>{active ? `${state.operation?.selectedCount ?? '—'} ${t('historicalSessionUnit')}` : t('historicalLaunchHint')}</small></div>
       <button type="button" className="hse-launch-button" disabled={!workspace || state.status === 'previewing'} onClick={() => active ? setOpen(true) : void preview()}><span className="hse-launch-button-full">{buttonLabel}</span><span className="hse-launch-button-short">{buttonShort}</span></button>
     </section>
     {open ? <div className="hse-launch-overlay" role="presentation" onMouseDown={event => event.target === event.currentTarget && close()}><section className="hse-launch-dialog" role="dialog" aria-modal="true" aria-labelledby="hse-historical-title">
-      <header className="hse-launch-head"><div><span>{t('historicalLaunchHint')}</span><h2 id="hse-historical-title">{state.status === 'running' ? t('historicalRunning') : t('historicalPreviewTitle')}</h2><p>{state.status === 'running' ? t('historicalRunningHint') : t('historicalPreviewHint')}</p></div><button type="button" className="hse-dialog-close" aria-label={t('close')} onClick={close}>×</button></header>
+      <header className="hse-launch-head"><div><span>{t('historicalLaunchHint')}</span><h2 id="hse-historical-title">{dialogTitle}</h2><p>{dialogHint}</p></div><button type="button" className="hse-dialog-close" aria-label={t('close')} onClick={close}>×</button></header>
       <div className="hse-launch-body">
         {state.status === 'previewing' ? <div className="hse-empty"><div className="hse-spin"/>{t('historicalPreparing')}</div> : null}
         {state.status === 'starting' ? <div className="hse-empty"><div className="hse-spin"/>{t('historicalStarting')}</div> : null}
-        {state.status === 'running' ? <div className="hse-run-state"><div className="hse-spin"/><b>{t('historicalRunning')}</b><span>{state.operation?.selectedCount ?? '—'} Trials · {snapshot.workspace.label}</span><p>{t('historicalRunningHint')}</p></div> : null}
+        {state.status === 'running' ? <div className="hse-run-state"><div className="hse-spin"/><b>{t('historicalRunning')}</b><span>{state.operation?.selectedCount ?? '—'} {t('historicalSessionUnit')}</span><p>{t('historicalRunningHint')}</p></div> : null}
         {state.status === 'completed' ? <div className="hse-run-state"><b>✓ {t('historicalCompleted')}</b></div> : null}
-        {state.status === 'error' ? <HarborErrorState error={{ ...state.error, nextStep: historicalErrorHint(state.error.code, t) }} t={t}/> : null}
+        {state.status === 'error' ? <section className="hse-launch-section"><p role="alert">{historicalErrorHint(state.error.code, t)}</p><details><summary>{t('historicalErrorDetails')}</summary><HarborErrorState error={{ ...state.error, nextStep: historicalErrorHint(state.error.code, t) }} t={t}/></details></section> : null}
         {state.status === 'ready' && previewValue ? <>
-          <div className="hse-launch-summary"><div><span>{t('selectedSessions')}</span><b>{previewValue.selected.length}</b></div><div><span>{t('requestEstimate')}</span><b>{previewValue.estimatedJudgeRequests}</b></div><div><span>{t('tokenExpiry')}</span><b>{new Date(previewValue.expiresAt).toLocaleTimeString()}</b></div><div><span>{t('workspace')}</span><b>{snapshot.workspace.label}</b></div></div>
-          <section className="hse-launch-section"><h3>{t('recentSessions')}</h3><div className="hse-session-list">{previewValue.selected.map(session => <article key={session.trialId}><div><b>{session.title}</b><span>{session.lastActivityAt ? new Date(session.lastActivityAt).toLocaleString() : '—'}</span></div><p>{t('turnCounts')} {session.turnCount ?? 0} · {t('toolCounts')} {session.toolCallCount ?? 0} · {t('feedbackCounts')} +{session.feedback?.positive ?? 0} / -{session.feedback?.negative ?? 0}</p><code>{(session.modelRoutes ?? []).map(route => `${route.provider}/${route.model}`).join(' · ') || session.agentPreset || '—'}</code></article>)}</div></section>
-          <section className="hse-launch-section"><h3>{t('historicalBoundaries')}</h3><div className="hse-launch-grid"><div><span>{t('generatorRole')}</span><b>{t('generatorRoleValue')}</b></div><div><span>{t('evaluatorIdentity')}</span><b>{evaluator?.id ?? '—'} · {evaluator?.version ?? '—'}</b></div><div><span>{t('judgeIdentity')}</span><b>{judge?.provider ?? '—'} / {judge?.model ?? '—'}</b></div><div><span>{t('coupling')}</span><b>{previewValue.evaluation?.coupling ?? '—'}</b></div><div><span>{t('evidenceRetention')}</span><b>{previewValue.retention?.privateEvidence} · {previewValue.retention?.jobEvidence}</b></div></div><p className="hse-boundary-note">{t('historicalBoundaryDetail')}</p></section>
+          <p className="hse-boundary-note">{t('historicalPrivacyHint')}</p>
+          {previewValue.scan?.partial ? <p className="hse-muted">{t('historicalPartialHint')}</p> : null}
+          {previewValue.excludedCounts?.unreadable > 0 ? <p className="hse-muted">{t('historicalUnreadableHint')}</p> : null}
+          <div className="hse-launch-summary"><div><span>{t('selectedSessions')}</span><b>{previewValue.selected.length}</b></div><div><span>{t('judgeIdentity')}</span><b>{judge?.provider ?? '—'} / {judge?.model ?? '—'}</b></div></div>
+          <section className="hse-launch-section"><h3>{t('recentSessions')}</h3><div className="hse-session-list">{previewValue.selected.map(session => <article key={session.trialId}><div><b>{session.title}</b><span>{session.lastActivityAt ? new Date(session.lastActivityAt).toLocaleString() : '—'}</span></div><p>{t('turnCounts')} {session.turnCount ?? 0} · {t('toolCounts')} {session.toolCallCount ?? 0}</p></article>)}</div></section>
+          <details className="hse-launch-section"><summary>{t('historicalBoundaries')}</summary><p className="hse-boundary-note">{t('historicalBoundaryDetail')}</p></details>
         </> : null}
       </div>
       <footer className="hse-launch-actions">
         {state.status === 'ready' ? <><button type="button" onClick={close}>{t('cancel')}</button><button type="button" className="hse-confirm" onClick={() => void confirm()}>{t('historicalConfirm')}</button></> : null}
-        {state.status === 'error' ? <><button type="button" onClick={close}>{t('close')}</button>{state.error.code === 'SESSION_SELECTION_TOO_EXPENSIVE' ? <button type="button" onClick={() => void preview(30)}>{t('recent30Days')}</button> : <button type="button" onClick={() => void preview()}>{t('previewAgain')}</button>}</> : null}
+        {state.status === 'error' ? <><button type="button" onClick={close}>{t('close')}</button><button type="button" onClick={() => void preview()}>{t('previewAgain')}</button></> : null}
         {state.status === 'running' ? <button type="button" onClick={close}>{t('close')}</button> : null}
       </footer>
     </section></div> : null}
@@ -2610,7 +2456,7 @@ function HistoricalLauncher({ snapshot, reload, onCompleted, t }) {
 }
 
 function DashboardView(props) {
-  return <DashboardSessionView key={String(props.sessionId)} {...props}/>
+  return <HarborSessionContext.Provider value={props.sessionId}><DashboardSessionView key={String(props.sessionId)} {...props}/></HarborSessionContext.Provider>
 }
 
 function nearestScrollPort(element) {
@@ -2625,7 +2471,7 @@ function GettingStarted({ jobs, openJob, t }) {
   return <section className="hse-journey" aria-label={t('journeyTitle')}><h2>{t('journeyTitle')}</h2><p>{t('journeyIntro')}</p><ol>{[1, 2, 3].map(step => <li key={step}>{t(`journeyStep${step}`)}</li>)}</ol>{jobs?.length ? <button type="button" className="hse-button" onClick={() => openJob(jobs[0].name)}>{t('journeyOpen')}</button> : <p>{t('journeyEmpty')}</p>}</section>
 }
 
-function DashboardSessionView({ t, bridge, stop, sessionId, useSession, useInput, inputActions, replaceHarborReference }) {
+function DashboardSessionView({ t, bridge, sessionId, useInput, inputActions, replaceHarborReference }) {
   const [workspace, setWorkspace] = useState('')
   const [offset, setOffset] = useState(0)
   const [attentionFilter, setAttentionFilter] = useState('all')
@@ -2655,38 +2501,9 @@ function DashboardSessionView({ t, bridge, stop, sessionId, useSession, useInput
       return commitIssuedDraft(bridge, sessionId, issued, replaceHarborReference, prompt, phaseRef.current, true)
     } catch { return false }
   }, [bridge, inputActions, replaceHarborReference, sessionId])
-  const resolveLatest = useCallback((token, requestedSessionId) => {
-    if (!token || String(requestedSessionId) !== String(sessionId)) throw new Error('Harbor context resolution requires the active Session')
-    return mutate('session-context-resolve', { sessionId, contextSnapshotId: token })
-  }, [sessionId])
-  const reanalyzeLatest = useCallback(async context => {
-    if (!context || !inputActions) return
-    try {
-      const issued = await bridge.issue(sessionId, context, { forceNew: true })
-      commitIssuedDraft(bridge, sessionId, issued, replaceHarborReference, t('reanalyzeLatestPrompt'), phaseRef.current, true)
-    } catch {}
-  }, [bridge, inputActions, replaceHarborReference, sessionId, t])
-  const dockCallbacks = useRef()
-  dockCallbacks.current = { resolveLatest, reanalyzeLatest, prepareQuestion: askContext }
-  useEffect(() => {
-    // Observe only our own canvas. Placement uses the public input.dock slot,
-    // not Host DOM selectors, private stores, or duplicate conversation state.
-    let previous
-    const callbacks = { resolveLatest: (...args) => dockCallbacks.current.resolveLatest(...args), reanalyzeLatest: (...args) => dockCallbacks.current.reanalyzeLatest(...args), prepareQuestion: (...args) => dockCallbacks.current.prepareQuestion(...args) }
-    const publish = width => {
-      const narrow = width <= 1050
-      if (previous === narrow) return
-      previous = narrow
-      bridge.update(sessionId, { workbenchDock: { pageSessionId, narrow, ...callbacks } })
-    }
-    if (rootNode.current) publish(rootNode.current.getBoundingClientRect().width)
-    const observer = new ResizeObserver(entries => publish(entries[0].contentRect.width))
-    if (rootNode.current) observer.observe(rootNode.current)
-    return () => {
-      observer.disconnect()
-      if (bridge.getSnapshot(sessionId).workbenchDock?.pageSessionId === pageSessionId) bridge.update(sessionId, { workbenchDock: undefined })
-    }
-  }, [bridge, pageSessionId, sessionId])
+  const request = useHarborApi()
+  const update = useHarborMutation()
+  const viewDiagnostic = (operation, result) => bridge.navigate(sessionId, { kind: 'harbor.navigate', actionId: `diagnostic-result-${operation.operationId}`, target: { route: 'harbor.job', workspace: operation.target.workspace, job: result.jobName, stage: 'judge' } }, { force: true })
   const switchWorkspace = event => {
     navigationHistory.current = []
     setHistoryDepth(0)
@@ -2798,8 +2615,11 @@ function DashboardSessionView({ t, bridge, stop, sessionId, useSession, useInput
   const askJob = jobSummary => askContext(buildUiContext({ sessionId, pageSessionId, workspace: snapshot.workspace.id, job: jobSummary.name, detail: undefined, jobSummary }), t('suggestedQuestion2'))
 
   return <HarborSessionContext.Provider value={sessionId}><main ref={rootNode} className="hse-root"><div className="hse-page hse-layout">
-    {!ui.workbenchDock?.narrow ? <CopilotDock bridge={bridge} sessionId={sessionId} useSession={useSession} stop={stop} resolveLatest={resolveLatest} reanalyzeLatest={reanalyzeLatest} prepareQuestion={askContext} t={t}/> : null}
-    <div className="hse-main-panel">{selected ? <Workbench key={`${selected.workspace}\u0000${selected.job}`} job={selected.job} workspace={selected.workspace} jobs={snapshot?.jobs ?? []} close={closeWorkbench} navigation={selected.navigation} consumeNavigation={consumeNavigation} restoreView={selected.restoreView} hasHistory={selected.fromNavigation} scrollContainerRef={scrollNode} onViewStateChange={value => { activeWorkbenchView.current = value }} sessionId={sessionId} pageSessionId={pageSessionId} bridge={bridge} askContext={askContext} t={t}/> : <>
+
+    <div className="hse-main-panel">
+      {ui.error ? <HarborErrorState error={ui.error} title={t('contextBindFailed')} t={t}/> : null}
+      <OperationTray hideWhenEmpty {...{ sessionId, request, update }} scopeKey={snapshot?.workspace?.id ?? workspace} t={key => t(`operationTray_${key}`)} onViewResult={viewDiagnostic}/>
+      {selected ? <Workbench key={`${selected.workspace}\u0000${selected.job}`} job={selected.job} workspace={selected.workspace} jobs={snapshot?.jobs ?? []} close={closeWorkbench} navigation={selected.navigation} consumeNavigation={consumeNavigation} restoreView={selected.restoreView} hasHistory={selected.fromNavigation} scrollContainerRef={scrollNode} onViewStateChange={value => { activeWorkbenchView.current = value }} sessionId={sessionId} pageSessionId={pageSessionId} bridge={bridge} askContext={askContext} t={t}/> : <>
       {historyDepth ? <button type="button" className="hse-button hse-dashboard-back" onClick={closeWorkbench}>{t('back')}</button> : null}
       {snapshot ? <GettingStarted jobs={snapshot.jobs} openJob={openJob} t={t}/> : null}
       <section className="hse-health-summary"><div className="hse-head"><div><small>Harbor · {t('eyebrow')}</small><h1>{t('health')}: {t((snapshot?.overview?.attention?.blocked ?? 0) > 0 ? 'health_blocked' : ['blocked', 'stalled', 'infrastructure', 'invalid', 'regressed', 'gate', 'fresh-baseline'].some(key => (snapshot?.overview?.attention?.[key] ?? 0) > 0) ? 'healthRisk' : 'healthy')}</h1><p>{t('attentionCountHint')}</p></div><button type="button" className="hse-button" onClick={() => void state.load()}>{t('refresh')}</button></div><div className="hse-health-filters" aria-label={t('attention')}>{ATTENTION_FILTERS.map(filter => <button type="button" key={filter} aria-pressed={attentionFilter === filter} onClick={() => { setAttentionFilter(filter); setOffset(0) }}><span>{t(`health_${filter}`)}</span><b>{snapshot?.overview?.attention?.[filter] ?? '—'}</b></button>)}</div></section>
@@ -2863,12 +2683,16 @@ function DoctorView({ t }) {
 
 function blockText(block) { return isRecord(block) && Array.isArray(block.content) ? block.content.filter(item => item?.type === 'text').map(item => item.text).join('\n') : '' }
 export function decodeToolResult(block) { if (!isRecord(block) || block.isError) return undefined; if (isRecord(block.meta)) return block.meta; try { const value = JSON.parse(blockText(block)); return isRecord(value) ? value : undefined } catch { return undefined } }
-function HarborToolView({ block, toolName, bridge, sessionId, t }) {
+function HarborToolView({ block, toolName, bridge, sessionId, prepareQuestion, t }) {
   const [open, setOpen] = useState(false)
-  const value = decodeToolResult(block)
+  const [navigationNotice, setNavigationNotice] = useState('')
+  const settled = block?.kind === 'tool-result'
+  const value = settled ? decodeToolResult(block) : undefined
   const uiAction = trustedHarborUiAction(toolName, value)
-  const running = !isRecord(block) || !('kind' in block)
-  return <section className="hse-tool"><button type="button" onClick={() => setOpen(!open)}><strong>🐳 {toolName}</strong><small>{running ? 'running' : block.isError ? 'error' : '✓'}</small></button>{open ? <pre>{value ? pretty(value) : blockText(block) || 'Running…'}</pre> : null}{uiAction ? <button type="button" className="hse-tool-action" onClick={() => bridge.navigate(sessionId, uiAction, { force: true })}>{t('viewInHarbor')}</button> : null}</section>
+  const draft = toolName === 'harbor_propose_action' && value?.schema === 'harbor-action-draft/v1' && typeof value.draftId === 'string' && value.draftId ? value : undefined
+  const onNavigate = accepted => setNavigationNotice(t(accepted === false ? 'navigationPending' : 'preparedInHarbor'))
+  const actions = createHarborActionHandlers({ bridge, sessionId, prepareQuestion, onNavigate, t })
+  return <HarborSessionContext.Provider value={sessionId}><section className="hse-tool"><button type="button" onClick={() => setOpen(!open)}><strong>🐳 {toolName}</strong><small>{!settled ? 'running' : block.isError ? 'error' : '✓'}</small></button>{open ? <pre>{value ? pretty(value) : blockText(block) || 'Running…'}</pre> : null}{uiAction ? <button type="button" className="hse-tool-action" onClick={() => onNavigate(bridge.navigate(sessionId, uiAction, { force: true }))}>{t('viewInHarbor')}</button> : null}{draft ? <ActionDraftCard draft={draft} onSourceDraft={actions.openSourceDraft} onReprepare={actions.reprepare} onViewComparison={actions.viewComparison} onViewResult={result => actions.viewDiagnostic(draft, result)} t={t}/> : null}{navigationNotice ? <p className="hse-draft-notice" role="status">{navigationNotice}</p> : null}</section></HarborSessionContext.Provider>
 }
 
 export const name = 'dsh-harbor-evolution'
@@ -2887,6 +2711,21 @@ export function apply(ctx) {
   }
   const injected = sessionId => ({
     t, bridge,
+    prepareQuestion: async (context, prompt = '') => {
+      const { actx, conversation } = scopedConversation(sessionId)
+      if (!actx || !conversation?.input?.for || !context) return false
+      let input
+      try {
+        input = conversation.input.for(actx)
+        const issued = await bridge.issue(sessionId, context, { forceNew: true })
+        return commitIssuedDraft(bridge, sessionId, issued, (reference, text) => replaceStructuredHarborReference(input, reference, text), prompt, input.state.getSnapshot().phase, true)
+      } catch (error) {
+        const failure = normalizeHarborUiError(error)
+        bridge.update(sessionId, { status: 'error', error: failure })
+        input?.notify?.('error', failure.message)
+        return false
+      }
+    },
     replaceHarborReference: (issued, prompt) => {
       const { actx, conversation } = scopedConversation(sessionId)
       if (!actx || !conversation?.input?.for) return false
@@ -2903,11 +2742,11 @@ export function apply(ctx) {
     },
   })
   ctx.slots.inject('conversation.view', () => ctx.slots.register({ name: 'conversation.view', id: 'harbor-evolution', order: 30, locale: NS, label: () => t('tab'), inject: injected }, DashboardView))
-  ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({ name: 'conversation.input.dock', id: 'harbor-evolution-context', order: 10, locale: NS, inject: injected }, ContextDock))
+  ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({ name: 'conversation.input.dock', id: 'harbor-evolution-input-sync', order: 10, locale: NS, inject: injected }, HarborInputSync))
   ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id: 'harbor-evolution', order: 35, label: () => t('settings'), inject: () => ({ t }) }, DoctorView))
   ctx.slots.inject('tool.call.toolview', function* registerTools() {
     for (const key of ['harbor_candidate_snapshot', 'harbor_model_binding', 'harbor_evolution_init', 'harbor_evolution_doctor', 'harbor_quick_diagnostic_init', 'harbor_session_diagnostic_preview', 'harbor_session_diagnostic_run', 'harbor_dataset_validate', 'harbor_context_preview', 'harbor_eval_run', 'harbor_eval_result', 'harbor_evaluator_inspect', 'harbor_evaluator_update', 'harbor_ground_truth_init', 'harbor_evaluator_meta_evaluate', 'harbor_candidate_compare', 'harbor_resolve_page_context', 'harbor_get_evidence', 'harbor_propose_action']) yield ctx.slots.register({ name: 'tool.call.toolview', key, inject: injected }, HarborToolView)
   })
 }
 
-module.exports = { name, inject, apply, CopilotDock, actionDraftContext, resolvedUiContext, harborDisplayedAnswerBasis, recoverHarborTurn, applySourceProposal, removeContextPart, mergeHarborFocus, selectedSourceLines, sectionForNavigation, HarborUiBridge, buildUiContext, harborContextFilters, replaceStructuredHarborReference, clearStructuredHarborReferences, needsStructuredHarborNormalization, commitIssuedDraft, isHarborInputBusy, dashboardFailureState, workbenchSuccessState, workbenchFailureState, harborTurnProjection, harborSubmissionTransition, effectiveHarborSubmissionReference, shouldClearObservedExplicit, isExplicitContextExpired, evidenceCriterionOwners, evidenceFocusKey, isEvidenceFocused, trialNavigationView, trialRestoreView, navigationHistoryEntry, ownsNavigationHistoryEntry, restoreNavigationSelection, clearConsumedNavigation, ownsTrialRequest, trialListSuccessState, trialListFailureState, hasTrialFilters, trialDetailLoadingState, trialDetailErrorState, comparisonCandidates, governanceRequestKey, ownsGovernanceRequest, ownsGovernanceBinding, normalizeHarborUiError, harborApiError, trustedHarborUiAction, trustedHarborResolvedContext, trustedHarborReferences, harborAnswerBasis, toolUiAction }
+module.exports = { name, inject, apply, HarborInputSync, HarborToolView, createHarborActionHandlers, actionDraftContext, resolvedUiContext, harborDisplayedAnswerBasis, recoverHarborTurn, applySourceProposal, removeContextPart, mergeHarborFocus, selectedSourceLines, sectionForNavigation, HarborUiBridge, buildUiContext, harborContextFilters, replaceStructuredHarborReference, clearStructuredHarborReferences, needsStructuredHarborNormalization, commitIssuedDraft, isHarborInputBusy, dashboardFailureState, workbenchSuccessState, workbenchFailureState, harborTurnProjection, harborSubmissionTransition, effectiveHarborSubmissionReference, shouldClearObservedExplicit, isExplicitContextExpired, evidenceCriterionOwners, evidenceFocusKey, isEvidenceFocused, trialNavigationView, trialRestoreView, navigationHistoryEntry, ownsNavigationHistoryEntry, restoreNavigationSelection, clearConsumedNavigation, ownsTrialRequest, trialListSuccessState, trialListFailureState, hasTrialFilters, trialDetailLoadingState, trialDetailErrorState, comparisonCandidates, governanceRequestKey, ownsGovernanceRequest, ownsGovernanceBinding, normalizeHarborUiError, harborApiError, trustedHarborUiAction, trustedHarborResolvedContext, trustedHarborReferences, harborAnswerBasis, toolUiAction }

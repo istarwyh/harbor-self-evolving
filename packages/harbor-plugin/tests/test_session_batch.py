@@ -13,6 +13,7 @@ import pytest
 
 from harbor.models.task.task import Task
 from harbor_dsh_evolution.dataset import load_validated_dataset
+from harbor_dsh_evolution.identity import canonical_digest
 from harbor_dsh_evolution.session_batch import (
     _default_evaluator_source,
     generation_batch_digest,
@@ -23,6 +24,115 @@ from harbor_dsh_evolution.session_batch import (
 from harbor_dsh_evolution.stack import snapshot_stack
 
 from helpers import HISTORICAL_JUDGE_BINDING, make_historical_batch
+
+
+def test_legacy_exact_cwd_batch_remains_valid_without_source_projects_or_scan(tmp_path: Path):
+    batch_path, batch, _ = make_historical_batch(tmp_path)
+    assert batch["selection"]["scope"] == "exact-cwd"
+    assert "scan" not in batch["selection"]
+    assert all("source_project_digest" not in record for record in batch["records"])
+    assert load_generation_batch(batch_path, project_root=tmp_path).manifest == batch
+
+
+def test_exact_cwd_batch_accepts_complete_scan_metadata(tmp_path: Path):
+    batch_path, batch, _ = make_historical_batch(tmp_path)
+    batch["selection"]["scan"] = {
+        "scope": "exact-cwd", "listed_count": 1, "candidate_count": 1,
+        "read_count": 1, "unscanned_count": 0, "partial": False,
+        "window_order": "all-candidates", "selection_order": "last-activity-desc",
+    }
+    batch["digest"] = generation_batch_digest(batch)
+    batch_path.write_text(json.dumps(batch))
+    assert load_generation_batch(batch_path, project_root=tmp_path).manifest == batch
+
+
+def test_cross_project_history_materializes_with_separate_output_identity(tmp_path: Path):
+    batch_path, batch, observations = make_historical_batch(tmp_path, count=2)
+    batch["selection"]["scope"] = "dsh-history"
+    batch["selection"]["scan"] = {
+        "scope": "dsh-history", "listed_count": 20, "candidate_count": 12,
+        "read_count": 4, "unscanned_count": 8, "partial": True,
+        "window_order": "created-at-desc", "selection_order": "last-activity-desc",
+    }
+    for index, record in enumerate(batch["records"]):
+        record["source_project_digest"] = canonical_digest(
+            {"cwd": f"/private/synthetic-source-{index}"},
+            namespace="harbor-dsh-project-cwd-v1",
+        )
+    batch["digest"] = generation_batch_digest(batch)
+    batch_path.write_text(json.dumps(batch))
+
+    loaded = load_generation_batch(batch_path, project_root=tmp_path)
+    assert loaded.observations == observations
+    assert len({record["source_project_digest"] for record in loaded.manifest["records"]}) == 2
+    assert all(
+        record["source_project_digest"] != batch["project"]["cwd_digest"]
+        for record in loaded.manifest["records"]
+    )
+    assert batch["project"]["cwd_digest"] == canonical_digest(
+        {"cwd": str(tmp_path.resolve())}, namespace="harbor-dsh-project-cwd-v1"
+    )
+    result = materialize_historical_dataset(
+        project_root=tmp_path,
+        batch_path=batch_path,
+        output_path=tmp_path / "output-dataset",
+        **HISTORICAL_JUDGE_BINDING,
+    )
+    materialized = load_generation_batch(Path(result["batch_path"]), project_root=tmp_path)
+    assert materialized.manifest == batch
+    assert materialized.observations == observations
+    assert "/private/synthetic-source-" not in json.dumps(materialized.manifest)
+
+
+@pytest.mark.parametrize("source_project_digest", [None, "", "/private/source", "sha256:bad"])
+def test_rejects_invalid_source_project_digests(tmp_path: Path, source_project_digest):
+    batch_path, batch, _ = make_historical_batch(tmp_path)
+    batch["selection"]["scope"] = "dsh-history"
+    batch["records"][0]["source_project_digest"] = source_project_digest
+    batch["digest"] = generation_batch_digest(batch)
+    batch_path.write_text(json.dumps(batch))
+    with pytest.raises(ValueError, match="source_project_digest"):
+        load_generation_batch(batch_path, project_root=tmp_path)
+
+
+def test_source_project_identity_is_covered_by_the_batch_digest(tmp_path: Path):
+    batch_path, batch, _ = make_historical_batch(tmp_path)
+    batch["selection"]["scope"] = "dsh-history"
+    batch["records"][0]["source_project_digest"] = "sha256:" + "1" * 64
+    batch["digest"] = generation_batch_digest(batch)
+    batch["records"][0]["source_project_digest"] = "sha256:" + "2" * 64
+    batch_path.write_text(json.dumps(batch))
+    with pytest.raises(ValueError, match="Generation Batch digest mismatch"):
+        load_generation_batch(batch_path, project_root=tmp_path)
+
+
+@pytest.mark.parametrize("field,value", [
+    ("scope", "exact-cwd"), ("read_count", True), ("candidate_count", -1),
+    ("listed_count", 0), ("unscanned_count", 1), ("partial", True),
+    ("window_order", "last-activity-desc"),
+])
+def test_rejects_inconsistent_scan_metadata(tmp_path: Path, field: str, value):
+    batch_path, batch, _ = make_historical_batch(tmp_path)
+    batch["selection"]["scope"] = "dsh-history"
+    batch["selection"]["scan"] = {
+        "scope": "dsh-history", "listed_count": 1, "candidate_count": 1,
+        "read_count": 1, "unscanned_count": 0, "partial": False,
+        "window_order": "created-at-desc", "selection_order": "last-activity-desc",
+        field: value,
+    }
+    batch["digest"] = generation_batch_digest(batch)
+    batch_path.write_text(json.dumps(batch))
+    with pytest.raises(ValueError, match="selection.scan"):
+        load_generation_batch(batch_path, project_root=tmp_path)
+
+
+def test_rejects_unknown_history_scope(tmp_path: Path):
+    batch_path, batch, _ = make_historical_batch(tmp_path)
+    batch["selection"]["scope"] = "unknown"
+    batch["digest"] = generation_batch_digest(batch)
+    batch_path.write_text(json.dumps(batch))
+    with pytest.raises(ValueError, match="selection.scope"):
+        load_generation_batch(batch_path, project_root=tmp_path)
 
 
 def test_validates_batch_cross_links_and_rejects_identity_mismatch(tmp_path: Path):

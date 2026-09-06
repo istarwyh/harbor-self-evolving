@@ -8,7 +8,7 @@ import {
 
 export const ACTION_CARD_MESSAGES = {
   zh: {
-    actionStateRecovered: '已核查并解锁；未重试', actionRecoveryReleased: '诊断锁已解除。原运行状态和证据保留，没有自动重试。', actionRecoveryTaskCenter: '打开上方「后台任务」，核查进程与资源后可确认解锁。', actionDiagnosticPartialView: '查看运行／部分证据',
+    actionStateRecovered: '已核查并解锁；未重试', actionRecoveryReleased: '诊断锁已解除。原运行状态和证据保留，没有自动重试。', actionRecoveryTaskCenter: '打开 Harbor 标签中的「后台任务」，核查进程与资源后可确认解锁。', actionDiagnosticPartialView: '查看运行／部分证据',
     actionSuggestion: 'AI 建议', actionReviewSource: '审阅并修改',
     actionSourceBoundary: '只在编辑器中打开修改建议，不会改动文件。审阅后保存才会创建新版本。',
     actionSourceBaseline: '修改评测规则后，需要使用新规则建立新的基线，旧结果不会被覆盖。',
@@ -66,7 +66,7 @@ export const ACTION_CARD_MESSAGES = {
     actionCancelFailed: '停止请求未得到确认，运行状态未改变。请恢复操作状态后再处理。',
   },
   en: {
-    actionStateRecovered: 'Inspected and unlocked; not retried', actionRecoveryReleased: 'Diagnostic lock released. Original status and evidence retained; no automatic retry.', actionRecoveryTaskCenter: 'Open Background tasks above to inspect the process and resources before confirming unlock.', actionDiagnosticPartialView: 'View run / partial evidence',
+    actionStateRecovered: 'Inspected and unlocked; not retried', actionRecoveryReleased: 'Diagnostic lock released. Original status and evidence retained; no automatic retry.', actionRecoveryTaskCenter: 'Open Background tasks in the Harbor tab to inspect the process and resources before confirming unlock.', actionDiagnosticPartialView: 'View run / partial evidence',
     actionSuggestion: 'AI suggestion', actionReviewSource: 'Review and edit',
     actionSourceBoundary: 'Opens the suggestion in the editor without changing files. Only your reviewed save creates a new version.',
     actionSourceBaseline: 'Changing evaluation rules requires a fresh baseline. Historical results remain unchanged.',

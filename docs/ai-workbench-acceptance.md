@@ -6,6 +6,28 @@ Release scope for **0.9.2**: the user requested publication of the reviewed incr
 
 Selected original UI screenshots and newly captured public CI/release pages are archived in the [0.9.2 visual verification gallery](releases/v0.9.2/README.md). Historical captures and newly captured result pages are dated separately; the gallery does not change the acceptance boundaries below.
 
+## Combined 0.9.3 release verification — 2026-09-07
+
+The user approved one combined release after the shared native-conversation and historical-quickstart work completed. Final pre-release checks passed **549 Node tests / 318 Python tests**, locked dependency installation, client build, npm pack, Python wheel/sdist build, schema synchronization and shell syntax checks. Two final regressions are repaired: undeclared public tool arguments cannot widen the exact-cwd history boundary (only the internal Web entry selects dsh-history); a terminal operation render no longer cancels result navigation while dashboard refresh is pending, while workspace changes, unmount and newer previews still revoke old callbacks.
+
+The [0.9.3 verification gallery](releases/v0.9.3/README.md) separates freshly captured 0.9.3 component screens from the earlier synthetic historical-quickstart captures and records publication status separately. Prior unreleased iteration notes and their test counts below remain historical. Neither this release nor its tests establish ordinary-send automatic page context, installed-Host/real-provider acceptance, full Docker recovery, a business Candidate baseline, or complete PRD acceptance.
+
+## Automatic historical quickstart — unreleased, 2026-09-07
+
+The Web entry now discovers up to three completed conversations through the current DSH Session Query corpus, independent of the evaluation output directory. No source path, project or date selection is required. Confirmation still discloses the review model and redacted-data/cost boundary; original tasks are not rerun. Empty history, unreadable history and an exhausted recent scan window have distinct localized messages with technical details collapsed. Existing Agent tools retain their default exact-cwd semantics.
+
+Source identities remain frozen and revalidated per original project; private output stays in the evaluation workspace. Small-batch discovery stops after finding enough samples and reports its scan boundary, without claiming global latest-by-activity ordering. Actual Launcher/HTTP/controller/service/materialization paths were exercised with synthetic cross-project histories and a controlled runner. Five screenshots and exact limits are in the [historical quickstart verification record](verification/historical-quickstart/README.md).
+
+Final shared-workspace integration passed the client build, **542 Node tests / 318 Python tests**, including the concurrent native-conversation simplification. This resolves the earlier stale Historical copy assertion described in that iteration's record; it does not turn either isolated browser fixture into installed-Host or real-provider acceptance. No commit or package publication occurred in this iteration.
+
+## Native conversation simplification — unreleased, 2026-09-06
+
+Removed the visible Context Capsule and Copilot panels above the native Composer. The Workbench is single-column; background operations live in the plugin page and disappear only after a successful empty read. Native Tool result cards retain reviewed AI proposals, evidence navigation, recovery, and exact source-review targets. An invisible reference synchronizer preserves optional Ask AI / `@harbor` lifecycles without another visible input surface.
+
+Automatic page context is **not implemented**: the inspected rc.8 public input contract has no general ordinary-send context contributor. Native result navigation asks the user to open Harbor; automatic Host-tab switching is not claimed. No private Host injection or automatic draft replacement was added.
+
+The [dated verification record and four screenshots](verification/native-conversation/README.md) distinguish real plugin components and local service actions from the synthetic Composer, task state, and data. Dedicated native-card/task/documentation tests passed **47 / 47**. Full-workspace verification is subject to the concurrent Historical Session changes documented there; no package publication or installed-Host acceptance occurred in this iteration. Earlier Capsule/Copilot descriptions below are historical and are superseded only for this UI placement.
+
 ## Candidate-owned ACP runtime — 2026-09-06
 
 The hard-coded demo/latest dependency blocker recorded in earlier iterations is now removed. Candidate-owned source, explicit runtime identity, exact npm locks and prepared Node/SDK checks replace runtime application discovery. Quick diagnostic generates the new contract; old Candidate evidence is retained and requires an explicit new snapshot before execution. Details and reproducible verification commands are in [Candidate runtime contract](candidate-runtime-contract.md).

@@ -4,6 +4,18 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+## 0.9.3 - 2026-09-07
+
+- Simplify the Workbench to one column and remove the visible Context Capsule and duplicated Harbor Copilot panel. Keep explicit Ask AI / `@harbor` references in the native conversation without rewriting drafts or sending messages automatically.
+- Render reviewed AI action proposals in native tool-result cards. Preserve preview, human confirmation, exact-object navigation and recovery; saving a Candidate suggestion remains `applied: false`, not an applied change or completed evaluation.
+- Keep background tasks in the Harbor page, collapsed by default and hidden only after a successful empty read; retain cancellation, partial evidence, recovery and result entry points.
+- Make the Web Historical Session launcher discover up to three eligible completed Sessions from DSH-accessible history without asking for a source directory. Keep source projects separate from the evaluation output workspace, show model/cost disclosure, and require confirmation before materialization or execution.
+- Keep the public Agent preview fixed to `exact-cwd`; cross-project `dsh-history` selection is an internal Web option, not a caller-controlled widening of the Agent tool. Preserve bounded reads, source identity checks, owner-bound selection tokens, redaction and legacy exact-workspace batch compatibility.
+- Distinguish unavailable history from read failures and keep technical details collapsed. Preserve result navigation when Historical completion triggers a deferred reload, covered by the 22-test launcher regression suite rather than inferred from earlier screenshots.
+- Validation: 549/549 Node tests passed with no failures or skips, and 318/318 Python tests passed. Locked dependency installation, npm packaging (50 files), Python wheel/sdist builds, source-to-package content checks, schema synchronization, shell syntax, whitespace checks and reproducible client rebuilding passed. A fresh-directory wheel import loaded version 0.9.3 and all three entry points; 16 synthetic loader smoke tests passed with 23 deselected. These are local preflight results; public package publication and artifact verification remain pending.
+- Archive eight key screenshots under `docs/releases/v0.9.3/`: four fresh 0.9.3 component/service fixture captures from September 7 and four unchanged Historical quickstart captures from September 6, when the package version field was still 0.9.2 with uncommitted source changes. Preserve their distinct source identities and limits.
+- Scope: component/service fixtures and controlled runners do not constitute a real installed Host/model/Candidate/Docker journey. Automatic page context for ordinary messages, full PRD acceptance, real-provider quality evaluation and the complete platform/keyboard matrix remain unverified or unimplemented as documented in the gallery.
+
 ## 0.9.2 - 2026-09-06
 
 - Carry forward the 0.9.0/0.9.1 Workbench changes with evidence-bound AI answers, explicit object follow-ups, typed navigation, and reviewed action drafts.
