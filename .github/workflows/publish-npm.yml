@@ -47,4 +47,4 @@ jobs:
           name: npm-distribution
           path: npm-dist
       - name: Publish with OIDC
-        run: npx --yes --package=npm@12.0.2 --ignore-scripts npm publish npm-dist/*.tgz --ignore-scripts --access public --registry=https://registry.npmjs.org
+        run: npx --yes --package=npm@12.0.2 --ignore-scripts npm publish ./npm-dist/*.tgz --ignore-scripts --access public --registry=https://registry.npmjs.org
