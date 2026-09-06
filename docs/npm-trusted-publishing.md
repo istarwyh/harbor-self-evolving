@@ -21,8 +21,8 @@
 
 版本改动经原有 CI 测试、审查并合入 `main` 后，创建并推送 `vX.Y.Z` tag。npm 和既有 PyPI 工作流分别自动发布。
 
-npm 构建 job 使用包目录的锁定依赖，通过已有 `prepack` 构建并打包；发布 job 下载同一次运行的 tarball，使用 npm 12.0.2 与 OIDC 发布。仅发布 job 有 `id-token: write`，发布 tarball 时不重复运行生命周期脚本。公开仓库/包的 OIDC 发布自动生成 provenance。
+npm 构建 job 使用包目录的锁定依赖，通过已有 `prepack` 构建并打包；发布 job 下载同一次运行的 tarball，临时运行 npm 12.0.2 与 OIDC 发布，不原地覆盖 runner 自带的 npm。仅发布 job 有 `id-token: write`，发布 tarball 时不重复运行生命周期脚本。公开仓库/包的 OIDC 发布自动生成 provenance。
 
 首次接入以真实发布成功为准，保存配置不代表授权已通过。发布完成后核对两处 registry 和 GitHub Release；两处 registry 不是原子事务，不能将一处成功称为整个版本发布完成。
 
-失败时查看 npm/GitHub 的原生错误，修正后重跑失败 job。npm 不允许覆盖同版本，已经成功的发布不重复运行。OIDC 失败时检查精确的 owner/repo/workflow/environment 绑定及直接发布权限，不回退到长期 Token。
+失败时查看 npm/GitHub 的原生错误，修正后重跑失败 job。如果需要修复工作流，将修复合入 `main` 后用 `gh workflow run publish-npm.yml --ref main` 单独补发 npm，避免移动已公开的 tag 或重复触发 PyPI。手动入口打包所选 ref 的源码，操作前确认其 package 版本和待发布内容；不会自动替换为旧 tag。npm 不允许覆盖同版本，已经成功的发布不重复运行。OIDC 失败时检查精确的 owner/repo/workflow/environment 绑定及直接发布权限，不回退到长期 Token。
