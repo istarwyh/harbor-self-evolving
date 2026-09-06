@@ -21,7 +21,7 @@
 
 版本改动经原有 CI 测试、审查并合入 `main` 后，创建并推送 `vX.Y.Z` tag。npm 和既有 PyPI 工作流分别自动发布。
 
-每次发布把关键过程图及“改动、步骤、结果、边界”说明归档到 `docs/releases/vX.Y.Z/`，并把图集入口与资料包附到 Release。目录格式和示例见[发布变更与验证图集](releases/README.md)；这不新增自动校验或审批。
+开始验证前，从[发布图集模板](releases/TEMPLATE.md)建立 `docs/releases/vX.Y.Z/README.md`，验证过程中保存关键状态，补齐“改动、步骤、结果、边界”说明。发布交付时按[图集规范与清单](releases/README.md)更新索引，并把图集入口与资料包附到 Release；非 UI 变更可使用测试/日志证据。分别报告包发布与资料归档状态，缺资料时明确列出，不新增自动校验或审批。
 
 npm 构建 job 使用包目录的锁定依赖，通过已有 `prepack` 构建并打包；发布 job 下载同一次运行的 tarball，临时运行 npm 12.0.2 与 OIDC 发布，不原地覆盖 runner 自带的 npm。仅发布 job 有 `id-token: write`，发布 tarball 时不重复运行生命周期脚本。公开仓库/包的 OIDC 发布自动生成 provenance。
 
