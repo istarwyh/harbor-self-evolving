@@ -204,6 +204,8 @@ cd harbor-self-evolving
 ./hse test
 ```
 
+维护者发布流程见 [npm Trusted Publishing 接入与验证](docs/npm-trusted-publishing.md)：通过 GitHub Actions OIDC 发布，不保存长期 npm Token。
+
 仓库结构：
 
 ```text
