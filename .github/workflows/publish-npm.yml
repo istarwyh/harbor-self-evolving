@@ -1,0 +1,51 @@
+name: Publish npm package
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build npm package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.22.2"
+      - name: Build and pack
+        working-directory: packages/dsh-plugin
+        run: |
+          npm ci
+          mkdir -p ../../npm-dist
+          npm pack --pack-destination ../../npm-dist
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v7
+        with:
+          name: npm-distribution
+          path: npm-dist/*.tgz
+
+  publish:
+    name: Publish to npm
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/dsh-harbor-evolution
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.22.2"
+      - name: Use OIDC-capable npm
+        run: npm install --global npm@12.0.2 --ignore-scripts --registry=https://registry.npmjs.org
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: npm-distribution
+          path: npm-dist
+      - name: Publish with OIDC
+        run: npm publish npm-dist/*.tgz --ignore-scripts --access public --registry=https://registry.npmjs.org
