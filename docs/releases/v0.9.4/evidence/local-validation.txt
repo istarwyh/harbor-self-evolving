@@ -1,0 +1,41 @@
+Harbor 0.9.4 release-candidate validation summary
+Date: 2026-09-07, Asia/Shanghai (UTC+08:00)
+Environment: macOS arm64; Node 22.22.2; CPython 3.12.14.
+Source: feature commit 8eef4d2dc91ca168646bb81cf923d7d892e55f73 plus coordinated 0.9.4 metadata and release documentation.
+This is a bounded summary of observed command results, not a complete raw log.
+
+packages/dsh-plugin: npm ci
+Exit 0; added 23 packages; audited 24; 0 vulnerabilities reported by that run.
+
+packages/dsh-plugin: npm run check
+Exit 0; 589 tests passed; 0 failed, skipped or cancelled.
+
+packages/harbor-plugin: uv sync --frozen --python 3.12
+Exit 0; CPython 3.12.14; locked dependencies installed.
+
+packages/harbor-plugin: uv run --frozen --python 3.12 pytest
+Exit 0; 318 passed in 12.38 seconds.
+
+packages/dsh-plugin: npm pack --pack-destination <owned-release-directory>
+Exit 0; dsh-harbor-evolution-0.9.4.tgz; 52 files; package size 261.4 kB.
+
+packages/harbor-plugin: uv build --out-dir <owned-release-directory>/dist
+Exit 0; harbor_dsh_evolution-0.9.4-py3-none-any.whl and harbor_dsh_evolution-0.9.4.tar.gz.
+
+Repository: git diff --check
+Exit 0.
+
+Independent local-package verification in a separate temporary directory:
+npm install --offline --ignore-scripts: exit 0, 20 packages installed.
+uv venv --offline and uv pip install --offline: exit 0, 90 packages installed.
+Node main entry, automatic-page-context/context-snapshots/service imports, 13 declared exports, and dsh-harbor --help: passed.
+Python -I imported the installed 0.9.4 wheel, not the source checkout. The harbor-dsh, dsh-evolution and dsh-historical-evaluation entrypoints loaded. harbor-dsh --help and harbor plugins list passed and showed both Harbor plugins.
+npm 52/52 files, wheel 38/38 source files and sdist 72/72 non-generated files match the release source bytes.
+Python source differs from v0.9.3 only in the coordinated __init__.py version.
+
+Local candidate SHA-256 (public package verification remains separate):
+dbfa3e7a5f8fdb3cfdd0999789c7f42cdbc90f586373e8e87c1caa17d0ca6223  dsh-harbor-evolution-0.9.4.tgz
+315551a57565e6f1951a16dde2ada493f5e19676051cd0aad01e10ea8a473e4b  harbor_dsh_evolution-0.9.4-py3-none-any.whl
+30a606cfebd915976e0f24bef051d7db1fdd9092cc7686c9659a8b77ccb6ddfc  harbor_dsh_evolution-0.9.4.tar.gz
+
+No existing user Profile, model credential, business workspace, Candidate or Docker evaluation was used by these commands. Published-package and paired desktop checks are recorded separately.

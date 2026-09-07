@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+## 0.9.4 - 2026-09-07
+
+- Attach the current Harbor page to ordinary native Composer messages on compatible hosts. Freeze the page, checked Trial membership, list status/validity filters and sort at submit; explicit Ask AI / `@harbor` references take priority. Leaving Harbor, slash commands and opt-out skip implicit context.
+- Show readable frozen task/selection metadata inside the native message attachment. Keep user text and images intact; the paired Host retains failed submissions separately when a newer draft occupies the Composer.
+- Persist owner-bound page and selection identity/revision snapshots in private, Git-ignored project storage. Normal process restart or cache expiry can recover new references; changed evidence remains drifted or stale, and old memory-only references are not migrated.
+- Fix low-contrast text and headings in the light document preview. Keep the single native Composer and do not restore the removed Context Capsule or Copilot panel.
+- Compatibility: automatic context and failed-send recovery require the paired Host changes; upgrading this npm package alone does not add them to older hosts. Python behavior is unchanged apart from the coordinated version.
+- Verification and publication status: see the [0.9.4 archive](docs/releases/v0.9.4/README.md). Synthetic controlled-model acceptance does not establish real-provider quality, Candidate/Docker evaluation or complete PRD acceptance.
+
 ## 0.9.3 - 2026-09-07
 
 - Simplify the Workbench to one column and remove the visible Context Capsule and duplicated Harbor Copilot panel. Keep explicit Ask AI / `@harbor` references in the native conversation without rewriting drafts or sending messages automatically.
