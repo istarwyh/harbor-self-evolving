@@ -53,7 +53,8 @@ Skill 会先检查文件，再围绕四个用户可理解的概念补齐必要�
 在 Web profile 中还会出现这些可见入口：
 
 - 对话页的 `Harbor` Tab：先看轻量 Job 结果，再打开按需加载的 Evaluation Workbench。
-- 只保留原生输入框和对话，不再在其上方展示 Context Capsule 或 Copilot 面板。对象旁的 `问 AI` 和原生 `@harbor` 仍可附上一次性对象引用；当前 rc.8 普通发送不会自动携带页面状态，尚未实现发送时自动绑定当前页面。
+- 只保留原生输入框和对话，不再在其上方展示 Context Capsule 或 Copilot 面板。配套支持 `conversation.contexts.register` 的爱鸭宿主时，普通提问会在发送瞬间冻结 Harbor 当前页面和选择；页面内可关闭自动附带。`问 AI` 和原生 `@harbor` 显式引用优先。旧 rc.8 宿主仍需显式引用，单独升级插件不会补齐宿主能力。
+- 多选直接提问会冻结具体勾选成员；只看列表时也附带状态、有效性筛选和排序，不发送自由搜索原文。消息附件显示当时的任务、选区与观测时间。连续输入期间发送失败的原文和图片保留在原生“未发送消息”条目中，不覆盖新草稿；恢复到输入框再发时重新捕获当前页面。
 - 同会话的原生工具结果卡承接证据导航和 AI 修改建议；typed `harbor.navigate` 操作准备好对象后会提示打开 Harbor 标签，并非自动切换标签。可通过 Back 恢复原 workspace、分页、Stage、Trial、筛选、排序、Evidence 焦点、Compare Baseline 与滚动位置。后台任务位于插件主页面，保留取消、异常核查和结果入口，成功读取且无任务时隐藏。
 - `评测最近会话`：自动从当前 DSH 可访问的历史中选取最多 3 条已完成会话，不需要查找目录或配置来源；预览会话数量与评审模型，确认后才发送脱敏对话并后台评测，完成后打开结果。体验样本不代表全部历史，也不会重跑原任务。
 - Job 工作台：默认以概览、Trials、Pipeline、优化假设、Compare / Gate、Evaluator / Rubric、产物和审计组织；阶段流程收进 Pipeline。先直接展示 Candidate / Dataset / Evaluation Stack / 模型身份和 Candidate 自带的锁定运行时，再展示 Agent 收到的 query 与 instruction、Harbor 收集的页面/文档/结构化产物、评测器 Ground Truth 元评测、逐 Trial 判分、Population 有效覆盖、受控优化假设和 Baseline 回归 Gate。完整 JSON 只留在折叠审计区。
@@ -62,7 +63,7 @@ Skill 会先检查文件，再围绕四个用户可理解的概念补齐必要�
 - 工具调用中的 Harbor 专属卡片：直接理解初始化、Doctor、Context 预览、评测与 Gate。
 - “设置 → Harbor 自进化”：检查项目目录、Evaluation Stack、Jobs 和两个 Harbor CLI 是否就绪；显示当前/最新插件版本及精确更新命令，但不会静默安装。
 
-GUI 的写操作限于三个明确入口：已授权 Evaluator 文件保存为新版本；Historical Session 的 `预览 → 用户确认 → 后台运行 → 打开 Job`；Action Draft 经预检、人工确认后保存本地草稿与操作审计（选定 Compare 仍为只读）。AI 原生问答只在用户显式绑定对象并发送消息后调用同一个 Chat Session；页面刷新、普通发送、普通读取和工作空间切换都不会自动附带 Harbor 上下文、自动启动 Agent 或 Job，也不会 Gate、晋级、部署、发布或修改生产状态。Candidate 评测与 Promotion Gate 等高成本或可晋级动作仍由官方 Skill 在澄清需求后显式提出，并在每次 Agent 调用写入或评测工具前经过 DSH 可审计的一次性用户批准；审批通道不可用时拒绝执行。
+GUI 的业务资源写操作限于三个明确入口：已授权 Evaluator 文件保存为新版本；Historical Session 的 `预览 → 用户确认 → 后台运行 → 打开 Job`；Action Draft 经预检、人工确认后保存本地草稿与操作审计（选定 Compare 仍为只读）。页面引用绑定还会保存私有的身份与修订元数据，不写入证据正文。支持的宿主在用户从 Harbor 页面发送普通消息时，将冻结页面引用和问题一起提交到同一个 Chat Session；离开 Harbor、关闭自动附带或存在显式引用时，不补入隐式页面引用。准备失败保留草稿，不悄悄发送无上下文的问题。单纯刷新、读取和切换工作空间不会发送消息或启动 Agent、Job、Gate、晋级、部署、发布或生产修改。Candidate 评测与 Promotion Gate 等高成本或可晋级动作仍由官方 Skill 在澄清需求后显式提出，并在每次 Agent 调用写入或评测工具前经过 DSH 可审计的一次性用户批准；审批通道不可用时拒绝执行。
 
 完整 AI 工作台 PRD 尚未全部实现。有界诊断/重试运行器、长任务 Operation 与可重放事件仍待补齐；当前预检会明确阻断这些动作，不把保存草稿伪装成已运行。已执行的真实模型/浏览器验收与未完成项见 [验收记录](docs/ai-workbench-acceptance.md)。
 
@@ -93,7 +94,7 @@ Plugin 注册 19 个确定性工具：
 - `harbor_context_preview`：经逐次批准刷新 Candidate manifest，再预览 Context v2、可比 baseline 和 fresh-baseline 要求。
 - `harbor_eval_run`：运行显式的 `diagnostic` 或 `promotion-eligible` Job。
 - `harbor_eval_result`：读取规范化 Summary，或按 `view=job|progress|dataset|trial|governance` 读取脱敏后的阶段、指令、生成产物与评测器治理证据；返回 `harbor-agent-read/v1`，实际 payload 位于 `data`。
-- `harbor_resolve_page_context`：在调用方的精确 DSH Session 与工作空间内解析短期 `@harbor` Context Snapshot，重新校验对象、修订与权威身份。显式指标、假设、Gate 原因、Finding、Attempt 和已保存源码片段返回有预算、已脱敏的 `selectedEvidence`；批量选择仅返回冻结的成员身份与修订，Trial 证据仍需另行读取。
+- `harbor_resolve_page_context`：在调用方的精确 DSH Session 与工作空间内解析 `@harbor` 或普通消息的 Context Snapshot，重新校验对象、修订与权威身份。上下文及集合绑定会将身份和修订保存在项目 `.harbor/private/page-contexts/` 的会话隔离目录，不保存证据正文或凭据，并带 Git 排除规则。15 分钟仅限制内存缓存，新快照可跨宿主重启重读；旧版本未落盘引用、删除或损坏的记录仍需重新选择，已有记录不自动迁移或清理。证据变化会标记只读漂移，集合成员变化则拒绝，不会重跑查询或悄悄换对象。显式局部对象返回有预算、已脱敏的 `selectedEvidence`；批量选择仅返回冻结的成员身份与修订，Trial 证据仍需另行读取。
 - `harbor_get_evidence`：使用 resolver 返回的精确 typed ref，按 Workspace → Job → Trial → Criterion → Evidence 祖先链读取一条有大小上限、已脱敏且标记为不可信输入的证据；不会把产物文本当成指令。
 - `harbor_propose_action`：提出结构化草稿，不执行变更；在原生对话的工具结果卡中预检、人工确认后保存草稿审计，或执行选定的只读 Compare。有界诊断/重试尚未接入运行器时明确阻断，生产操作保持关闭。
 - `harbor_evaluator_inspect`：查看统一 Evaluator 接口、Rubric、实现身份和声明授权的可编辑文件；同样返回 `harbor-agent-read/v1`，对文件数、源码总量和敏感源码实行上限或正文省略。

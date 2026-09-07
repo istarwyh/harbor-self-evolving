@@ -79,8 +79,9 @@ async function settled(f, operationId) {
 test('real 12-Trial frozen selection reaches runner intact even when model-facing evidence is unavailable; preflight writes nothing', async t => {
   const f = await fixture()
   const calls = runnerStub(t)
-  const before = await inventory(f.projectRoot)
   const { draft, selection } = await prepareDraft(f)
+  // Selection binding persists identity snapshots; preview itself still writes nothing.
+  const before = await inventory(f.projectRoot)
   assert.equal(selection.count, 12)
   const original = f.service.resolveUiContext.bind(f.service)
   t.mock.method(f.service, 'resolveUiContext', async (...args) => ({ ...await original(...args), selectedEvidence: [{ available: false, reason: 'Reader budget exhausted' }] }))
@@ -109,16 +110,16 @@ test('real 12-Trial frozen selection reaches runner intact even when model-facin
 test('13-Trial execution and quality failures mislabeled as infrastructure retries are blocked without writes', async t => {
   const f = await fixture()
   const calls = runnerStub(t)
-  const before = await inventory(f.projectRoot)
   for (const options of [{ count: 13, mode: 'explicit' }, { kind: 'retry-infrastructure' }]) {
     const { draft } = await prepareDraft(f, options)
+    const before = await inventory(f.projectRoot)
     const preview = await f.service.previewAction({ sessionId, draftId: draft.draftId })
     assert.equal(preview.status, 'BLOCKED')
     await assert.rejects(f.service.confirmAction(confirmation(preview)), /HARBOR_ACTION_BLOCKED/)
+    assert.deepEqual(await inventory(f.projectRoot), before)
   }
   assert.equal(calls.prepares.length, 0)
   assert.equal(calls.executions.length, 0)
-  assert.deepEqual(await inventory(f.projectRoot), before)
 })
 
 test('frozen member revision drift invalidates confirmation instead of expanding or silently rerunning the filter', async t => {

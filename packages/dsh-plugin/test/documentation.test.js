@@ -108,11 +108,14 @@ test('public documentation matches the released Historical Session surface', asy
     assert.match(document, /without a Context Capsule or Copilot panel|不再在其上方展示 Context Capsule 或 Copilot 面板/);
     assert.match(document, /harbor\.navigate/);
     assert.match(document, /read-only|只读/);
-    assert.match(document, /ordinary sends|普通发送/);
+    assert.match(document, /conversation\.contexts\.register/);
+    assert.match(document, /Older rc\.8|旧 rc\.8/);
   }
-  assert.match(rootReadme, /不会自动附带 Harbor 上下文/);
-  assert.match(pluginReadme, /never auto-attach Harbor context/);
-  assert.match(rootReadme, /不会 Gate、晋级、部署、发布或修改生产状态/);
+  assert.match(rootReadme, /发送瞬间冻结 Harbor 当前页面和选择/);
+  assert.match(rootReadme, /离开 Harbor、关闭自动附带或存在显式引用时，不补入隐式页面引用/);
+  assert.match(pluginReadme, /Leaving Harbor, slash commands, and opt-out skip implicit context/);
+  assert.match(pluginReadme, /upgrading only this plugin does not add the host capability/);
+  assert.match(rootReadme, /不会发送消息或启动 Agent、Job、Gate、晋级、部署、发布或生产修改/);
   assert.match(pluginReadme, /every production mutation remain explicit/);
 
   for (const document of [rootReadme, pluginReadme, bundledSkill]) {

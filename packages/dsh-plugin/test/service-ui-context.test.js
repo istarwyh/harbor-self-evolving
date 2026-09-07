@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict'
-import { mkdir, mkdtemp, readFile, rename, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rename, writeFile, rm, readdir } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
@@ -308,6 +311,57 @@ test('Host-issued batch selectors resolve only frozen members in their Session',
   assert.equal(resolved.selectedEvidence[0].value.members[0].id, 'exec-a')
   assert.ok(Buffer.byteLength(JSON.stringify(input)) < 4096)
   await assert.rejects(service.createTrialSelection({ workspace, job: 'job-42', sessionId: 'session-1', mode: 'explicit', trialIds: ['cross-job'] }), /DENIED/)
+})
+
+test('page and exact selection snapshots survive cache expiry and a fresh Host process', async t => {
+  const { projectRoot, service, workspace } = await fixture()
+  t.after(() => rm(projectRoot, { recursive: true, force: true }))
+  let now = Date.now()
+  service.uiContexts.now = () => now
+  service.trialSelections.now = () => now
+  const selection = await service.createTrialSelection({ workspace, job: 'job-42', sessionId: 'session-1', mode: 'explicit', trialIds: ['exec-a'], filters: {} })
+  const selected = { ...context(workspace), route: { name: 'harbor.job', params: { job: 'job-42', stage: 'judge' } }, object: { kind: 'job', id: 'job-42', job: 'job-42', stage: 'judge' }, selection: [selection.ref] }
+  const bound = await service.bindUiContext({ sessionId: 'session-1', context: selected })
+  assert.equal(bound.durable, true)
+  assert.deepEqual(bound.selectedTrials, ['exec-a'])
+  now += 16 * 60_000
+  const owner = { sessionId: 'session-1', projectRoot }
+  const resumed = await service.resolveUiContext({ contextSnapshotId: bound.contextSnapshotId }, owner)
+  assert.deepEqual(resumed.selectedEvidence[0].value.members.map(member => member.id), ['exec-a'])
+  assert.equal(service.uiContexts.entries.size, 0, 'the expired in-memory context was actually removed')
+
+  const script = `import { EvolutionService } from ${JSON.stringify(new URL('../lib/service.js', import.meta.url).href)};
+    const [projectRoot, workspace, token, selectionJson] = process.argv.slice(1);
+    const service = new EvolutionService({ projectRoot, jobsDir: 'jobs' });
+    service.activateProjectRoot(projectRoot, 'restart-test', 'session-1');
+    const resolved = await service.resolveUiContext({ contextSnapshotId: token }, { sessionId: 'session-1', projectRoot });
+    const members = await service.trialSelection({ sessionId: 'session-1', workspace, ...JSON.parse(selectionJson) });
+    console.log(JSON.stringify({ pid: process.pid, resolved, members }));`
+  const child = await promisify(execFile)(process.execPath, ['--input-type=module', '-e', script, projectRoot, workspace, bound.contextSnapshotId, JSON.stringify(selection.ref)])
+  const restarted = JSON.parse(child.stdout)
+  assert.notEqual(restarted.pid, process.pid)
+  assert.equal(restarted.resolved.contextSnapshotId, bound.contextSnapshotId)
+  assert.equal(restarted.resolved.freshness, 'FRESH')
+  assert.deepEqual(restarted.members.members.map(member => member.id), ['exec-a'])
+  const privateDir = path.join(projectRoot, '.harbor/private/page-contexts', createHash('sha256').update('session-1').digest('hex'))
+  const records = await Promise.all((await readdir(privateDir)).map(file => readFile(path.join(privateDir, file), 'utf8')))
+  assert.doesNotMatch(records.join(''), /Visible result|Missing a required concept|do-not-return|Bearer|query/)
+  await assert.rejects(service.resolveUiContext({ contextSnapshotId: bound.contextSnapshotId }, { sessionId: 'session-2', projectRoot }), /EXPIRED|MISMATCH/)
+  await writeInteractionJob(projectRoot, 'Changed evidence after capture.')
+  await assert.rejects(service.resolveUiContext({ contextSnapshotId: bound.contextSnapshotId }, owner), /STALE_SELECTION/)
+})
+
+test('a restored single-Trial snapshot reports evidence drift without changing its identity', async t => {
+  const { projectRoot, service, workspace } = await fixture()
+  t.after(() => rm(projectRoot, { recursive: true, force: true }))
+  const bound = await service.bindUiContext({ sessionId: 'session-1', context: context(workspace) })
+  const restored = new EvolutionService({ projectRoot, jobsDir: 'jobs' })
+  restored.activateProjectRoot(projectRoot, 'restart-test', 'session-1')
+  await writeInteractionJob(projectRoot, 'Changed after restart.')
+  const result = await restored.resolveUiContext({ contextSnapshotId: bound.contextSnapshotId }, { sessionId: 'session-1', projectRoot })
+  assert.equal(result.freshness, 'DRIFTED_READ_ONLY')
+  assert.equal(result.refs.object.trial, 'exec-a')
+  assert.equal(result.basedOn.artifactRevision, bound.context.artifactRevision)
 })
 
 test('fixed and filtered selections resolve inside a Job larger than the selection limit', async () => {
