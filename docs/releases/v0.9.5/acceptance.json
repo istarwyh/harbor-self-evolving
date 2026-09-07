@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-09-08T00:50:00+08:00",
+  "candidateVersion": "0.9.5",
+  "baseCommit": "b748d49a94689bbcfa4a68cf39b696dc09f9b05d",
+  "evidenceType": [
+    "synthetic",
+    "component-fixture"
+  ],
+  "boundaries": {
+    "realHost": false,
+    "modelCalled": false,
+    "realProvider": false,
+    "candidateEvaluation": false,
+    "dockerEvaluation": false
+  },
+  "source": {
+    "script": "packages/dsh-plugin/scripts/native-workbench-preview.mjs",
+    "react": "18.3.1",
+    "reactDom": "18.3.1",
+    "jobCount": 1,
+    "trialCount": 2,
+    "exceptionCount": 0
+  },
+  "dom": {
+    "heroPresent": true,
+    "gettingStartedPresent": false,
+    "automaticContextCheckboxPresent": false
+  },
+  "layouts": [
+    {
+      "name": "desktop",
+      "viewportCssPx": 1272,
+      "screenshot": "screenshots/01-synthetic-home-desktop.png"
+    },
+    {
+      "name": "container-880",
+      "containerClientWidth": 880,
+      "containerScrollWidth": 880,
+      "heroWidth": 844,
+      "screenshot": "screenshots/02-synthetic-home-880px.png"
+    },
+    {
+      "name": "container-500",
+      "containerClientWidth": 500,
+      "containerScrollWidth": 500,
+      "heroWidth": 464,
+      "screenshot": "screenshots/03-synthetic-home-500px.png"
+    }
+  ]
+}

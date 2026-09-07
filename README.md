@@ -23,7 +23,7 @@ cd /absolute/path/to/your-agent-workspace
 npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 ```
 
-安装器会让 npm Plugin 与 Python Adapter 使用同一个正式版本；需要完全固定版本时，把 `latest` 改为 `0.9.4`。
+安装器会让 npm Plugin 与 Python Adapter 使用同一个正式版本；需要完全固定版本时，把 `latest` 改为 `0.9.5`。
 
 默认安装到 DSH 的 `web` profile。`setup` 会一次完成：
 
@@ -53,7 +53,7 @@ Skill 会先检查文件，再围绕四个用户可理解的概念补齐必要�
 在 Web profile 中还会出现这些可见入口：
 
 - 对话页的 `Harbor` Tab：先看轻量 Job 结果，再打开按需加载的 Evaluation Workbench。
-- 只保留原生输入框和对话，不再在其上方展示 Context Capsule 或 Copilot 面板。配套支持 `conversation.contexts.register` 的爱鸭宿主时，普通提问会在发送瞬间冻结 Harbor 当前页面和选择；页面内可关闭自动附带。`问 AI` 和原生 `@harbor` 显式引用优先。旧 rc.8 宿主仍需显式引用，单独升级插件不会补齐宿主能力。
+- 只保留原生输入框和对话，不再在其上方展示 Context Capsule 或 Copilot 面板。配套支持 `conversation.contexts.register` 的爱鸭宿主会在发送瞬间冻结 Harbor 当前页面和选择；显式 `问 AI` 和原生 `@harbor` 引用优先，不再提供容易导致上下文缺失的页面内关闭开关。旧 rc.8 宿主仍需显式引用，单独升级插件不会补齐宿主能力。
 - 多选直接提问会冻结具体勾选成员；只看列表时也附带状态、有效性筛选和排序，不发送自由搜索原文。消息附件显示当时的任务、选区与观测时间。连续输入期间发送失败的原文和图片保留在原生“未发送消息”条目中，不覆盖新草稿；恢复到输入框再发时重新捕获当前页面。
 - 同会话的原生工具结果卡承接证据导航和 AI 修改建议；typed `harbor.navigate` 操作准备好对象后会提示打开 Harbor 标签，并非自动切换标签。可通过 Back 恢复原 workspace、分页、Stage、Trial、筛选、排序、Evidence 焦点、Compare Baseline 与滚动位置。后台任务位于插件主页面，保留取消、异常核查和结果入口，成功读取且无任务时隐藏。
 - `评测最近会话`：自动从当前 DSH 可访问的历史中选取最多 3 条已完成会话，不需要查找目录或配置来源；预览会话数量、评审模型、数据策略与 Judge 数据边界，确认后才发送保留普通文本和绝对路径、但已脱敏凭据及会话标识的有界 Session Observation 并后台评测，完成后打开结果。体验样本不代表全部历史，也不会重跑原任务。
@@ -63,7 +63,7 @@ Skill 会先检查文件，再围绕四个用户可理解的概念补齐必要�
 - 工具调用中的 Harbor 专属卡片：直接理解初始化、Doctor、Context 预览、评测与 Gate。
 - “设置 → Harbor 自进化”：检查项目目录、Evaluation Stack、Jobs 和两个 Harbor CLI 是否就绪；显示当前/最新插件版本及精确更新命令，但不会静默安装。
 
-GUI 的业务资源写操作限于三个明确入口：已授权 Evaluator 文件保存为新版本；Historical Session 的 `预览 → 用户确认 → 后台运行 → 打开 Job`；Action Draft 经预检、人工确认后保存本地草稿与操作审计（选定 Compare 仍为只读）。页面引用绑定还会保存私有的身份与修订元数据，不写入证据正文。支持的宿主在用户从 Harbor 页面发送普通消息时，将冻结页面引用和问题一起提交到同一个 Chat Session；离开 Harbor、关闭自动附带或存在显式引用时，不补入隐式页面引用。准备失败保留草稿，不悄悄发送无上下文的问题。单纯刷新、读取和切换工作空间不会发送消息或启动 Agent、Job、Gate、晋级、部署、发布或生产修改。Candidate 评测与 Promotion Gate 等高成本或可晋级动作仍由官方 Skill 在澄清需求后显式提出，并在每次 Agent 调用写入或评测工具前经过 DSH 可审计的一次性用户批准；审批通道不可用时拒绝执行。
+GUI 的业务资源写操作限于三个明确入口：已授权 Evaluator 文件保存为新版本；Historical Session 的 `预览 → 用户确认 → 后台运行 → 打开 Job`；Action Draft 经预检、人工确认后保存本地草稿与操作审计（选定 Compare 仍为只读）。页面引用绑定还会保存私有的身份与修订元数据，不写入证据正文。支持的宿主在用户从 Harbor 页面发送普通消息时，将冻结页面引用和问题一起提交到同一个 Chat Session；离开 Harbor 或存在显式引用时，不补入隐式页面引用。准备失败保留草稿，不悄悄发送无上下文的问题。单纯刷新、读取和切换工作空间不会发送消息或启动 Agent、Job、Gate、晋级、部署、发布或生产修改。Candidate 评测与 Promotion Gate 等高成本或可晋级动作仍由官方 Skill 在澄清需求后显式提出，并在每次 Agent 调用写入或评测工具前经过 DSH 可审计的一次性用户批准；审批通道不可用时拒绝执行。
 
 完整 AI 工作台 PRD 尚未全部实现。有界诊断/重试运行器、长任务 Operation 与可重放事件仍待补齐；当前预检会明确阻断这些动作，不把保存草稿伪装成已运行。已执行的真实模型/浏览器验收与未完成项见 [验收记录](docs/ai-workbench-acceptance.md)。
 
