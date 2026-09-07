@@ -2,11 +2,11 @@
 
 - 归档日期：2026-09-07，Asia/Shanghai（UTC+08:00）。按共享发布模板建立。
 - 目标版本 / tag：`0.9.4` / `v0.9.4`。
-- 产品源码：Harbor 功能提交 `8eef4d2`；配套 Host 功能提交 `6434fa78ca`，集成至最新 YourBuddy 主线后为 `d5e200d441`。最终公开制品与提交关系待发布后核对。
+- 产品源码：正式 tag 指向 `8264804dfd23186d030703580020b941a1bcc306`，与本地候选 `07890bb1bcfe8df179f5aa737d1cebf02d73fe90` 产品树相同。Harbor 功能提交为 `8eef4d2`；配套 Host 功能原提交 `6434fa78ca`，集成至最新 YourBuddy 主线后为 `d5e200d441`。
 - 验收环境：macOS arm64、Node 22.22.2、pnpm 11.7.0；开发源码的真实 Loader、原生 Composer、Host 接纳、正式 Harbor resolver 和持久化 Session 日志。
 - 数据与模型：synthetic / controlled-model，无密钥模型传输；没有真实提供方、Candidate 或 Docker 评测。
-- 包发布状态：npm、PyPI、GitHub Release 均待发布及公开核对。
-- 资料归档状态：7 张原始过程图与机器记录已归档；正式制品、CI 链接和可下载 ZIP 待补。
+- 包发布状态：npm、PyPI、GitHub Release 均已发布。npm latest 与 PyPI 默认版本均为 0.9.4；公开包、候选与工作流制品逐字节一致，公开包隔离安装和入口检查通过。
+- 资料归档状态：7 张原始过程图、机器记录、本地与公开包验证均已归档；本地 ZIP 解压、7 张图片和相对链接检查通过。公开下载与摘要核对结果见发布页。
 
 ## 这次改了什么
 
@@ -24,7 +24,7 @@
 
 普通消息自动上下文需要支持 `conversation.contexts.register` 的配套宿主。配套 YourBuddy 0.3.4 正在准备，正式安装包状态以其发布页为准；仅升级 npm Plugin 不会让旧 rc.8 宿主获得新能力。旧宿主仍支持 Ask AI / `@harbor` 显式引用。
 
-在业务 Agent 工作区运行 `npx --yes dsh-harbor-evolution@0.9.4 setup --project-root "$PWD"`，按 setup 输出重启对应 Profile。已使用 YourBuddy 的用户应使用配套桌面更新，避免把开发 checkout 安装为机器本地链接。升级命令在该版本公开前不可用，本归档不会提前称其已安装验证。
+在业务 Agent 工作区运行 `npx --yes dsh-harbor-evolution@0.9.4 setup --project-root "$PWD"`，按 setup 输出重启对应 Profile。已使用 YourBuddy 的用户应使用配套桌面更新，避免把开发 checkout 安装为机器本地链接。本轮验证公开包的隔离安装与 CLI/插件入口，没有在现有用户 Profile 执行 setup。
 
 最短体验：打开 Harbor → 打开任务或勾选多个任务 → 在原生输入框提问 → 展开消息内的 Harbor 附件核对对象。页面内可关闭自动附带；离开 Harbor、使用斜杠命令或已有显式引用时不添加隐式页面上下文。
 
@@ -97,20 +97,22 @@
 | 功能开发回归 | 功能提交 `8eef4d2` / `6434fa78ca` | Harbor 589/589；Host GUI 3947 通过、1 跳过；5 个浏览器用例连续两次 replay 通过 |
 | 私有引用存储 | `context-snapshots`、`trial-selection`、`service-ui-context` | 独立复核 40/40：真实子进程、缓存到期、同 Session/project、漂移、权限/FIFO/symlink、并发与 Git 忽略 |
 | 0.9.4 冻结依赖、测试与包构建 | [本地验证摘要](evidence/local-validation.txt) | npm ci、Node 589/589、CPython 3.12.14 / Python 318/318、52 文件 npm 包及 wheel/sdist 构建通过；包内容与源码一致，离线隔离安装及 Node/Python 入口、三个 Python entrypoints、两个 Harbor 插件加载通过 |
-| npm 发布与公开安装包 | 官方 OIDC 工作流 | 待核对 |
-| PyPI wheel / sdist | 官方发布工作流 | 待核对 |
-| GitHub Release / ZIP | 下方正式入口 | 待核对 |
+| npm 发布与公开安装包 | [OIDC run 34082331753](https://github.com/istarwyh/harbor-self-evolving/actions/runs/34082331753) | 成功；公开 tgz 与本地候选、工作流制品相同，latest=0.9.4，隔离安装/入口通过 |
+| PyPI wheel / sdist | [run 34082331832](https://github.com/istarwyh/harbor-self-evolving/actions/runs/34082331832) | 成功；两个公开文件与候选、工作流制品相同，默认版本=0.9.4，导入、3 个 entrypoints、2 个插件通过 |
+| GitHub Release / ZIP | [v0.9.4](https://github.com/istarwyh/harbor-self-evolving/releases/tag/v0.9.4) | 正式 Release 已公开；本地 ZIP 解压、PNG 格式和相对图片链接检查通过，公开附件核对结果见发布页 |
+
+PR、分支、主线和 tag 的 Node/Python CI 均成功：[PR CI](https://github.com/istarwyh/harbor-self-evolving/actions/runs/34081908870)、[主线 CI](https://github.com/istarwyh/harbor-self-evolving/actions/runs/34082180079)、[tag CI](https://github.com/istarwyh/harbor-self-evolving/actions/runs/34082331764)。公开制品摘要、来源与安装命令见 [公开验证记录](evidence/public-packages.txt)。npm/PyPI provenance 核对了发布身份、来源提交/tag、运行与文件摘要；没有执行独立密码学签名或证书链验证。
 
 ## 未完成项与验证边界
 
 - 失败消息暂不跨浏览器刷新恢复；新页面引用持久化只覆盖正常重启与缓存到期，不保证断电、磁盘损坏或项目迁移后的恢复。旧版内存 token 不迁移。引用元数据在准备/绑定时即可落盘，即使消息最终失败；当前没有自动清理。
-- 历史 Host 全量 Web 验收曾有两项未关闭失败：remote-welcome 的代理 socket 断连、hmr-live 的 Node 22 加载钩子启动错误。本轮最新主线集成复核结果待补，不能将历史失败称为通过。
+- 历史 Host 全量 Web 的两项失败已做聚焦复核：最新主线集成、Node 24.20.0 下 HMR 原样通过；remote-welcome 因本机 DNS 将 remote.localhost 映射为代理虚拟地址而失败，只在该测试进程将此主机解析为回环后，原 Host/origin/cookie/reload 断言全部通过，未改系统网络配置。普通上下文、真实 Harbor 和 HMR 共 3 文件 6 测试通过，相关单元 9 文件 214 测试通过。这不是普通网络环境下全量 Web 全绿的声明。
 - 未运行真实提供方、Candidate/Docker、业务质量基线或完整 PRD 验收；有界诊断/操作运行器等既有缺口仍按产品验收记录说明。
 - 发布、来源一致性、测试通过与截图可见是不同证据，不能相互代替。
 
 ## 发布入口与资料包
 
-- 版本发布页：[Harbor v0.9.4](https://github.com/istarwyh/harbor-self-evolving/releases/tag/v0.9.4)（待发布）。
+- 版本发布页：[Harbor v0.9.4](https://github.com/istarwyh/harbor-self-evolving/releases/tag/v0.9.4)。
 - 功能源码：[Harbor 功能提交](https://github.com/istarwyh/harbor-self-evolving/commit/8eef4d2dc91ca168646bb81cf923d7d892e55f73)、[配套 Host 集成功能提交](https://github.com/istarwyh/yourbuddy/commit/d5e200d4415f5d951374dd7794762b542057d0f9)（待远端提交）。
-- 验证资料包：待上传 `harbor-0.9.4-verification.zip`；包含本说明、机器记录和 7 张相对路径图片。
-- 发布交付清单：按共享索引逐项核对，公开核对与离线 ZIP 校验完成前不声明交付完成。
+- 验证资料包：[harbor-0.9.4-verification.zip](https://github.com/istarwyh/harbor-self-evolving/releases/download/v0.9.4/harbor-0.9.4-verification.zip)。包含本说明、机器记录、验证摘要和 7 张相对路径图片；附件状态以 Release 为准。
+- 发布交付清单：按共享索引逐项核对；本地 ZIP 校验已完成，公开下载与摘要核对单独记录在 Release，不将本地检查冒充公开下载验证。
