@@ -1,0 +1,33 @@
+Harbor 0.9.4 public package verification
+Date: 2026-09-07, Asia/Shanghai (UTC+08:00)
+Source/tag commit: 8264804dfd23186d030703580020b941a1bcc306
+Tag: v0.9.4
+
+Published metadata:
+https://registry.npmjs.org/dsh-harbor-evolution/0.9.4
+https://pypi.org/project/harbor-dsh-evolution/0.9.4/
+npm latest and PyPI default version both resolved to 0.9.4.
+
+Release inputs downloaded from:
+https://github.com/istarwyh/harbor-self-evolving/actions/runs/34082331753 (npm-distribution)
+https://github.com/istarwyh/harbor-self-evolving/actions/runs/34082331832 (python-distributions)
+All three public downloads are byte-identical to the corresponding workflow artifacts and independently verified local candidates.
+
+SHA-256:
+dbfa3e7a5f8fdb3cfdd0999789c7f42cdbc90f586373e8e87c1caa17d0ca6223  dsh-harbor-evolution-0.9.4.tgz
+315551a57565e6f1951a16dde2ada493f5e19676051cd0aad01e10ea8a473e4b  harbor_dsh_evolution-0.9.4-py3-none-any.whl
+30a606cfebd915976e0f24bef051d7db1fdd9092cc7686c9659a8b77ccb6ddfc  harbor_dsh_evolution-0.9.4.tar.gz
+
+Installed-package smoke, fresh owned directories, no existing Profile:
+npm install --offline --ignore-scripts <public tarball>: succeeded.
+Node main module, all 13 export targets, new automatic-page-context/context-snapshots/service modules and dsh-harbor --help: passed.
+uv venv --offline and uv pip install --offline <public wheel>: succeeded.
+Python -I imported the installed package as 0.9.4 and loaded harbor-dsh, dsh-evolution, dsh-historical-evaluation entrypoints.
+harbor-dsh --help and harbor plugins list: passed; both Harbor plugins were listed.
+
+Provenance scope:
+npm SLSA source SHA, v0.9.4 tag and run 34082331753/attempts/1 match the release.
+Both PyPI provenance records match publisher identity and subject digests; certificate SAN/extensions match the same SHA/tag, publish-pypi.yml, pypi environment and run 34082331832/attempts/1.
+Independent cryptographic signature and certificate-chain verification was NOT performed; identity/digest/field consistency is not described as that verification.
+
+No real model, business workspace, Candidate or Docker evaluation was used. Desktop installer and signed updater checks are owned by the paired YourBuddy release, not this package smoke.
