@@ -22,7 +22,7 @@
 
 ## 如何体验与升级
 
-普通消息自动上下文需要支持 `conversation.contexts.register` 的配套宿主。配套 YourBuddy 0.3.4 正在准备，正式安装包状态以其发布页为准；仅升级 npm Plugin 不会让旧 rc.8 宿主获得新能力。旧宿主仍支持 Ask AI / `@harbor` 显式引用。
+普通消息自动上下文需要支持 `conversation.contexts.register` 的配套宿主。[YourBuddy 0.3.4](https://github.com/istarwyh/yourbuddy/releases/tag/yourbuddy-v0.3.4) 已于 2026-09-07 14:01 UTC+08:00 发布，内置 Harbor JavaScript 与 Python Adapter 0.9.4；正式桌面制品的独立核验与边界见其发布记录。仅升级 npm Plugin 不会让旧 rc.8 宿主获得新能力。旧宿主仍支持 Ask AI / `@harbor` 显式引用。
 
 在业务 Agent 工作区运行 `npx --yes dsh-harbor-evolution@0.9.4 setup --project-root "$PWD"`，按 setup 输出重启对应 Profile。已使用 YourBuddy 的用户应使用配套桌面更新，避免把开发 checkout 安装为机器本地链接。本轮验证公开包的隔离安装与 CLI/插件入口，没有在现有用户 Profile 执行 setup。
 
@@ -113,6 +113,6 @@ PR、分支、主线和 tag 的 Node/Python CI 均成功：[PR CI](https://githu
 ## 发布入口与资料包
 
 - 版本发布页：[Harbor v0.9.4](https://github.com/istarwyh/harbor-self-evolving/releases/tag/v0.9.4)。
-- 功能源码：[Harbor 功能提交](https://github.com/istarwyh/harbor-self-evolving/commit/8eef4d2dc91ca168646bb81cf923d7d892e55f73)、[配套 Host 集成功能提交](https://github.com/istarwyh/yourbuddy/commit/d5e200d4415f5d951374dd7794762b542057d0f9)（待远端提交）。
+- 功能源码：[Harbor 功能提交](https://github.com/istarwyh/harbor-self-evolving/commit/8eef4d2dc91ca168646bb81cf923d7d892e55f73)、[配套 Host 集成功能提交](https://github.com/istarwyh/yourbuddy/commit/d5e200d4415f5d951374dd7794762b542057d0f9)。YourBuddy 正式 tag 对应产品 Commit `d4c3b8f08d4fb55ed0a3bf9d3930d60cf759813d`。
 - 验证资料包：[harbor-0.9.4-verification.zip](https://github.com/istarwyh/harbor-self-evolving/releases/download/v0.9.4/harbor-0.9.4-verification.zip)。包含本说明、机器记录、验证摘要和 7 张相对路径图片；附件状态以 Release 为准。
-- 发布交付清单：按共享索引逐项核对；本地 ZIP 校验已完成，公开下载与摘要核对单独记录在 Release，不将本地检查冒充公开下载验证。
+- 发布交付清单：公开 ZIP 已独立重新下载并解压，11 个文件与证据 Commit `3973e69fbd8bb4bc6a1de8d1bf419dae7ff06595` 逐字节一致，7 张 PNG、10 条相对链接与 JSON 均检查通过。ZIP SHA-256 为 `b253941a37fb594a7f95aaf00c9e04127be06db3cb1ee76e1f0a6c6667f42b51`，不包含此后的配套桌面发布状态补记；保留该历史归档，不覆盖已公开 ZIP、安装包或 tag。包发布与 Harbor 资料归档分别完成，配套桌面核验单独记录。
