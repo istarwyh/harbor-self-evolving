@@ -112,8 +112,9 @@ test('public documentation matches the released Historical Session surface', asy
     assert.match(document, /Older rc\.8|旧 rc\.8/);
   }
   assert.match(rootReadme, /发送瞬间冻结 Harbor 当前页面和选择/);
-  assert.match(rootReadme, /离开 Harbor、关闭自动附带或存在显式引用时，不补入隐式页面引用/);
-  assert.match(pluginReadme, /Leaving Harbor, slash commands, and opt-out skip implicit context/);
+  assert.match(rootReadme, /离开 Harbor 或存在显式引用时，不补入隐式页面引用/);
+  assert.match(pluginReadme, /Harbor pages no longer expose an opt-out/);
+  assert.match(pluginReadme, /Leaving Harbor and slash commands skip implicit context/);
   assert.match(pluginReadme, /upgrading only this plugin does not add the host capability/);
   assert.match(rootReadme, /不会发送消息或启动 Agent、Job、Gate、晋级、部署、发布或生产修改/);
   assert.match(pluginReadme, /every production mutation remain explicit/);

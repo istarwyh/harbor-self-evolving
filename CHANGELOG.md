@@ -4,7 +4,12 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+## 0.9.5 - 2026-09-08
+
+- Consolidate Harbor identity, health, Job/Trial/exception metrics, refresh and the Historical Session launch action into one compact responsive Hero. Remove the redundant Getting Started block and standalone health summary while retaining the full attention filters directly below it.
+- Make automatic Harbor page context mandatory on compatible hosts and remove the opt-out/unsupported controls. Explicit Ask AI / `@harbor` references still take priority; other Views and slash commands remain outside implicit Harbor context, and unavailable pages fail explicitly.
 - Preserve ordinary Unix, macOS, Windows and UNC paths in Historical Session observations instead of treating them as secrets or fatal redaction failures. Keep credential and raw Session-id redaction fail-closed, use the same projected text for `initial_user_goal` and `visible_transcript`, and disclose the active data policy plus Judge input boundary before confirmation.
+- Verification and publication status: see the [0.9.5 archive](docs/releases/v0.9.5/README.md). Local synthetic/component evidence does not establish installed-Host, real-provider, Candidate/Docker, business-quality or complete PRD acceptance.
 
 ## 0.9.4 - 2026-09-07
 

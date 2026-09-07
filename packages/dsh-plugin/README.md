@@ -14,8 +14,8 @@ npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 
 The setup command installs both required runtimes:
 
-- `harbor-dsh-evolution==0.9.4` in a managed Python environment.
-- `dsh-harbor-evolution@0.9.4` in the selected DSH profile.
+- `harbor-dsh-evolution==0.9.5` in a managed Python environment.
+- `dsh-harbor-evolution@0.9.5` in the selected DSH profile.
 
 It then stores the absolute Harbor executable paths and a fallback `projectRoot` in the profile's `harbor-evolution` block and verifies the integration. Agent Tool calls always use the calling session's absolute working directory as their project root; the configured value remains the Web Workbench and non-Agent fallback. Existing unrelated profile entries are preserved, and rerunning setup updates the same block.
 
@@ -75,8 +75,8 @@ In the `web` profile, the same package also registers:
 ### Start with an object, not a command
 
 1. Open an evaluation result. Select a task, score, evidence item, or saved source fragment.
-2. On hosts supporting `conversation.contexts.register`, type your question in the existing Composer and send. Harbor freezes the page and selection at the submit lock. **Ask AI** and native `@harbor` take priority over implicit context. Turn off **Attach current page on send** inside Harbor to send without it. Older rc.8 hosts show an upgrade hint and require explicit references; upgrading only this plugin does not add the host capability.
-3. Read answers and proposal cards in the existing conversation. There is no second Composer or context panel. The same durable message carries question and page reference; switching pages or Sessions during preparation cannot retarget it. Checked rows freeze exact Trial membership, and a list without an open Trial still supplies status/validity filters and sort; free-text search is not sent. Attachments show the captured object, selection and observation time. When a newer draft exists, failed messages retain their text and images in the native unsent-message list instead of overwriting it. Restore to the Composer and resend to capture the current page again. Leaving Harbor, slash commands, and opt-out skip implicit context.
+2. On hosts supporting `conversation.contexts.register`, type your question in the existing Composer and send. Harbor freezes the page and selection at the submit lock. **Ask AI** and native `@harbor` take priority over implicit context. Harbor pages no longer expose an opt-out that could silently remove the current object. Older rc.8 hosts show an upgrade hint and require explicit references; upgrading only this plugin does not add the host capability.
+3. Read answers and proposal cards in the existing conversation. There is no second Composer or context panel. The same durable message carries question and page reference; switching pages or Sessions during preparation cannot retarget it. Checked rows freeze exact Trial membership, and a list without an open Trial still supplies status/validity filters and sort; free-text search is not sent. Attachments show the captured object, selection and observation time. When a newer draft exists, failed messages retain their text and images in the native unsent-message list instead of overwriting it. Restore to the Composer and resend to capture the current page again. Leaving Harbor and slash commands skip implicit context.
 4. For scoring rules, select saved lines and choose **Suggest a change**. **Review and edit** opens the matching file directly. The AI may populate an unchanged editor, but never replaces your manual edits. Review the diff and explicitly save to create new identities; this does not run an evaluation or Gate.
 
 Unsaved source edits are isolated by Session, workspace, Job, and file and retained in this browser tab's `sessionStorage`. File/view switches and refresh can recover them; closing the tab may discard them. Storage failures are shown, with an in-memory fallback and a leave-page warning for unpersisted edits. Source conflicts preserve the original base and edited text; review the latest source before accepting a new base. Saving or explicitly discarding clears only that file's draft. Expired authorizations never erase suggestion text or human edits; changed source or expired task subsets require an explicit new selection, not an automatically widened scope.
