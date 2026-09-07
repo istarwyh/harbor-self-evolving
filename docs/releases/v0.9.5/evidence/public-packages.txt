@@ -1,0 +1,35 @@
+Harbor 0.9.5 public package verification
+Date: 2026-09-08, Asia/Shanghai (UTC+08:00)
+Source/tag commit: 97d01bf3ee9abaed9f2555135def7ab55d2b722d
+Tag: v0.9.5
+
+Published metadata:
+https://registry.npmjs.org/dsh-harbor-evolution/0.9.5
+https://pypi.org/project/harbor-dsh-evolution/0.9.5/
+npm latest and PyPI default version both resolved to 0.9.5.
+
+Release inputs downloaded from:
+https://github.com/istarwyh/harbor-self-evolving/actions/runs/34146528116 (npm-distribution)
+https://github.com/istarwyh/harbor-self-evolving/actions/runs/34146528050 (python-distributions)
+All three public downloads are byte-identical to the corresponding workflow artifacts and independently verified local candidates.
+
+SHA-256:
+daa7ca6cd2d1d24f9d7ba74a92cb579a2b0d450c87e0bd49466d733a092f9a99  dsh-harbor-evolution-0.9.5.tgz
+6c43b85b61082d772b68978dce10f6436bfe1da7090c2c36225bb9a8837451dd  harbor_dsh_evolution-0.9.5-py3-none-any.whl
+fd6304078349dd6fe34312ace9c7c51bc09e5fb09580d4496ceadb4315a0e9c2  harbor_dsh_evolution-0.9.5.tar.gz
+
+Installed-package smoke, fresh owned directories, no existing Profile:
+npm install --offline --ignore-scripts <public tarball>: succeeded.
+Node main module, all 5 declared exports, automatic-page-context/context-snapshots/service modules and the dsh-harbor executable loaded.
+The dsh-harbor --help path printed its usage contract and returned its documented usage exit code 2.
+uv venv and uv pip install --offline <public wheel>: succeeded.
+Python -I imported the installed package as 0.9.5 and loaded harbor-dsh, dsh-evolution and dsh-historical-evaluation entrypoints.
+harbor-dsh --help and harbor plugins list passed; both Harbor plugins were listed.
+
+Provenance scope:
+npm audit signatures (npm 12.0.2) verified 19 registry signatures and one package attestation. The npm SLSA statement's SHA-512, source commit, v0.9.5 tag, publish-npm.yml and run 34146528116/attempts/1 match the public tarball and release source.
+Both PyPI provenance records match the publisher repository, pypi environment, publish-pypi.yml, subject names/digests, source commit, v0.9.5 tag and run 34146528050/attempts/1. Certificate SAN/extension field consistency was checked. Independent cryptographic signature or certificate-chain verification was NOT performed for PyPI.
+
+PR, main and tag CI succeeded. The publish jobs emitted only non-blocking upstream annotations: GitHub forced an upload-artifact action that targets Node.js 20 to Node.js 24, and PyPI reported digital-attestation generation.
+
+No real model, business workspace, Candidate or Docker evaluation was used. Installed desktop/Host compatibility remains outside this package-only verification.

@@ -2,11 +2,11 @@
 
 - 归档日期（含时区）：2026-09-08，Asia/Shanghai（UTC+08:00）。
 - 目标发布版本 / tag：`0.9.5` / `v0.9.5`。
-- 被验证的产品版本 / 提交：发布候选基于 `b748d49a94689bbcfa4a68cf39b696dc09f9b05d`；正式发布提交与 tag 待发布后补录。
+- 被验证的产品版本 / 提交：发布候选基于 `b748d49a94689bbcfa4a68cf39b696dc09f9b05d`；正式 `v0.9.5` tag 指向产品提交 `97d01bf3ee9abaed9f2555135def7ab55d2b722d`。本发布后记录位于 tag 之后的文档提交，不移动产品 tag。
 - 验收环境：macOS arm64、Node 22.22.2；隔离发布工作树中的真实插件源码、真实浏览器 bundle 与本地组件/服务 fixture。
 - 数据与模型：synthetic component fixture；2 条合成 Trial；未调用模型、真实提供方、Candidate 或 Docker。
-- 包发布状态：待核对 npm、PyPI 与 GitHub Release。
-- 资料归档状态：3 张本次源码组件截图、机器记录与本地包验证已加入候选；公开包验证和 Release 附件待发布后补录。
+- 包发布状态：npm 0.9.5 与 PyPI 0.9.5 已公开且默认版本均为 0.9.5；GitHub Release 使用正式 tag，并在本归档提交后附加资料 ZIP 与校验清单。
+- 资料归档状态：3 张本次源码组件截图、机器记录、本地/公开包验证均已归档；资料 ZIP 从本次发布后归档提交生成，公开下载状态以 Release 页面为准。
 
 ## 这次改了什么
 
@@ -63,9 +63,11 @@
 | 项目 | 版本/提交、命令或来源链接 | 实际结果与边界 |
 | --- | --- | --- |
 | 与本次改动相关的测试/验收 | `./hse test`、[本地验证摘要](evidence/local-validation.txt) 与 `acceptance.json` | Python 318/318、Node 591/591 通过；npm 52/52、wheel 38/38、sdist 72/72 非生成文件与源码逐字节一致；截图只证明源码组件的可见布局与 DOM 状态 |
-| npm 包与对应发布运行 | 待发布 | 待核对公开版本、下载文件、来源运行与候选摘要 |
-| PyPI wheel / sdist 与对应发布运行 | 待发布 | 待核对两个公开文件、来源运行与候选摘要 |
-| GitHub Release 与附件 | 待创建 | 待核对图集链接、验证 ZIP 与公开下载 |
+| npm 包与对应发布运行 | [OIDC run 34146528116](https://github.com/istarwyh/harbor-self-evolving/actions/runs/34146528116) | 成功；公开 tgz 与本地候选、工作流制品相同，latest=0.9.5，隔离安装/入口和 npm attestation 验证通过 |
+| PyPI wheel / sdist 与对应发布运行 | [run 34146528050](https://github.com/istarwyh/harbor-self-evolving/actions/runs/34146528050) | 成功；两个公开文件与候选、工作流制品相同，默认版本=0.9.5，导入、3 个 entrypoints、2 个插件通过 |
+| GitHub Release 与附件 | [v0.9.5](https://github.com/istarwyh/harbor-self-evolving/releases/tag/v0.9.5) | 正式 tag 与三份包制品已核对；资料 ZIP、校验清单和最终公开下载状态以 Release 页面为准 |
+
+发布分支、PR、主线与 tag CI 均成功：[分支 CI](https://github.com/istarwyh/harbor-self-evolving/actions/runs/34146403263)、[PR CI](https://github.com/istarwyh/harbor-self-evolving/actions/runs/34146406014)、[主线 CI](https://github.com/istarwyh/harbor-self-evolving/actions/runs/34146460522)、[tag CI](https://github.com/istarwyh/harbor-self-evolving/actions/runs/34146528064)。公开制品摘要、来源、安装烟测与 provenance 边界见[公开验证记录](evidence/public-packages.txt)。npm 执行了签名/attestation 验证；PyPI 核对了发布身份、来源字段、摘要与证书字段一致性，但没有执行独立密码学签名或证书链验证。
 
 ## 未完成项与验证边界
 
@@ -75,8 +77,8 @@
 
 ## 发布入口与资料包
 
-- 版本发布页：待创建 `v0.9.5` Release。
-- 完整验收记录 / 相关提交或 PR：功能 PR [#34](https://github.com/istarwyh/harbor-self-evolving/pull/34)；发布 PR 待创建。
-- 验证资料包：待上传 `harbor-0.9.5-verification.zip`。
+- 版本发布页：[Harbor v0.9.5](https://github.com/istarwyh/harbor-self-evolving/releases/tag/v0.9.5)。
+- 完整验收记录 / 相关提交或 PR：功能 PR [#34](https://github.com/istarwyh/harbor-self-evolving/pull/34)；发布 PR [#35](https://github.com/istarwyh/harbor-self-evolving/pull/35)；产品提交 [`97d01bf`](https://github.com/istarwyh/harbor-self-evolving/commit/97d01bf3ee9abaed9f2555135def7ab55d2b722d)。
+- 验证资料包：[harbor-0.9.5-verification.zip](https://github.com/istarwyh/harbor-self-evolving/releases/download/v0.9.5/harbor-0.9.5-verification.zip)，从本次发布后归档提交生成；公开下载与校验结果以 Release 页面为准。
 
-发布后将补录正式 tag/main commit、GitHub Actions 运行、npm/PyPI 公开文件与摘要、ZIP 解压/相对图片链接核对及 Release 下载入口；不移动公开 tag，不覆盖同版本包。
+公开 npm/PyPI 包、工作流制品与本地候选的三组摘要完全一致。资料包生成后还需独立下载、解压并核对相对图片链接；该结果记录在 Release，不移动公开 tag，不覆盖同版本包。
