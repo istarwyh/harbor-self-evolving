@@ -83,7 +83,7 @@ harbor_session_diagnostic_preview(limit=10)
 
 Preview 只读取当前 Agent Session 的 exact-cwd，默认最近 10 条已完成顶层业务会话；一条会话对应一个 Trial。它不会返回原始 Session id、正文或工具 payload。`createdAfter` 可缩小候选范围，当前没有 cursor；超过读取预算时必须缩小时间范围或改用显式 Dataset。
 
-确认令牌绑定用户 Session、工作区、样本、Feedback 状态与 Judge 身份，15 分钟内单次使用。Run 会再次校验所有源 digest，然后把脱敏 Batch 写入 `.harbor/private/session-batches`，并在 `jobs` 保留 Historical 证据。运行前检查两个目录的 VCS 与保留策略。
+确认令牌绑定用户 Session、工作区、样本、Feedback 状态与 Judge 身份，15 分钟内单次使用。Run 会再次校验所有源 digest，然后把凭据与原始 Session 标识已脱敏、普通正文绝对路径仍保留的 Batch 写入 `.harbor/private/session-batches`，并在 `jobs` 保留 Historical 证据。运行前检查两个目录的 VCS 与保留策略。
 
 Historical Job 不接受外部自定义 Stack，不执行 Candidate，也不能比较或晋级。`completed-unscored` 表示 Evaluator 因证据不足正常弃权；应分别报告 Trial/Criterion coverage，而不是把它换算成 0 分。确认后的 badcase 可以再固化为回归 Dataset，进入普通 Candidate 路径。
 

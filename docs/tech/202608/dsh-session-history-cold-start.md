@@ -452,7 +452,7 @@ Generator 的 Agent Preset 不能只读取创建时 Header：会话可以在稳�
 - 原始 Tool Result body；
 - `assistant/chunk`；
 - Credential、Cookie、Authorization 和环境变量值；
-- 绝对路径；
+- 原始 Session id 与 Session Header 中的工作目录；
 - Attachment bytes；
 - OAuth、Codex Auth 或上游 API 配置；
 - DSH 内部 Replay State。
@@ -466,7 +466,7 @@ Generator 的 Agent Preset 不能只读取创建时 Header：会话可以在稳�
 Redactor 使用 allowlist-first 策略：
 
 1. **结构化删除**：删除已知敏感字段和默认不允许的事件内容；
-2. **路径规范化**：绝对路径转换为 projectRoot-relative；越界路径只保留 basename 或 `[outside-project]`；
+2. **正文投影**：保留有界的用户可见文本及其中的普通绝对路径；Session Header 工作目录不复制为正文，原始 Session id 通过 canary 替换；
 3. **Secret Pattern 替换**：Authorization、Bearer、Cookie、token、API key、password、私钥块等替换为 `[REDACTED:<kind>]`；
 4. **Attachment 处理**：只保留 mime、大小和内容摘要，不复制 bytes；
 5. **大小限制**：按消息、Tool Result、Session 和 Batch 截断；
@@ -494,7 +494,7 @@ Redactor 使用 allowlist-first 策略：
   "schema_version": 1,
   "policy": {
     "id": "dsh-session-default-redaction",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "digest": "sha256:..."
   },
   "sessions": [
@@ -559,7 +559,9 @@ Harbor Core 新增通用 `historical-generation-batch/v1`。它只依赖记录�
   },
   "redaction_policy": {
     "id": "dsh-session-default-redaction",
-    "version": "1.0.0",
+    "version": "1.1.0",
+    "visible_text": "preserve-except-credentials-and-session-identifiers",
+    "local_paths": "preserve",
     "digest": "sha256:..."
   },
   "records": [
@@ -1446,7 +1448,7 @@ Projection/Redaction：
 - Assistant chunks 不重复；
 - Tool arguments/results 默认省略；
 - Authorization/Cookie/API key/private key canary 不落盘；
-- 绝对路径和 Attachment bytes 不落盘；
+- 用户可见正文中的普通绝对路径保留；Session Header cwd、原始 Session id 和 Attachment bytes 不落盘；
 - 截断和 completeness 正确；
 - 二次扫描 fail closed。
 

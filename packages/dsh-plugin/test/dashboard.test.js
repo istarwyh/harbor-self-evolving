@@ -140,6 +140,8 @@ test('dashboard is a lightweight Context v2 overview', async () => {
   assert.equal(snapshot.config.projectRoot, projectRoot)
   assert.equal(snapshot.config.projectRootSource, 'agent-session')
   assert.equal(snapshot.overview.totalJobs, 4)
+  assert.equal(snapshot.overview.totalTrials, 4)
+  assert.equal(snapshot.overview.totalExceptions, 1)
   assert.deepEqual(snapshot.overview.latestMetric, { name: 'reward', value: 0.82 })
   assert.equal(snapshot.jobs.find(job => job.name === 'candidate-v2').status, 'partial')
   assert.equal(snapshot.jobs.find(job => job.name === 'pending').status, 'pending')

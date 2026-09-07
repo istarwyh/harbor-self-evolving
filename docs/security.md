@@ -10,7 +10,7 @@
 - Job/Trial API 有文件大小和分页限制；证据超长时带标记截断。
 - `Authorization`、`Cookie`、token、API key、secret、password 和 request headers 等字段在 Web 返回前脱敏。
 - Workbench 不渲染危险 HTML，也不返回完整原始 SSE。
-- Historical Preview 不返回原始 Session id、正文或工具 payload；最终 Observation/Batch 对原始 id 做精确 canary 检查，命中即拒绝写入。
+- Historical Preview 不返回原始 Session id、正文或工具 payload；最终 Observation/Batch 对原始 id 做精确 canary 检查，命中即拒绝写入。确认后的有界用户可见正文保留普通绝对路径，凭据形态内容仍脱敏并 fail closed。
 - Historical selection token 随机、短期、单次使用，并绑定调用 Session、exact-cwd、源 digest、Feedback 状态和已确认 Judge；任一变化都要求重新 Preview。
 - `.harbor/private/session-batches` 按私有目录创建，逐级拒绝符号链接逃逸；已有 `.gitignore` 不会被静默覆盖。
 - Historical Judge 使用短期 Host Broker capability；运行前互证 provider/model/reasoning、protocol、Job 和 Batch digest，令牌不进入 argv、Stack、Context 或 Job artifacts。
