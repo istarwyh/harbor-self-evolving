@@ -11,6 +11,7 @@ const source = await readFile(new URL('../src/client/index.jsx', import.meta.url
 const compiled = await build({
   stdin: { contents: `${source}\nmodule.exports.__usability = { GovernancePanel, TrialSelectionBar, TrialExplorer };`, resolveDir: fileURLToPath(new URL('../src/client/', import.meta.url)), loader: 'jsx' },
   bundle: true, write: false, format: 'cjs', platform: 'browser', external: ['react'],
+  loader: { '.jpg': 'dataurl' },
   define: { __HSE_VERSION__: '"test"' }, logOverride: { 'commonjs-variable-in-esm': 'silent' },
 })
 const tick = () => new Promise(resolve => setImmediate(resolve))

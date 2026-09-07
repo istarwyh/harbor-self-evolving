@@ -5,7 +5,7 @@ import path from 'node:path'
 import test from 'node:test'
 
 import { buildHistoricalGenerationBatch, writePrivateHistoricalBatch } from '../lib/session-materializer.js'
-import { buildSessionObservation } from '../lib/session-redaction.js'
+import { buildSessionObservation, DEFAULT_REDACTION_POLICY } from '../lib/session-redaction.js'
 import { canonicalDigest } from '../lib/session-selection.js'
 
 const RAW_SESSION_ID = 'raw-session-id-must-never-leak'
@@ -93,10 +93,25 @@ test('Session Observation allowlists visible text and removes secret-bearing pay
   assert.equal(observation.generator.agent_preset, 'business-[REDACTED_SESSION_ID]')
   assert.match(serialized, /REDACTED_SECRET/)
   assert.doesNotMatch(serialized, /REDACTED_SECRET\]\]/)
-  assert.match(serialized, /REDACTED_PATH/)
+  assert.match(serialized, /\/Users\/private\/My Secret Project/)
+  assert.doesNotMatch(serialized, /REDACTED_PATH/)
   assert.doesNotMatch(serialized, new RegExp(API_SECRET))
   assert.doesNotMatch(serialized, new RegExp(BEARER_SECRET))
-  assert.doesNotMatch(serialized, /raw-session-id-must-never-leak|correct horse|battery staple|My Secret Project|replayState|tool-call|request\/header|system/)
+  assert.doesNotMatch(serialized, /raw-session-id-must-never-leak|correct horse|battery staple|replayState|tool-call|request\/header|system/)
+})
+
+test('Session Observation preserves Unix, macOS, Windows, and UNC paths in initial_user_goal', () => {
+  const selected = selectedFixture()
+  const goal = String.raw`Inspect /opt/service/config.yml, /Users/alice/project, C:\work\repo\file.js, and \\server\share\project.`
+  selected.events[1].data.content[0].text = goal
+
+  const observation = buildSessionObservation(selected)
+  const firstUserText = observation.visible_transcript.find(message => message.role === 'user').content[0].text
+
+  assert.equal(observation.task.initial_user_goal, goal)
+  assert.equal(firstUserText, goal)
+  assert.equal(DEFAULT_REDACTION_POLICY.local_paths, 'preserve')
+  assert.equal(DEFAULT_REDACTION_POLICY.visible_text, 'preserve-except-credentials-and-session-identifiers')
 })
 
 test('Session Observation redacts opaque tokens, credential URLs, and a private key without a footer', () => {

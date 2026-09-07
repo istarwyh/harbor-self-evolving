@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+- Preserve ordinary Unix, macOS, Windows and UNC paths in Historical Session observations instead of treating them as secrets or fatal redaction failures. Keep credential and raw Session-id redaction fail-closed, use the same projected text for `initial_user_goal` and `visible_transcript`, and disclose the active data policy plus Judge input boundary before confirmation.
+
 ## 0.9.4 - 2026-09-07
 
 - Attach the current Harbor page to ordinary native Composer messages on compatible hosts. Freeze the page, checked Trial membership, list status/validity filters and sort at submit; explicit Ask AI / `@harbor` references take priority. Leaving Harbor, slash commands and opt-out skip implicit context.

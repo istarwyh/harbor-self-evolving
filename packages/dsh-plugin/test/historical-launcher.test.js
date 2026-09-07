@@ -19,6 +19,7 @@ const bundle = await build({
     const useHarborApi = () => environment.request
     const useHarborMutation = () => environment.update
     const HarborErrorState = 'test-error'
+    const oceanBackground = 'data:image/jpeg;base64,test-ocean'
     ${launcher}
     export { HistoricalLauncher }
   `, loader: 'jsx', resolveDir: dirname(sourcePath) },
@@ -28,6 +29,7 @@ const tick = () => new Promise(resolve => setImmediate(resolve))
 const preview = (overrides = {}) => ({
   scope: 'dsh-history', previewId: 'preview-a', expiresAt: '2026-09-06T12:00:00Z',
   selected: [1, 2, 3].map(index => ({ trialId: `trial-${index}`, title: `历史会话 ${index}`, turnCount: index, toolCallCount: 2 })),
+  dataPolicy: { mode: 'source-text-with-secret-redaction', localPaths: 'preserved' },
   evaluation: { judge: { provider: 'test-provider', model: 'review-model' } }, ...overrides,
 })
 const operation = (status, overrides = {}) => ({ operationId: 'operation-a', status, selectedCount: 3, workspace: 'workspace-a', ...overrides })
@@ -70,6 +72,28 @@ function harness({ request = async () => ({ status: 'idle' }), update, language 
   }
 }
 
+test('compact Hero consolidates identity, health, core metrics, refresh, and Historical launch', async () => {
+  const ui = harness()
+  ui.setProps({
+    variant: 'hero',
+    snapshot: {
+      workspace: { id: 'workspace-a', label: '/private/workspace' },
+      overview: { totalJobs: 4, totalTrials: 12, totalExceptions: 2, attention: { blocked: 1 } },
+    },
+  })
+  try {
+    const nodes = ui.render()
+    const hero = nodes.find(node => node.type === 'section' && node.props.className === 'hse-hero')
+    assert.ok(hero)
+    assert.match(hero.props.style['--ocean-image'], /test-ocean/)
+    assert.match(ui.text(hero), /Harbor.*health.*health_blocked.*jobs4.*trials12.*exceptions2/s)
+    assert.equal(nodes.some(node => node.props?.className === 'hse-launch-card'), false)
+    assert.ok(nodes.some(node => node.props?.className === 'hse-refresh'))
+    await ui.click(node => node.props.className === 'hse-hero-primary')
+    assert.deepEqual(ui.writes, [{ route: 'historical-preview', args: { workspace: 'workspace-a', limit: 3, includeFeedback: true } }])
+  } finally { ui.dispose() }
+})
+
 test('launcher finds at most three Sessions automatically and runs only after a clear model disclosure and confirmation', async () => {
   const ui = harness()
   try {
@@ -77,7 +101,9 @@ test('launcher finds at most three Sessions automatically and runs only after a 
     assert.deepEqual(ui.writes, [{ route: 'historical-preview', args: { workspace: 'workspace-a', limit: 3, includeFeedback: true } }])
     const nodes = ui.render(), content = ui.text(nodes)
     assert.equal(nodes.filter(node => node.type === 'article').length, 3)
-    assert.match(content, /脱敏对话.*评审模型.*模型费用/)
+    assert.match(content, /会话数据.*评审模型.*模型费用/)
+    assert.match(content, /数据策略.*原文.*凭据与会话标识脱敏.*绝对路径保留/)
+    assert.match(content, /Judge 数据边界.*初始目标.*可见对话.*不发送 reasoning、工具载荷或附件/)
     assert.match(content, /test-provider.*review-model/)
     assert.doesNotMatch(content, /private\/workspace|当前目录|显式 Dataset|最近 30 天/)
     assert.equal(nodes.some(node => ['input', 'select'].includes(node.type)), false, 'No directory, source, date, or project picker')

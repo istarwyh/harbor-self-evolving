@@ -68,10 +68,11 @@ test('Harbor-looking text owned by another reference does not override the page'
   assert.equal(calls.length, 1)
 })
 
-test('opt-out sends no page context, including when the page is unavailable', () => {
-  const { provider, calls } = setup({ automaticContext: false })
-  assert.equal(provider.prepare(request()), undefined)
-  assert.equal(calls.length, 0)
+test('legacy opt-out state cannot disable automatic Harbor page context', async () => {
+  const current = context('trial-a')
+  const { provider, calls } = setup({ automaticContext: false, current })
+  assert.equal((await provider.prepare(request())).text, harborContextModelReference(token))
+  assert.equal(calls[0].snapshot.object.trial, 'trial-a')
 })
 
 test('a page that is still loading fails explicitly, rather than silently omitting context', () => {

@@ -56,7 +56,7 @@ Skill 会先检查文件，再围绕四个用户可理解的概念补齐必要�
 - 只保留原生输入框和对话，不再在其上方展示 Context Capsule 或 Copilot 面板。配套支持 `conversation.contexts.register` 的爱鸭宿主时，普通提问会在发送瞬间冻结 Harbor 当前页面和选择；页面内可关闭自动附带。`问 AI` 和原生 `@harbor` 显式引用优先。旧 rc.8 宿主仍需显式引用，单独升级插件不会补齐宿主能力。
 - 多选直接提问会冻结具体勾选成员；只看列表时也附带状态、有效性筛选和排序，不发送自由搜索原文。消息附件显示当时的任务、选区与观测时间。连续输入期间发送失败的原文和图片保留在原生“未发送消息”条目中，不覆盖新草稿；恢复到输入框再发时重新捕获当前页面。
 - 同会话的原生工具结果卡承接证据导航和 AI 修改建议；typed `harbor.navigate` 操作准备好对象后会提示打开 Harbor 标签，并非自动切换标签。可通过 Back 恢复原 workspace、分页、Stage、Trial、筛选、排序、Evidence 焦点、Compare Baseline 与滚动位置。后台任务位于插件主页面，保留取消、异常核查和结果入口，成功读取且无任务时隐藏。
-- `评测最近会话`：自动从当前 DSH 可访问的历史中选取最多 3 条已完成会话，不需要查找目录或配置来源；预览会话数量与评审模型，确认后才发送脱敏对话并后台评测，完成后打开结果。体验样本不代表全部历史，也不会重跑原任务。
+- `评测最近会话`：自动从当前 DSH 可访问的历史中选取最多 3 条已完成会话，不需要查找目录或配置来源；预览会话数量、评审模型、数据策略与 Judge 数据边界，确认后才发送保留普通文本和绝对路径、但已脱敏凭据及会话标识的有界 Session Observation 并后台评测，完成后打开结果。体验样本不代表全部历史，也不会重跑原任务。
 - Job 工作台：默认以概览、Trials、Pipeline、优化假设、Compare / Gate、Evaluator / Rubric、产物和审计组织；阶段流程收进 Pipeline。先直接展示 Candidate / Dataset / Evaluation Stack / 模型身份和 Candidate 自带的锁定运行时，再展示 Agent 收到的 query 与 instruction、Harbor 收集的页面/文档/结构化产物、评测器 Ground Truth 元评测、逐 Trial 判分、Population 有效覆盖、受控优化假设和 Baseline 回归 Gate。完整 JSON 只留在折叠审计区。
 - 评测器页：直接查看 `script` 或 `llm-as-judge` 的统一接口、三元 Criterion、Rubric 与实现源码；只能受控修改 Descriptor 授权的文件，并强制创建新的 Evaluator / Stack 身份。
 - `harbor-dsh-evaluator/v1`：统一 `script` 与 `llm-as-judge` 的输入、三元 Criteria 输出、实现身份和可编辑文件；详情见 [`docs/evaluator-interface.md`](docs/evaluator-interface.md)。

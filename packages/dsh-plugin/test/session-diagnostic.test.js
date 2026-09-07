@@ -62,6 +62,8 @@ function judgeRuntime(binding = {}) {
 test('Preview and Run preserve a shared token, revalidate sources, and write only redacted ids', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'hse-session-diagnostic-'))
   const source = snapshot('private-source-id', root)
+  const sourceGoal = String.raw`Fix /Users/alice/project and C:\work\repo without exposing api_key=fixture-secret-value.`
+  source.events[1].data.content[0].text = sourceGoal
   const { ctx } = harness(root, [source])
   const calls = []
   const service = new SessionDiagnosticService({
@@ -82,6 +84,20 @@ test('Preview and Run preserve a shared token, revalidate sources, and write onl
   assert.equal(preview.selected.length, 1)
   assert.equal(preview.selected[0].feedback.positive, 1)
   assert.match(preview.warnings.join('\n'), /retention policy/)
+  assert.deepEqual(preview.dataPolicy, {
+    mode: 'source-text-with-secret-redaction',
+    credentials: 'redacted',
+    sessionIdentifiers: 'redacted',
+    localPaths: 'preserved',
+    sentToJudge: 'bounded-session-observation',
+    omittedFromJudge: ['reasoning', 'tool-payloads', 'attachments'],
+    redactionPolicy: {
+      id: 'dsh-session-default-redaction',
+      version: '1.1.0',
+      digest: preview.dataPolicy.redactionPolicy.digest,
+    },
+  })
+  assert.match(preview.dataPolicy.redactionPolicy.digest, /^sha256:[0-9a-f]{64}$/)
   assert.equal(preview.retention.privateEvidence, '.harbor/private/session-batches')
   assert.deepEqual(preview.evaluation, {
     evaluator: { id: 'dsh-session-historical-evaluator', version: '1.0.0' },
@@ -106,6 +122,17 @@ test('Preview and Run preserve a shared token, revalidate sources, and write onl
   assert.equal(calls.length, 1)
   const persisted = await readFile(calls[0].args.batchPath, 'utf8')
   assert.doesNotMatch(persisted, /private-source-id/)
+  const manifest = JSON.parse(persisted)
+  const observation = JSON.parse(await readFile(
+    path.join(path.dirname(calls[0].args.batchPath), manifest.records[0].observation_path),
+    'utf8',
+  ))
+  const projectedGoal = sourceGoal.replace(/api_key=.*/, '[REDACTED_SECRET]')
+  assert.equal(observation.task.initial_user_goal, projectedGoal)
+  assert.equal(observation.visible_transcript[0].content[0].text, projectedGoal)
+  assert.match(observation.task.initial_user_goal, /\/Users\/alice\/project/)
+  assert.match(observation.task.initial_user_goal, /C:\\work\\repo/)
+  assert.doesNotMatch(JSON.stringify(observation), /fixture-secret-value/)
   await assert.rejects(
     service.run({ selectionToken: preview.selectionToken }, execution(root)),
     /TOKEN_INVALID/,
