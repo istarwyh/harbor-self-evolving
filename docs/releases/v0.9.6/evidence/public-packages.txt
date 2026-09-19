@@ -1,0 +1,35 @@
+Harbor 0.9.6 public package verification
+Date: 2026-09-19, Asia/Shanghai (UTC+08:00)
+Source/tag commit: 3495d15215b03ba62fbeae23582490fbbe1d8b60
+Tag: v0.9.6
+
+Published metadata:
+https://registry.npmjs.org/dsh-harbor-evolution/0.9.6
+https://pypi.org/project/harbor-dsh-evolution/0.9.6/
+npm latest and PyPI default version both resolved to 0.9.6.
+
+Release inputs downloaded from:
+https://github.com/istarwyh/harbor-self-evolving/actions/runs/35421066463 (npm-distribution)
+https://github.com/istarwyh/harbor-self-evolving/actions/runs/35421066455 (python-distributions)
+All three public registry downloads are byte-identical to the corresponding workflow artifacts. The same three artifacts were attached to GitHub Release v0.9.6 and their server-reported SHA-256 digests match this record.
+
+SHA-256:
+6a7fa2ec3597313153e0b4fd8e803d44f31bc4f1085444604d50927609d36a9d  dsh-harbor-evolution-0.9.6.tgz
+687b1f71ccb0dbf8333e05585ed3d02582238ff940d9daa848af2b0a0d97d2eb  harbor_dsh_evolution-0.9.6-py3-none-any.whl
+0dbbf670081275069a9a15d3dd650a84df8ae7f6bee00ff6f079b3a0743a8629  harbor_dsh_evolution-0.9.6.tar.gz
+
+Installed-package smoke, fresh owned directories:
+npm installed dsh-harbor-evolution@0.9.6 from the public registry with scripts disabled.
+The Node main module loaded with Config/apply/inject/name/synchronizeWorkbenchProjectRoot exports. The new execution-environment module, automatic page context, context snapshots, service and dsh-harbor executable were present.
+The dsh-harbor --help path printed its usage contract and returned its documented usage exit code 2.
+uv installed the public wheel into a fresh Python 3.12 venv.
+Python -I imported harbor_dsh_evolution as 0.9.6 and found harbor-dsh, dsh-evolution and dsh-historical-evaluation entrypoints.
+harbor-dsh --help, harbor plugins list and harbor-dsh host-check passed; both Harbor plugins were listed and Host check returned HOST_RUNTIME_READY.
+
+Provenance scope:
+npm 12.0.2 audit signatures verified 20 registry signatures and two attestations in the installed graph. The dsh-harbor-evolution SLSA statement's SHA-512, source commit, v0.9.6 tag, publish-npm.yml and run 35421066463/attempts/1 match the public tarball and release source.
+Both PyPI provenance statements have the expected filenames and SHA-256 subjects. Their certificates contain the expected repository, pypi environment, publish-pypi.yml, source commit, v0.9.6 tag and run 35421066455/attempts/1 identities. Independent cryptographic signature or certificate-chain verification was NOT performed for PyPI.
+
+PR, main and tag CI succeeded. The workflows emitted only non-blocking platform annotations: GitHub forced an upload-artifact action that targets Node.js 20 to Node.js 24, and ubuntu-latest announced its future Ubuntu 26 migration.
+
+No real model, business workspace, Candidate, Historical Session or Docker evaluation was used. Installed desktop/Host application compatibility and business-quality evaluation remain outside this package-only verification.

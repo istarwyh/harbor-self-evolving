@@ -1,6 +1,6 @@
 Harbor 0.9.6 local validation
 Captured: 2026-09-19 Asia/Shanghai (UTC+08:00)
-Candidate: codex/release-0.9.6 working tree before release commit
+Candidate: codex/release-0.9.6 working tree before release commit; released as 3495d15215b03ba62fbeae23582490fbbe1d8b60
 Environment: macOS 15.6.1 arm64; Node 22.22.3; npm 10.9.8; pnpm 11.25.0; uv 0.12.5; Python 3.12.14
 Evidence type: local source tests and package builds; synthetic fixtures; no model/provider calls
 

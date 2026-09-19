@@ -2,11 +2,11 @@
 
 - 归档日期（含时区）：2026-09-19，Asia/Shanghai（UTC+08:00）。
 - 目标发布版本 / tag：`0.9.6` / `v0.9.6`。
-- 被验证的产品版本 / 提交：`codex/release-0.9.6` 工作区候选；正式提交、tag 与发布后归档提交待发布流程完成后补录。
+- 被验证的产品版本 / 提交：正式 `v0.9.6` tag 指向产品提交 `3495d15215b03ba62fbeae23582490fbbe1d8b60`；发布后归档位于 tag 之后的文档提交，不移动产品 tag。
 - 验收环境：macOS 15.6.1 arm64、Node 22.22.3、npm 10.9.8、pnpm 11.25.0、uv 0.12.5、Python 3.12.14；真实源码与本地 Host 运行时。
 - 数据与模型：没有运行真实 Candidate、Historical Session 或外部模型评测；测试使用临时目录、合成任务和进程级 fixture。
-- 包发布状态：待核对 npm、PyPI 与 GitHub Release。
-- 资料归档状态：本地测试记录随发布候选归档；公开制品记录、资料 ZIP 与校验清单待发布后补录。
+- 包发布状态：npm 0.9.6 与 PyPI 0.9.6 已公开且默认版本均为 0.9.6；GitHub Release 使用正式 tag，并附三份逐字节核对过的包制品。
+- 资料归档状态：本地测试、公开制品与 provenance 记录已归档；验证 ZIP 从本次发布后归档提交生成，连同校验清单附到 Release，公开下载状态以 Release 页面为准。
 
 ## 这次改了什么
 
@@ -44,22 +44,24 @@
 
 | 项目 | 版本/提交、命令或来源链接 | 实际结果与边界 |
 | --- | --- | --- |
-| 与本次改动相关的测试/验收 | `./hse test`、`./hse doctor`、`harbor-dsh host-check`、[本地验证摘要](evidence/local-validation.txt) | 本地结果见记录；无真实模型或付费评测 |
-| npm 包与对应发布运行 | 待发布后补录 | 待核对公开版本、tgz、provenance 与安装入口 |
-| PyPI wheel/sdist 与对应发布运行 | 待发布后补录 | 待核对公开版本、两个文件、入口与安装导入 |
-| GitHub Release 与附件 | 待发布后补录 | 待核对正式 tag、三个包制品、验证 ZIP 和校验清单 |
+| 与本次改动相关的测试/验收 | `./hse test`、`./hse doctor`、`harbor-dsh host-check`、[本地验证摘要](evidence/local-validation.txt) | Python 321/321、Node 593/593 通过；Host doctor/check、npm 53 文件打包、wheel/sdist 构建通过；无真实模型或付费评测 |
+| npm 包与对应发布运行 | [OIDC run 35421066463](https://github.com/istarwyh/harbor-self-evolving/actions/runs/35421066463) 与[公开验证记录](evidence/public-packages.txt) | 成功；公开 tgz 与工作流制品逐字节相同，latest=0.9.6，隔离安装、主入口、CLI 和 npm attestation 验证通过 |
+| PyPI wheel/sdist 与对应发布运行 | [run 35421066455](https://github.com/istarwyh/harbor-self-evolving/actions/runs/35421066455) 与[公开验证记录](evidence/public-packages.txt) | 成功；两个公开文件与工作流制品逐字节相同，默认版本=0.9.6，导入、3 个 entrypoint、2 个 Harbor plugin 与 Host check 通过 |
+| GitHub Release 与附件 | [v0.9.6](https://github.com/istarwyh/harbor-self-evolving/releases/tag/v0.9.6) | 正式 tag 与三个包制品已核对；验证 ZIP、校验清单及最终匿名下载状态以 Release 页面为准 |
+
+发布分支、PR、主线与 tag CI 均成功：[分支 CI](https://github.com/istarwyh/harbor-self-evolving/actions/runs/35420966632)、[PR CI](https://github.com/istarwyh/harbor-self-evolving/actions/runs/35420978404)、[主线 CI](https://github.com/istarwyh/harbor-self-evolving/actions/runs/35421020642)、[tag CI](https://github.com/istarwyh/harbor-self-evolving/actions/runs/35421066454)。公开包摘要、来源、安装烟测与 provenance 边界见[公开验证记录](evidence/public-packages.txt)。
 
 ## 未完成项与验证边界
 
 - 未运行真实供应商模型、真实 Candidate/Historical Session 数据或付费 Harbor 评测；因此不将自动化测试结论外推为业务质量基线。
 - 默认 Host 模式按产品要求不提供容器隔离、用户切换、网络策略或 CPU/内存限制，任务以当前用户权限直接运行。
 - macOS arm64 是本轮本地实测平台；Linux x64/arm64 由 CI 运行包测试，但没有额外真实宿主机评测旅程。
-- 发布工作流、公开制品与资料附件需要在正式 tag 后独立核对，不能由本地构建成功提前推断。
+- GitHub Actions 仅有非阻塞的平台弃用提示：`upload-artifact` 的 Node 20 runtime 被 GitHub 强制切换到 Node 24，`ubuntu-latest` 将在 2026-10-19 迁移到 Ubuntu 26；两者未造成测试或发布失败。
 
 ## 发布入口与资料包
 
-- 版本发布页：待发布后补录。
-- 完整验收记录 / 相关提交或 PR：待发布后补录。
-- 验证资料包：待上传 `harbor-0.9.6-verification.zip` 后补录。
+- 版本发布页：[Harbor v0.9.6](https://github.com/istarwyh/harbor-self-evolving/releases/tag/v0.9.6)。
+- 完整验收记录 / 相关提交或 PR：产品 PR [#37](https://github.com/istarwyh/harbor-self-evolving/pull/37)；产品提交 [`3495d15`](https://github.com/istarwyh/harbor-self-evolving/commit/3495d15215b03ba62fbeae23582490fbbe1d8b60)。
+- 验证资料包：[harbor-0.9.6-verification.zip](https://github.com/istarwyh/harbor-self-evolving/releases/download/v0.9.6/harbor-0.9.6-verification.zip)，从本次发布后归档提交生成；公开下载与校验结果以 Release 页面为准。
 
-发布后归档提交会补全永久链接、公开摘要与验证边界，不移动已公开 tag，不覆盖或重发同版本包。
+公开 npm/PyPI 包、工作流制品和 GitHub Release 上的三份包制品摘要一致。验证资料 ZIP 生成后独立下载、解压并核对文档/证据相对链接；结果记录在 Release，不移动公开 tag，不覆盖或重发同版本包。
