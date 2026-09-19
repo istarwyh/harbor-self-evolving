@@ -892,10 +892,11 @@ outputs: [HTML, print, RSS, markdown, LLMSFULL]
 
 #### 当前仓库发布状态（2026-09-19 实查）
 
-- `https://istarwyh.github.io/harbor-self-evolving/` 当前返回 GitHub Pages `Site not found`；
-- Repository Settings → Pages 已开启，并已实查切换为规划要求的 **GitHub Actions**；首次成功 deployment 前，设置页显示 workflow details 尚未生成；
-- 当前 checkout 已实现 `website/` 与 `.github/workflows/website-pages.yml`，本地 warning-strict build 和 artifact scan 已通过；
-- 但只有 workflow 合并推送、Pages deployment 成功并完成公开 URL 验收后，才能声称“站点已经发布无误”。
+- `https://istarwyh.github.io/harbor-self-evolving/` 已返回生产站点，英文、中文、Docs、404、静态图片与 Agent 输出代表性路径均通过真实 HTTP / 浏览器检查；
+- Repository Settings → Pages 的 Source 为 **GitHub Actions**；`github-pages` environment 使用 selected branches/tags policy，仅允许 `main`；
+- commit `68ad7aca8aff317e88c1bf4f187db111c57e3751` 的 [Pages run #1](https://github.com/istarwyh/harbor-self-evolving/actions/runs/35451540058) 成功，产物为 6.15 MB，digest `sha256:2449192d635bbcb67447f16041eeeb8c5ef1098ba26355205dce5662b2aae999`；
+- 同一 commit 的 [CI run #137](https://github.com/istarwyh/harbor-self-evolving/actions/runs/35451540072) 中 Python、Node、website 三个 Job 全部成功；
+- 该 deployment 证明网站产物已发布，不代表 Plugin/npm/PyPI 新版本发布或 Candidate v3 known issue 已修复。
 
 一次性仓库设置已完成：Settings → Pages → Build and deployment 的 Source 为 **GitHub Actions**。后续不能改回 `main / (root)` 或 `main /docs`，因为源文件位于 `website/`，生产物由 workflow 通过 Pages artifact API 发布。官方要求与流程见 [GitHub Pages custom workflows](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages) 和 [publishing source](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)。
 
@@ -1070,36 +1071,36 @@ GitHub Pages artifact 上线后执行两层校验：先等待 `deploy-pages` 返
 
 ### 14.1 构建与依赖
 
-- [ ] `hugo mod graph` 解析到精确的 `github.com/pgsty/oink@v1.0.0`。
-- [ ] Hugo Extended / Go 版本与 CI 固定值一致。
-- [ ] production build 使用 `--printPathWarnings --panicOnWarning`，零 warning。
-- [ ] `public/`、`resources/` 和 caches 未提交。
-- [ ] `params.github_subdir: website` 已设置，edit/history 链接落到 monorepo 正确文件。
-- [ ] `LICENSES/` 与 `THIRD_PARTY_NOTICES.md` 逐项记录 OINK / Starter / 文档 / 资产的版本、来源、采用和修改方式；需要页面级 attribution 的内容已实际显示。
+- [x] `hugo mod graph` 解析到精确的 `github.com/pgsty/oink@v1.0.0`。
+- [x] Hugo Extended / Go 版本与 CI 固定值一致。
+- [x] production build 使用 `--printPathWarnings --panicOnWarning`，零 warning。
+- [x] `public/`、`resources/` 和 caches 未提交。
+- [x] `params.github_subdir: website` 已设置，edit/history 链接落到 monorepo 正确文件。
+- [x] `LICENSES/` 与 `THIRD_PARTY_NOTICES.md` 逐项记录 OINK / Starter / 文档 / 资产的版本、来源、采用和修改方式；需要页面级 attribution 的内容已实际显示。
 - [ ] production HTML 的 CSP / origin 清单已实测，不新增未声明的第三方请求，也不破坏搜索、Mermaid 或主题脚本。
 
 ### 14.2 内容真实性
 
-- [ ] 正式安装路径是 npm setup，不是本地 `link:`。
-- [ ] 当前版本、19 tools、Web 3 / Agent 10 会话边界准确；19 tools 全名齐全，并标出 10 个 approval 写操作与 9 个只读/内存操作。
-- [ ] DSH Plugin 的安装、Skill、Workbench、Context/Evidence、Historical、Evaluator、Action/Operation、Settings、Broker 均有入口，没有只介绍工具列表。
-- [ ] Candidate Context v3 / Historical Context v2 写法准确；Candidate v3 Web known issue 在修复发布前与能力卡同页可见。
-- [ ] Host 默认与“无隔离、无资源限制”的风险同时出现；Model Broker request/byte limit 不被写成 token/cost hard cap。
-- [ ] Historical Job 明确 Gate N/A、Meta-Evaluation not-run，并披露 bounded redacted 内容会发给所选 Judge。
-- [ ] Job 完成、Gate 建议、生产部署三者没有混写。
+- [x] 正式安装路径是 npm setup，不是本地 `link:`。
+- [x] 当前版本、19 tools、Web 3 / Agent 10 会话边界准确；19 tools 全名齐全，并标出 10 个 approval 写操作与 9 个只读/内存操作。
+- [x] DSH Plugin 的安装、Skill、Workbench、Context/Evidence、Historical、Evaluator、Action/Operation、Settings、Broker 均有入口，没有只介绍工具列表。
+- [x] Candidate Context v3 / Historical Context v2 写法准确；Candidate v3 Web known issue 在修复发布前与能力卡同页可见。
+- [x] Host 默认与“无隔离、无资源限制”的风险同时出现；Model Broker request/byte limit 不被写成 token/cost hard cap。
+- [x] Historical Job 明确 Gate N/A、Meta-Evaluation not-run，并披露 bounded redacted 内容会发给所选 Judge。
+- [x] Job 完成、Gate 建议、生产部署三者没有混写。
 - [ ] 所有截图带版本、日期、证据类型和验证边界。
-- [ ] `0.9.1` 未完成发布的历史被如实说明。
-- [ ] 0.9.6 版本检查与本地 HEAD 一键更新分栏；一键更新不出现在 0.9.6 能力卡或发布截图。
-- [ ] Shipped / Development preview / Roadmap 状态来自 tag、registry 和 release archive，不以 checkout 文件是否存在为准。
+- [x] `0.9.1` 未完成发布的历史被如实说明。
+- [x] 0.9.6 版本检查与本地 HEAD 一键更新分栏；一键更新不出现在 0.9.6 能力卡或发布截图。
+- [x] Shipped / Development preview / Roadmap 状态来自 tag、registry 和 release archive，不以 checkout 文件是否存在为准。
 
 ### 14.3 页面与交互
 
-- [ ] `/`、`/zh/`、`/product/`、`/product/dsh-plugin/`、Plugin Docs、Book、Blog、`/releases/`、404 可打开。
-- [ ] 每个核心页面有翻译 peer；语言切换不回首页。
+- [x] `/`、`/zh/`、`/product/`、`/product/dsh-plugin/`、Plugin Docs、Book、Blog、`/releases/`、404 可打开。
+- [x] 每个核心页面有翻译 peer；语言切换不回首页。
 - [ ] 1440 / 768 / 390 宽度可读，移动端不隐藏 Historical 数据 / 成本等关键说明。
 - [ ] light / dark 下 logo、截图、Mermaid 和状态色可读。
 - [ ] 键盘焦点、modal focus trap / return、form label、progressbar、tab semantics 和 reduced motion 通过人工与 axe 检查。
-- [ ] 首版至少有 26 个可复用视觉资产：1 张品牌主视觉、9 张解释图、16 组产品截图；核心长页面至少一张理解图和一张产品证据图。
+- [x] 首版至少有 26 个可复用视觉资产：1 张品牌主视觉、9 张解释图、16 组产品截图；核心长页面至少一张理解图和一张产品证据图。
 - [ ] Plugin 截图覆盖 loading、empty、stale/error+retry、running、partial/unscored、conflict/expired，而不只展示 happy path。
 - [ ] 每张图有非重复的 alt text、版本化 caption、明确宽高；Gallery 可放大，移动端局部文字仍可读。
 - [ ] Hero ≤ 300 KiB、普通 WebP 截图目标 ≤ 250 KiB、thumbnail ≤ 80 KiB；首页图片初始传输约 1 MiB，非首屏 lazy-load 且无明显 CLS。
@@ -1109,35 +1110,35 @@ GitHub Pages artifact 上线后执行两层校验：先等待 `deploy-pages` 返
 
 ### 14.4 SEO 与 Agent 输出
 
-- [ ] canonical 指向真实生产 URL，包含 project subpath 或自定义域名。
-- [ ] hreflang 指向真实翻译 peer。
-- [ ] sitemap、production robots、preview noindex 正确。
+- [x] canonical 指向真实生产 URL，包含 project subpath 或自定义域名。
+- [x] hreflang 指向真实翻译 peer。
+- [x] sitemap、production robots、preview noindex 正确。
 - [ ] 每页有独立 description，核心页有 social card。
-- [ ] 每语言搜索 index 存在，中文/英文/缩写均可命中。
-- [ ] 每页 `index.md`、每语言 `llms.txt` / `navigation.json`、Docs `llms-full.txt` 可访问。
-- [ ] HTML head 有 Markdown alternate link。
+- [x] 每语言搜索 index 存在，中文/英文/缩写均可命中。
+- [x] 每页 `index.md`、每语言 `llms.txt` / `navigation.json`、Docs `llms-full.txt` 可访问。
+- [x] HTML head 有 Markdown alternate link。
 
 ### 14.5 安全与隐私
 
-- [ ] `public/` 不含凭据、token、Cookie、私钥、原始 Session id。
-- [ ] 不含 `.harbor/private`、`jobs`、临时目录和本机绝对路径。
-- [ ] 搜索 index、Markdown 和 llms 输出单独扫描，而不只检查 HTML。
-- [ ] GA、Giscus、外部搜索、assistant links 未被默认启用。
-- [ ] 图片没有个人信息、真实业务内容或无法说明来源的敏感信息。
-- [ ] Web 安全页把 same-origin 写成浏览器 CSRF 防线，并明确当前可信 loopback 前提，不将其描述为 caller authentication。
-- [ ] `@harbor` durable snapshot、Historical in-process operation、Evaluator browser draft 与本地 private artifacts 的保留 / 恢复限制均有说明。
-- [ ] 外部 URL artifact 不在公共站点演示时自动发起未知网络请求；产品文档披露当前 iframe 边界。
+- [x] `public/` 不含凭据、token、Cookie、私钥、原始 Session id。
+- [x] 不含 `.harbor/private`、`jobs`、临时目录和本机绝对路径。
+- [x] 搜索 index、Markdown 和 llms 输出单独扫描，而不只检查 HTML。
+- [x] GA、Giscus、外部搜索、assistant links 未被默认启用。
+- [x] 图片没有个人信息、真实业务内容或无法说明来源的敏感信息。
+- [x] Web 安全页把 same-origin 写成浏览器 CSRF 防线，并明确当前可信 loopback 前提，不将其描述为 caller authentication。
+- [x] `@harbor` durable snapshot、Historical in-process operation、Evaluator browser draft 与本地 private artifacts 的保留 / 恢复限制均有说明。
+- [x] 外部 URL artifact 不在公共站点演示时自动发起未知网络请求；产品文档披露当前 iframe 边界。
 
 ### 14.6 真实部署
 
-- [ ] Repository Settings → Pages 的 Source 保持已实查的 `GitHub Actions`；首次 deployment 生成 `github-pages` environment 后，仅允许默认分支部署。
-- [ ] `.github/workflows/website-pages.yml` 仅由 `main` push / `workflow_dispatch` 发布；PR 只走无 Pages 写权限的 website CI job。
-- [ ] Actions 固定到审计过的 commit SHA；build 不取得 OIDC，deploy 才取得 `pages: write` / `id-token: write`；workflow 使用 `github-pages` environment 和 `github-pages` concurrency。
-- [ ] Go / Hugo / module 命令的 working directory 和路径均指向 `website/`；`configure-pages` 有 `id: pages`；Hugo 接收 `${{ steps.pages.outputs.base_url }}/`；上传的是 `website/public/`。
-- [ ] `deploy` 明确 `needs: build`；Pages artifact 小于内部预算且不含 symbolic / hard links；没有维护 `gh-pages` 分支或依赖 `.nojekyll`。
-- [ ] GitHub Pages workflow 成功并记录真实 `page_url`；`https://istarwyh.github.io/harbor-self-evolving/` 不再返回当前的 `Site not found`；站点部署状态没有被写成 Plugin/package release 状态。
-- [ ] `/harbor-self-evolving/`、`/harbor-self-evolving/zh/`、Docs、Book、Releases、404、搜索 index、图片、Markdown、`llms.txt`、sitemap 均从正确 project subpath 加载，无 404、root-path 泄漏或 redirect loop。
-- [ ] canonical、hreflang、Open Graph、sitemap、robots 都指向最终公开 URL；页面刷新、语言切换、深链和 anchor 已在真实 URL 验证。
+- [x] Repository Settings → Pages 的 Source 保持已实查的 `GitHub Actions`；首次 deployment 生成 `github-pages` environment 后，仅允许默认分支部署。
+- [x] `.github/workflows/website-pages.yml` 仅由 `main` push / `workflow_dispatch` 发布；PR 只走无 Pages 写权限的 website CI job。
+- [x] Actions 固定到审计过的 commit SHA；build 不取得 OIDC，deploy 才取得 `pages: write` / `id-token: write`；workflow 使用 `github-pages` environment 和 `github-pages` concurrency。
+- [x] Go / Hugo / module 命令的 working directory 和路径均指向 `website/`；`configure-pages` 有 `id: pages`；Hugo 接收 `${{ steps.pages.outputs.base_url }}/`；上传的是 `website/public/`。
+- [x] `deploy` 明确 `needs: build`；Pages artifact 小于内部预算且不含 symbolic / hard links；没有维护 `gh-pages` 分支或依赖 `.nojekyll`。
+- [x] GitHub Pages workflow 成功并记录真实 `page_url`；`https://istarwyh.github.io/harbor-self-evolving/` 不再返回当前的 `Site not found`；站点部署状态没有被写成 Plugin/package release 状态。
+- [x] `/harbor-self-evolving/`、`/harbor-self-evolving/zh/`、Docs、Book、Releases、404、搜索 index、图片、Markdown、`llms.txt`、sitemap 均从正确 project subpath 加载，无 404、root-path 泄漏或 redirect loop。
+- [x] canonical、hreflang、Open Graph、sitemap、robots 都指向最终公开 URL；页面刷新、语言切换、深链和 anchor 已在真实 URL 验证。
 - [ ] 回滚方式已记录并实测：重新部署最后一个成功 artifact 对应的 commit，或 revert 后由 main workflow 重建；不手工修改生产文件。
 
 ## 15. DSH Plugin 产品 Roadmap
