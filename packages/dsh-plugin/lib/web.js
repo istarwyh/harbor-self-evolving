@@ -12,6 +12,7 @@ export const EVALUATOR_ROUTE = '/_dsh/harbor-evolution/evaluator'
 export const META_ROUTE = '/_dsh/harbor-evolution/meta'
 export const PROJECT_ROOT_ROUTE = '/_dsh/harbor-evolution/project-root'
 export const VERSION_ROUTE = '/_dsh/harbor-evolution/version'
+export const VERSION_UPDATE_ROUTE = '/_dsh/harbor-evolution/version-update'
 export const HISTORICAL_PREVIEW_ROUTE = '/_dsh/harbor-evolution/historical-preview'
 export const HISTORICAL_RUN_ROUTE = '/_dsh/harbor-evolution/historical-run'
 export const HISTORICAL_OPERATION_ROUTE = '/_dsh/harbor-evolution/historical-operation'
@@ -153,6 +154,7 @@ export function installDashboardWeb(ctx, service, historicalController) {
       ['/_dsh/harbor-evolution/action-cancel', createMutationHandler(args => service.cancelAction(args), 'action-cancel-failed')],
       [SESSION_CONTEXT_RESOLVE_ROUTE, createMutationHandler(args => service.resolveBrowserUiContext(args), 'session-context-resolve-failed')],
       [VERSION_ROUTE, createApiHandler(args => service.version(args), 'version-check-unavailable')],
+      [VERSION_UPDATE_ROUTE, createMutationHandler(args => service.updateVersion(args), 'version-update-failed')],
       [PROJECT_ROOT_ROUTE, createMutationHandler(args => service.setProjectRoot(args), 'project-root-update-failed')],
     ]
     for (const [route, handler] of routes) {

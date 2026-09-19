@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { compareSemver, createVersionChecker, NPM_LATEST_URL, renderUpdateCommand } from '../lib/version.js'
+import { compareSemver, createVersionChecker, installVersionUpdate, NPM_LATEST_URL, renderUpdateCommand } from '../lib/version.js'
 
 test('semantic versions compare stable and prerelease releases correctly', () => {
   assert.equal(compareSemver('0.7.0', '0.7.1'), -1)
@@ -31,6 +31,26 @@ test('version checker returns an exact, safely quoted update command and caches 
   assert.equal(second.source, 'cache')
   assert.equal(requests, 1)
   assert.equal(renderUpdateCommand('0.8.0', '/tmp/project'), "npx --yes dsh-harbor-evolution@0.8.0 setup --project-root '/tmp/project'")
+})
+
+test('one-click update runs the exact registry package setup without a shell', async () => {
+  const calls = []
+  const result = await installVersionUpdate({
+    latestVersion: '0.9.7',
+    projectRoot: "/tmp/Agent's workspace",
+  }, {
+    npx: 'npx-test',
+    run: async (...args) => { calls.push(args); return { code: 0 } },
+  })
+
+  assert.deepEqual(calls, [[
+    'npx-test',
+    ['--yes', 'dsh-harbor-evolution@0.9.7', 'setup', '--project-root', "/tmp/Agent's workspace"],
+    { cwd: "/tmp/Agent's workspace", timeoutMs: 30 * 60 * 1_000 },
+  ]])
+  assert.equal(result.status, 'installed')
+  assert.equal(result.installedVersion, '0.9.7')
+  assert.equal(result.restartRequired, true)
 })
 
 test('registry failure stays non-blocking and falls back to stale successful data', async () => {

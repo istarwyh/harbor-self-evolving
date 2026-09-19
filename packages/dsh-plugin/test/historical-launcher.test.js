@@ -76,6 +76,7 @@ test('compact Hero consolidates identity, health, core metrics, refresh, and His
   const ui = harness()
   ui.setProps({
     variant: 'hero',
+    pluginVersion: '0.9.6',
     snapshot: {
       workspace: { id: 'workspace-a', label: '/private/workspace' },
       overview: { totalJobs: 4, totalTrials: 12, totalExceptions: 2, attention: { blocked: 1 } },
@@ -86,7 +87,7 @@ test('compact Hero consolidates identity, health, core metrics, refresh, and His
     const hero = nodes.find(node => node.type === 'section' && node.props.className === 'hse-hero')
     assert.ok(hero)
     assert.match(hero.props.style['--ocean-image'], /test-ocean/)
-    assert.match(ui.text(hero), /Harbor.*health.*health_blocked.*jobs4.*trials12.*exceptions2/s)
+    assert.match(ui.text(hero), /Harborv0\.9\.6.*health.*health_blocked.*jobs4.*trials12.*exceptions2/s)
     assert.equal(nodes.some(node => node.props?.className === 'hse-launch-card'), false)
     assert.ok(nodes.some(node => node.props?.className === 'hse-refresh'))
     await ui.click(node => node.props.className === 'hse-hero-primary')

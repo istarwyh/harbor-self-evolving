@@ -1,3 +1,5 @@
+import { runProcess } from './process.js'
+
 export const NPM_PACKAGE_NAME = 'dsh-harbor-evolution'
 export const NPM_LATEST_URL = `https://registry.npmjs.org/${NPM_PACKAGE_NAME}/latest`
 export const RELEASES_URL = 'https://github.com/istarwyh/harbor-self-evolving/releases'
@@ -53,6 +55,21 @@ function shellQuote(value) {
 export function renderUpdateCommand(latestVersion, projectRoot) {
   if (!parseSemver(latestVersion)) throw new Error('latestVersion must be a valid semantic version')
   return `npx --yes ${NPM_PACKAGE_NAME}@${latestVersion} setup --project-root ${shellQuote(projectRoot)}`
+}
+
+export async function installVersionUpdate({ latestVersion, projectRoot }, options = {}) {
+  const run = options.run ?? runProcess
+  const npx = options.npx ?? (process.platform === 'win32' ? 'npx.cmd' : 'npx')
+  await run(npx, [
+    '--yes', `${NPM_PACKAGE_NAME}@${latestVersion}`,
+    'setup', '--project-root', projectRoot,
+  ], { cwd: projectRoot, timeoutMs: 30 * 60 * 1_000 })
+  return {
+    status: 'installed',
+    installedVersion: latestVersion,
+    restartRequired: true,
+    completedAt: new Date().toISOString(),
+  }
 }
 
 function buildResult(currentVersion, latestVersion, projectRoot, checkedAt, options = {}) {

@@ -24,6 +24,29 @@ test('Evaluator governance finds the nearest nested active Stack without leaving
   assert.equal(await resolveEvaluatorStackPath({ projectRoot }, governance, '.harbor/custom.yml'), '.harbor/custom.yml')
 })
 
+test('one-click update installs the registry version for the active project and requires restart', async () => {
+  const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-version-update-'))
+  const calls = []
+  const service = new EvolutionService({ projectRoot }, {
+    pluginVersion: '0.9.6',
+    versionChecker: async input => {
+      calls.push({ check: input })
+      return { status: 'update-available', currentVersion: '0.9.6', latestVersion: '0.9.7' }
+    },
+    versionUpdater: async input => {
+      calls.push({ update: input })
+      return { status: 'installed', installedVersion: input.latestVersion, restartRequired: true }
+    },
+  })
+
+  const result = await service.updateVersion()
+  assert.equal(result.installedVersion, '0.9.7')
+  assert.equal(result.restartRequired, true)
+  assert.deepEqual(calls.at(-1), { update: { latestVersion: '0.9.7', projectRoot } })
+  assert.equal(calls[0].check.currentVersion, '0.9.6')
+  assert.equal(calls[0].check.refresh, true)
+})
+
 test('Web Workbench projectRoot can switch to an existing absolute directory without changing Agent tool scoping', async () => {
   const first = await mkdtemp(path.join(os.tmpdir(), 'harbor-web-root-first-'))
   const second = await mkdtemp(path.join(os.tmpdir(), 'harbor-web-root-second-'))
