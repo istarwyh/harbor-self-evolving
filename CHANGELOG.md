@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+## 0.9.6 - 2026-09-19
+
+- Make direct Host execution the default for Candidate, Historical Session and bounded diagnostic Harbor jobs. Run Agent, Verifier and task commands as the current user without Docker, isolation, network policy or resource limits; retain Docker as an explicit `executionEnvironment: "docker"` opt-in.
+- Add the Harbor `HostEnvironment` adapter with trial-local path mapping, file transfer, log mounts, timeout/process-group cleanup and macOS command compatibility. Add Host preflight for Bash, Node, npm and the exact ACP SDK while removing Docker checks from the default setup and doctor path.
+- Upgrade Candidate Evaluation Context to v3 and Historical Evaluation Context to v2 with execution-environment identity. Reject promotion comparisons across Host/Docker or materially different Host runtime fingerprints instead of treating them as comparable baselines.
+- Align the DSH launcher, model-broker endpoint, Historical preview token, diagnostics, generated verifier scripts, schemas and public documentation with the shared Host/Docker resolver. Add Python and Node regression coverage for Host execution, default selection and explicit Docker fallback.
+- Reorganize documentation around a current acceptance-status page, versioned release evidence and archived design/acceptance history; remove duplicated verification copies while retaining their versioned release archives.
+- Validation and publication status: local Python/Node suites, package builds, Host doctor and package dry runs are recorded in the [0.9.6 archive](docs/releases/v0.9.6/README.md). Public npm, PyPI and GitHub Release status is recorded there after tag publication; no real-provider or paid model evaluation is implied by these checks.
+
 ## 0.9.5 - 2026-09-08
 
 - Consolidate Harbor identity, health, Job/Trial/exception metrics, refresh and the Historical Session launch action into one compact responsive Hero. Remove the redundant Getting Started block and standalone health summary while retaining the full attention filters directly below it.
@@ -46,7 +55,7 @@ All notable changes to this project are documented in this file.
 - Add same-artifact staged installation, isolated script-free `npm ci`, exact prepared Node/ACP SDK checks, and initialize/session-new readiness before evaluation prompts. Quick diagnostic ships a tested, demo-free DSH core/Agent Loop/session/ACP composition and a pinned Task image definition.
 - Fix the Host gateway's prepared-call contract and isolate network abort reasons so completed and cancelled turns retain durable end records. Reject mismatched source/runtime identity, ambiguous model overlays and outdated Adapter execution contracts.
 - Migration: legacy Candidates remain historical evidence, but executing them requires a new Candidate runtime descriptor and snapshot. Do not silently rerun an old baseline with another runtime. Candidate Task images must contain the declared Node version and ACP SDK `0.12.1`; Host credentials and project npm configuration never enter Candidate source.
-- Validation: 469 Node tests and 301 Python tests; generated client, npm package, Python wheel/sdist and installed-wheel Quick diagnostic checks passed. Real macOS ACP completion/cancellation and Linux arm64 Harbor Adapter execution, ATIF, persistence and cleanup passed using controlled model streams with no vendor credentials. See `docs/candidate-runtime-contract.md` and `docs/ai-workbench-acceptance.md`.
+- Validation: 469 Node tests and 301 Python tests; generated client, npm package, Python wheel/sdist and installed-wheel Quick diagnostic checks passed. Real macOS ACP completion/cancellation and Linux arm64 Harbor Adapter execution, ATIF, persistence and cleanup passed using controlled model streams with no vendor credentials. See `docs/candidate-runtime-contract.md` and the archived ledger at `docs/archive/ai-workbench-acceptance-ledger.md`.
 - Scope: this is an incremental interaction/runtime reliability release, not full PRD completion or a new passing business baseline. Successful 12-Trial AC-04, a live full-Workbench Docker cancellation/recovery journey, the full mobile/keyboard matrix, Linux amd64 execution, and the complete meta-evaluation/fresh-baseline loop remain unverified. Controlled model transport evidence is not business quality evidence.
 
 ## 0.9.1 - 2026-09-05

@@ -25,7 +25,8 @@ def test_historical_context_describes_existing_records_without_candidate(tmp_pat
         dataset_path=Path(materialized["dataset_path"]),
         stack_path=Path(materialized["stack_path"]),
     )
-    assert context["protocol"] == "historical-generation-evaluation-context/v1"
+    assert context["protocol"] == "historical-generation-evaluation-context/v2"
+    assert context["execution_environment"]["kind"] == "host"
     assert context["job_kind"] == "historical-generation-evaluation"
     assert context["execution_mode"] == "observe-existing"
     assert context["promotion_eligible"] is False
@@ -122,7 +123,7 @@ def test_historical_cli_materialize_validate_and_context(
     )
     assert main() == 0
     context = json.loads(capsys.readouterr().out)
-    assert context["protocol"] == "historical-generation-evaluation-context/v1"
+    assert context["protocol"] == "historical-generation-evaluation-context/v2"
 
 
 def test_historical_context_rejects_dataset_record_reordering(tmp_path: Path):

@@ -63,7 +63,7 @@ harbor_candidate_snapshot
 
 ```text
 评测最近会话
-→ 安全预览最多 10 条会话与 Evaluator/Judge/成本/保留边界
+→ 安全预览并自动选取最多 3 条会话，展示 Evaluator/Judge/成本/保留边界
 → 用户明确确认
 → 后台运行 historical-generation-evaluation
 → 完成后自动打开 Job

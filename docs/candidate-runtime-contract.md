@@ -36,7 +36,7 @@ Adapter 安装前按已核验文件清单生成独立暂存副本，再次验证
 ## 两阶段检查，不把“静态合法”当作“运行成功”
 
 1. **确认前的静态检查。** Node 执行入口和 Python Doctor 校验 Candidate 自有 runtime。Doctor 还验证模型 overlay 可确切命中声明的入口；成功标记为 `CANDIDATE_RUNTIME_VERIFIED`。缺少这个能力标记的旧 Adapter 不能执行新契约。Bounded diagnostic 的计划也必须携带完整 runtime 身份，确认后重新验证输入。
-2. **获准启动后的 Task 内检查。** Adapter 检查精确 Node 版本、所需基础命令以及 `/opt/harbor-acp-venv` 中的 `agent-client-protocol==0.12.1`。环境不足时明确失败，不临时安装另一套 Node、SDK 或 ACP 应用。
+2. **获准启动后的 Task 内检查。** Adapter 检查精确 Node 版本、所需基础命令以及 `/opt/harbor-acp-venv` 中的 `agent-client-protocol==0.12.1`。Docker 模式由 Task 镜像提供该环境；默认 Host 模式把路径映射到 Adapter venv，并要求宿主机提供 Candidate 声明的精确 Node 版本。环境不足时明确失败，不临时安装另一套 Node、SDK 或 ACP 应用。
 3. **同锁安装。** 执行 `npm ci --omit=dev --ignore-scripts --no-audit --no-fund`，隔离 Host npm 配置和缓存。不回退到 `npm install`，不使用 `--force` 或 `--legacy-peer-deps`。
 4. **无评测提示词的 ACP readiness。** 用同一个已安装 launcher 完成 `initialize → session/new`，设置超时，并禁止通过本项目网关发起模型请求。这里只证明协议和会话可用，不证明任务完成。
 5. **正式运行。** Harbor ACP Runner 启动同一份已安装入口，保留 Task 工作目录、发送真实任务提示词并采集事件和 ATIF。此时才可能消费 Host Broker 授予的模型额度。

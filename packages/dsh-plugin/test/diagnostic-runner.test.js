@@ -58,7 +58,7 @@ async function harness(overrides = {}) {
     assert.fail(`Unexpected process arguments ${args[0]}`)
   }
   const owner = { sessionId: 'session-1', projectRoot: root }
-  return { root, owner, calls, leases, closed, plan, materialized, runner: new DiagnosticRunner({ projectRoot: root, jobsDir: 'jobs', harborDshBin: 'harbor-dsh-test-double', harborBin: 'harbor-test-double' }, modelRuntime, { runProcess, platform: overrides.platform }) }
+  return { root, owner, calls, leases, closed, plan, materialized, runner: new DiagnosticRunner({ projectRoot: root, jobsDir: 'jobs', harborDshBin: 'harbor-dsh-test-double', harborBin: 'harbor-test-double', ...overrides.config }, modelRuntime, { runProcess, platform: overrides.platform }) }
 }
 
 test('prepare is read-only and does not open a lease, materialize or launch a Job', async () => {
@@ -67,7 +67,7 @@ test('prepare is read-only and does not open a lease, materialize or launch a Jo
   assert.equal(plan.planDigest, h.plan.planDigest)
   assert.deepEqual(await readdir(h.root), [])
   assert.equal(h.leases.length, 0)
-  assert.deepEqual(h.calls.filter(call => call.command !== 'docker').map(call => call.args.slice(0, 2)), [['diagnostic-subset', 'plan'], ['docker-check'], ['--version']])
+  assert.deepEqual(h.calls.map(call => call.args.slice(0, 2)), [['diagnostic-subset', 'plan'], ['--version']])
   assert.deepEqual(JSON.parse(h.calls[0].options.input), { projectRoot: h.root, sourceJobDir: path.join(h.root, 'jobs/source'), trialIds: ['trial-1'] })
 })
 
@@ -76,7 +76,7 @@ test('execute uses the fixed bounded CLI and a scoped lease, never promotion fla
   const spawns = []
   const result = await h.runner.execute(h.plan, { owner: h.owner, operationId: 'hop_test-1', onSpawn: (pid, detail) => spawns.push({ pid, detail }) })
   const call = h.calls.find(call => call.args[0] === 'run')
-  assert.deepEqual(call.args.slice(call.args.indexOf('-n'), call.args.indexOf('-n') + 8), ['-n', '2', '-k', '1', '--max-retries', '0', '-e', 'docker'])
+  assert.deepEqual(call.args.slice(call.args.indexOf('-n'), call.args.indexOf('-n') + 8), ['-n', '2', '-k', '1', '--max-retries', '0', '-e', 'harbor_dsh_evolution.host_environment:HostEnvironment'])
   assert.ok(call.args.includes('mode=diagnostic'))
   assert.ok(call.args.includes('harbor_dsh_evolution.agent:DshCandidateAgent'))
   assert.ok(call.args.includes('harbor_dsh_evolution.diagnostic_plugin:BoundedDiagnosticPlugin'))
@@ -84,14 +84,15 @@ test('execute uses the fixed bounded CLI and a scoped lease, never promotion fla
   assert.equal(call.options.timeoutMs, 900_000)
   assert.equal(call.options.killGraceMs, 30_000)
   assert.equal(call.options.env.HSE_MODEL_GATEWAY_TOKEN, 'temporary-gateway-test-secret')
-  assert.deepEqual(h.leases[0].scope, { candidateDigest: digest('b'), jobName: 'diagnostic-test-1', maxRequests: 96, maxResponseBytes: 1_048_576 })
+  assert.deepEqual(h.leases[0].scope, { candidateDigest: digest('b'), jobName: 'diagnostic-test-1', advertisedHost: '127.0.0.1', maxRequests: 96, maxResponseBytes: 1_048_576 })
   assert.equal(h.closed.length, 1)
   assert.equal(spawns[0].pid, 42)
   assert.equal(spawns[0].detail.job, 'diagnostic-test-1')
-  assert.equal(spawns[0].detail.process.dockerTransport, 'pinned-local-unix/v1')
+  assert.equal(spawns[0].detail.process.dockerTransport, 'none')
+  assert.equal(spawns[0].detail.process.executionEnvironment, 'host')
   assert.match(spawns[0].detail.process.hostIdentity, /^sha256:[a-f0-9]{64}$/)
   assert.equal(call.options.env.DOCKER_CONTEXT, undefined)
-  assert.match(call.options.env.DOCKER_HOST, /^unix:\/\/\//)
+  assert.equal(call.options.env.DOCKER_HOST, undefined)
   assert.equal(result.schema, 'harbor-diagnostic-operation-result/v1')
   assert.equal(result.jobName, 'diagnostic-test-1')
   assert.equal(result.job, result.jobName)
@@ -121,7 +122,7 @@ test('unsupported broker budgets block before materialization or lease', async (
 })
 
 test('runtime blockers are actionable and cannot start a Job', async () => {
-  const h = await harness({ process: (_command, args) => args[0] === 'docker-check' ? { code: 2, stdout: '{"valid":false,"findings":[{"level":"error","code":"DOCKER_DAEMON_UNAVAILABLE","message":"/secret/path"}]}', stderr: '' } : undefined })
+  const h = await harness({ config: { executionEnvironment: 'docker' }, process: (_command, args) => args[0] === 'docker-check' ? { code: 2, stdout: '{"valid":false,"findings":[{"level":"error","code":"DOCKER_DAEMON_UNAVAILABLE","message":"/secret/path"}]}', stderr: '' } : undefined })
   await assert.rejects(h.runner.prepare({ owner: h.owner, sourceJobDir: 'jobs/source', trialIds: ['trial-1'] }), error => /RUNTIME_BLOCKED.*DOCKER_DAEMON_UNAVAILABLE/.test(error.message) && !/secret/.test(error.message))
   assert.equal(h.leases.length, 0)
 })
@@ -158,7 +159,7 @@ test('old or incomplete Adapter plans fail closed before model resolution and ca
 })
 
 test('remote Docker transports are blocked in preflight before materialization or model lease', async () => {
-  const h = await harness({ process: (command, args) => command === 'docker' && args[0] === 'context' && args[1] === 'inspect' ? { code: 0, stdout: 'tcp://remote-docker:2376', stderr: '' } : undefined })
+  const h = await harness({ config: { executionEnvironment: 'docker' }, process: (command, args) => command === 'docker' && args[0] === 'context' && args[1] === 'inspect' ? { code: 0, stdout: 'tcp://remote-docker:2376', stderr: '' } : undefined })
   await assert.rejects(h.runner.prepare({ owner: h.owner, sourceJobDir: 'jobs/source', trialIds: ['trial-1'] }), /RUNTIME_UNSUPPORTED.*local Docker Unix socket/)
   assert.equal(h.leases.length, 0)
   assert.equal(h.calls.some(call => call.args[1] === 'materialize' || call.args[0] === 'run'), false)

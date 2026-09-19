@@ -458,12 +458,12 @@ test('a recovered infrastructure retry remains a diagnostic operation even witho
   ui.dispose()
 })
 
-test('cancelled Host processes keep Docker cleanup and the held workspace lock explicit', async () => {
+test('cancelled Host processes keep runtime cleanup and the held workspace lock explicit', async () => {
   for (const status of ['CANCELLED', 'FAILED']) {
     const current = { ...operation(status, 4, { code: 'HARBOR_PROCESS_CANCELLED', cleanupRequired: true }), cleanupRequired: true }
     const ui = await cardHarness({ draft: diagnosticDraft, request: async () => current }, { effects: true })
     ui.render(); await nextTick()
-    assert.ok(ui.render().some(node => node.props.role === 'alert' && typeof node.props.children === 'string' && node.props.children.includes('Docker resource cleanup still requires verification')))
+    assert.ok(ui.render().some(node => node.props.role === 'alert' && typeof node.props.children === 'string' && node.props.children.includes('runtime cleanup still requires verification')))
     assert.ok(ui.render().some(node => typeof node.props.children === 'string' && node.props.children.includes('workspace diagnostic lock remains held')))
     assert.equal(ui.render().some(node => node.type === 'button' && /Confirm and start|Stop diagnostic/.test(node.props.children)), false)
     ui.dispose()
