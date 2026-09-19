@@ -7,14 +7,15 @@ from harbor_dsh_evolution.candidate import load_manifest
 from helpers import MODEL_BINDING, make_candidate, make_context, make_dataset, make_stack
 
 
-def test_context_v2_is_stable_portable_and_excludes_candidate_from_comparability(tmp_path: Path):
+def test_context_v3_is_stable_portable_and_excludes_candidate_from_comparability(tmp_path: Path):
     candidate_v1 = make_candidate(tmp_path, version="1.0.0")
     candidate_v2 = make_candidate(tmp_path, version="2.0.0", content="v2")
     dataset = make_dataset(tmp_path)
     stack = make_stack(tmp_path)
     first = make_context(tmp_path, candidate_v1, dataset, stack)
     second = make_context(tmp_path, candidate_v2, dataset, stack)
-    assert first["schema_version"] == 2
+    assert first["schema_version"] == 3
+    assert first["execution_environment"]["kind"] == "host"
     assert first["digest"] == second["digest"]
     assert first["full_digest"] != second["full_digest"]
     assert first["candidate"]["digest"] != second["candidate"]["digest"]

@@ -20,7 +20,7 @@ POLICY = {
 def context():
     component = lambda role: {"id": role, "version": "1", "digest": f"sha256:{role}", "reward_affecting": role != "runner"}
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "digest": "sha256:context",
         "mode": "promotion-eligible",
         "dataset": {"dataset_id": "search", "version": "1", "source_digest": "sha256:dataset"},
@@ -28,6 +28,7 @@ def context():
             "components": {role: component(role) for role in ("integration", "renderer", "evaluator", "rubric", "runner")},
             "judge": {"provider": "local", "model": "judge", "version": "1"},
         },
+        "execution_environment": {"kind": "host", "runtime_fingerprint": "sha256:host"},
     }
 
 
@@ -70,6 +71,19 @@ def test_rejects_rubric_and_judge_mismatch_with_codes():
     candidate["evaluation_context"]["evaluation_stack"]["judge"]["version"] = "2"
     report = evaluate_promotion(baseline, candidate, POLICY)
     assert {"RUBRIC_MISMATCH", "JUDGE_MODEL_MISMATCH"}.issubset(codes(report))
+
+
+def test_rejects_execution_environment_mismatch():
+    baseline = summary("v1", reward=0.4, citation_accuracy=0.8, latency=2, search_validity=1)
+    candidate = summary("v2", reward=0.8, citation_accuracy=0.9, latency=2, search_validity=1)
+    candidate["evaluation_context"] = deepcopy(candidate["evaluation_context"])
+    candidate["evaluation_context"]["execution_environment"] = {
+        "kind": "docker",
+        "runtime_fingerprint": "sha256:docker",
+    }
+    report = evaluate_promotion(baseline, candidate, POLICY)
+    assert report["decision"] == "REJECT"
+    assert "EXECUTION_ENVIRONMENT_MISMATCH" in codes(report)
 
 
 def test_rejects_context_v1_infrastructure_errors_and_invalid_artifacts():

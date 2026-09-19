@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/istarwyh/harbor-self-evolving/schemas/evaluation-context.schema.json",
-  "title": "Harbor DSH Evaluation Context v2",
+  "title": "Harbor DSH Evaluation Context v3",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "digest", "full_digest", "mode", "candidate", "dataset", "evaluation_stack", "candidate_model_binding", "runtime"],
+  "required": ["schema_version", "digest", "full_digest", "mode", "candidate", "dataset", "evaluation_stack", "candidate_model_binding", "execution_environment", "runtime"],
   "properties": {
-    "schema_version": { "const": 2 },
+    "schema_version": { "const": 3 },
     "digest": { "$ref": "#/$defs/digest" },
     "full_digest": { "$ref": "#/$defs/digest" },
     "mode": { "enum": ["diagnostic", "promotion-eligible"] },
@@ -56,6 +56,7 @@
         "protocol": { "const": "dsh-host-model-gateway/v1" }
       }
     },
+    "execution_environment": { "$ref": "#/$defs/execution_environment" },
     "runtime": {
       "type": "object",
       "additionalProperties": false,
@@ -67,5 +68,16 @@
       }
     }
   },
-  "$defs": { "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" } }
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "execution_environment": {
+      "type": "object",
+      "required": ["kind", "provider", "runtime_fingerprint"],
+      "properties": {
+        "kind": { "enum": ["host", "docker"] },
+        "provider": { "type": "string", "minLength": 1 },
+        "runtime_fingerprint": { "$ref": "#/$defs/digest" }
+      }
+    }
+  }
 }

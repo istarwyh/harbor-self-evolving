@@ -1180,7 +1180,7 @@ export async function readComparison(config, args) {
     }, baseline, candidate, baselineContract, candidateContract, baselineLifecycle, candidateLifecycle, baselineContext, candidateContext)
   }
   const reasons = []
-  if (baselineContext?.schema_version !== 2 || candidateContext?.schema_version !== 2) reasons.push('Context v2 is required')
+  if (baselineContext?.schema_version !== 3 || candidateContext?.schema_version !== 3) reasons.push('Context v3 is required')
   if (!baselineContext?.digest || baselineContext.digest !== candidateContext?.digest) reasons.push('Evaluation Context differs; establish a fresh baseline')
   if (baselineContract?.contract_id !== candidateContract?.contract_id || baselineContract?.version !== candidateContract?.version) reasons.push('Evaluation Contract identity differs')
   const directions = Object.fromEntries((candidateContract?.metrics ?? []).map(item => [item.id, item.direction ?? 'maximize']))
@@ -1308,7 +1308,7 @@ export async function readEvaluatorGovernance(config, args) {
         'Inspect the current Evaluator, Rubric, Judge, Contract, and representative false-positive/false-negative Trials.',
         'Create a new Evaluator/Rubric/Judge identity and source file; never overwrite the historical identity.',
         'Run meta-evaluation against independently maintained, provenance-bearing GT and report ESF, SCE, RCR, latency, and cost as applicable.',
-        'Update Evaluation Stack identity and preview Context v2 impact.',
+        'Update Evaluation Stack identity and preview Context v3 impact.',
         'Establish a fresh Agent baseline before comparing Agent Candidates under the new reward semantics.',
       ],
       freshBaselineRequiredWhen: ['evaluator digest changes', 'rubric digest changes', 'judge identity or parameters change'],

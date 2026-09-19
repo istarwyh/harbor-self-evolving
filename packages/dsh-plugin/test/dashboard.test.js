@@ -15,8 +15,8 @@ async function makeJob(projectRoot, name = 'candidate-v2', nTrials = 4) {
   const job = path.join(projectRoot, 'jobs', name)
   await mkdir(path.join(job, 'trial-assessments'), { recursive: true })
   const trials = Array.from({ length: nTrials }, (_, index) => ({ id: `trial-${index}`, name: `query ${index}`, rewards: { reward: index / Math.max(1, nTrials) }, exception: index === 1 ? { type: 'Timeout', classification: 'infrastructure' } : null }))
-  await writeFile(path.join(job, 'evaluation-summary.json'), JSON.stringify({ schema_version: 2, job: name, mode: 'promotion-eligible', candidate: { candidate_id: 'research-agent', version: '2.0.0', digest: 'sha256:candidate-v2' }, evaluation_context: { schema_version: 2, digest: 'sha256:context-stable' }, n_trials: nTrials, n_exceptions: 1, metrics: { reward: 0.82, citation_accuracy: 0.91 }, trials, artifact_validation: { valid: true } }))
-  await writeFile(path.join(job, 'evaluation-context.json'), JSON.stringify({ schema_version: 2, digest: 'sha256:context-stable', full_digest: 'sha256:full', candidate: {}, dataset: {}, evaluation_stack: {}, runtime: {} }))
+  await writeFile(path.join(job, 'evaluation-summary.json'), JSON.stringify({ schema_version: 2, job: name, mode: 'promotion-eligible', candidate: { candidate_id: 'research-agent', version: '2.0.0', digest: 'sha256:candidate-v2' }, evaluation_context: { schema_version: 3, digest: 'sha256:context-stable' }, n_trials: nTrials, n_exceptions: 1, metrics: { reward: 0.82, citation_accuracy: 0.91 }, trials, artifact_validation: { valid: true } }))
+  await writeFile(path.join(job, 'evaluation-context.json'), JSON.stringify({ schema_version: 3, digest: 'sha256:context-stable', full_digest: 'sha256:full', candidate: {}, dataset: {}, evaluation_stack: {}, execution_environment: { kind: 'host', runtime_fingerprint: 'sha256:host' }, runtime: {} }))
   await writeFile(path.join(job, 'evaluation-contract.json'), JSON.stringify({ schema_version: 1, contract_id: 'search', version: '1', primary_metric: 'reward', metrics: [{ id: 'reward', direction: 'maximize' }] }))
   await writeFile(path.join(job, 'trial-assessments', 'trial-0.json'), JSON.stringify({
     schema_version: 1,
@@ -124,7 +124,7 @@ async function makeHistoricalJob(projectRoot, name = 'session-diagnostic') {
   return job
 }
 
-test('dashboard is a lightweight Context v2 overview', async () => {
+test('dashboard is a lightweight Context v3 overview', async () => {
   const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-'))
   await makeJob(projectRoot)
   await mkdir(path.join(projectRoot, 'jobs', 'pending'))

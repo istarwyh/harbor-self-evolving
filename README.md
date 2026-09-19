@@ -16,14 +16,14 @@
 
 ## 一条命令安装
 
-要求：Docker、Node.js 22+、pnpm 和 [uv](https://docs.astral.sh/uv/)。进入你的业务 Agent 工作区后执行：
+要求：Node.js 22+、pnpm 和 [uv](https://docs.astral.sh/uv/)。默认使用宿主机执行，不需要 Docker。进入你的业务 Agent 工作区后执行：
 
 ```bash
 cd /absolute/path/to/your-agent-workspace
 npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 ```
 
-安装器会让 npm Plugin 与 Python Adapter 使用同一个正式版本；需要完全固定版本时，把 `latest` 改为 `0.9.5`。
+安装器会让 npm Plugin 与 Python Adapter 使用同一个正式版本；需要完全固定版本时，把 `latest` 改为 `0.9.6`。
 
 默认安装到 DSH 的 `web` profile。`setup` 会一次完成：
 
@@ -33,6 +33,8 @@ npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 4. 验证 Harbor、`dsh-evolution` / `dsh-historical-evaluation` entry point 和 `harbor-dsh` CLI。
 
 它只更新 profile 中的 `harbor-evolution` 配置块，不会覆盖其他用户配置；重复执行会更新同一个安装，不会产生重复条目。
+
+默认 `executionEnvironment: "host"`：Harbor 的 Agent、Verifier 与任务命令直接以当前用户身份在宿主机运行，不提供隔离、网络策略或资源限制，任务依赖必须已安装在宿主机。需要原 Docker 行为时，在 profile 配置中显式改为 `executionEnvironment: "docker"`；也可在评测工具参数中单次覆盖。
 
 安装完成后，停止旧的 DSH 进程，并执行安装器打印出的启动命令。默认形式是：
 
@@ -65,7 +67,7 @@ Skill 会先检查文件，再围绕四个用户可理解的概念补齐必要�
 
 GUI 的业务资源写操作限于三个明确入口：已授权 Evaluator 文件保存为新版本；Historical Session 的 `预览 → 用户确认 → 后台运行 → 打开 Job`；Action Draft 经预检、人工确认后保存本地草稿与操作审计（选定 Compare 仍为只读）。页面引用绑定还会保存私有的身份与修订元数据，不写入证据正文。支持的宿主在用户从 Harbor 页面发送普通消息时，将冻结页面引用和问题一起提交到同一个 Chat Session；离开 Harbor 或存在显式引用时，不补入隐式页面引用。准备失败保留草稿，不悄悄发送无上下文的问题。单纯刷新、读取和切换工作空间不会发送消息或启动 Agent、Job、Gate、晋级、部署、发布或生产修改。Candidate 评测与 Promotion Gate 等高成本或可晋级动作仍由官方 Skill 在澄清需求后显式提出，并在每次 Agent 调用写入或评测工具前经过 DSH 可审计的一次性用户批准；审批通道不可用时拒绝执行。
 
-完整 AI 工作台 PRD 尚未全部实现。有界诊断/重试运行器、长任务 Operation 与可重放事件仍待补齐；当前预检会明确阻断这些动作，不把保存草稿伪装成已运行。已执行的真实模型/浏览器验收与未完成项见 [验收记录](docs/ai-workbench-acceptance.md)。
+完整 AI 工作台 PRD 尚未全部实现。有界诊断/重试运行器、长任务 Operation 与可重放事件仍待补齐；当前预检会明确阻断这些动作，不把保存草稿伪装成已运行。已执行的验收边界与未完成项见 [当前验收状态](docs/acceptance-status.md)，逐版本证据见 [发布图集](docs/releases/README.md)。
 
 常用安装选项：
 
@@ -77,7 +79,7 @@ GUI 的业务资源写操作限于三个明确入口：已授权 Evaluator 文�
 | `--dsh-home <path>` | `$DSH_HOME` 或 `~/.dsh` | 使用隔离或自定义的 DSH 状态目录 |
 | `--runtime-dir <path>` | `~/.local/share/harbor-dsh-evolution` | Harbor Python 运行环境 |
 
-完整的 UI 确认、首次评测和排错方法见 [本地 DSH Web 快速开始](docs/dsh-web-quickstart.md)。
+完整的 UI 确认、首次评测和排错方法见 [本地 DSH Web 快速开始](docs/dsh-web-quickstart.md)；按角色和场景查找其他资料见 [文档导航](docs/README.md)。
 
 ## 用户实际获得的能力
 
@@ -91,7 +93,7 @@ Plugin 注册 19 个确定性工具：
 - `harbor_session_diagnostic_preview`：只读预览当前工作区最近完成的 DSH 会话、安全元数据、Judge 身份、耦合关系和本地保留范围，并返回短期确认令牌。
 - `harbor_session_diagnostic_run`：确认后冻结脱敏会话，按“一条会话一个 Trial”运行不可晋级的 Historical Generation Evaluation Job；不会重新执行 Candidate。
 - `harbor_dataset_validate`：验证任务、路径、敏感字段、Dataset source digest，并复现 Harbor 的运行时 Task 解析；Dataset 根目录下必须是一级 Task 子目录，`task.toml` 使用 `schema_version = "1.4"` 和 `org/name`。
-- `harbor_context_preview`：经逐次批准刷新 Candidate manifest，再预览 Context v2、可比 baseline 和 fresh-baseline 要求。
+- `harbor_context_preview`：经逐次批准刷新 Candidate manifest，再预览 Context v3、可比 baseline 和 fresh-baseline 要求。
 - `harbor_eval_run`：运行显式的 `diagnostic` 或 `promotion-eligible` Job。
 - `harbor_eval_result`：读取规范化 Summary，或按 `view=job|progress|dataset|trial|governance` 读取脱敏后的阶段、指令、生成产物与评测器治理证据；返回 `harbor-agent-read/v1`，实际 payload 位于 `data`。
 - `harbor_resolve_page_context`：在调用方的精确 DSH Session 与工作空间内解析 `@harbor` 或普通消息的 Context Snapshot，重新校验对象、修订与权威身份。上下文及集合绑定会将身份和修订保存在项目 `.harbor/private/page-contexts/` 的会话隔离目录，不保存证据正文或凭据，并带 Git 排除规则。15 分钟仅限制内存缓存，新快照可跨宿主重启重读；旧版本未落盘引用、删除或损坏的记录仍需重新选择，已有记录不自动迁移或清理。证据变化会标记只读漂移，集合成员变化则拒绝，不会重跑查询或悄悄换对象。显式局部对象返回有预算、已脱敏的 `selectedEvidence`；批量选择仅返回冻结的成员身份与修订，Trial 证据仍需另行读取。
@@ -133,7 +135,7 @@ PROMOTE / REJECT 建议 → 交给既有 CI/CD 发布
 candidate-manifest.json     # 本次到底评测了谁
 dataset-manifest.json       # 任务人口、路径和 source digest
 evaluation-stack-manifest.json # 八个角色、Judge 与完整/可比 digest
-evaluation-context.json     # Context v2：本次是否可与 baseline 比较
+evaluation-context.json     # Context v3：含执行环境身份及 baseline 可比性
 architecture-doctor.json   # 角色边界和正式评测阻断项
 evaluation-contract.json   # 指标语义、方向、分组和硬约束
 candidate-events.jsonl      # Trial 完成事件
@@ -150,7 +152,7 @@ optimization-report.json    # 带护栏和回滚条件的下一实验
 promotion-report.json       # 晋级或拒绝及原因
 ```
 
-Promotion Gate 会先检查 Context v2、Dataset、Integration、Renderer、Evaluator、Rubric、Judge、语义 Runner、产物 Schema、Trial 覆盖、Score Validity 和基础设施异常，再按指标方向判断提升、最小/最大阈值与非回归。Harbor Job 跑完不等于 Candidate 已通过 Gate；Diagnostic Job、Reporter 和 Optimizer 都不能自动 Gate。
+Promotion Gate 会先检查 Context v3（包括执行环境身份）、Dataset、Integration、Renderer、Evaluator、Rubric、Judge、语义 Runner、产物 Schema、Trial 覆盖、Score Validity 和基础设施异常，再按指标方向判断提升、最小/最大阈值与非回归。Harbor Job 跑完不等于 Candidate 已通过 Gate；Diagnostic Job、Reporter 和 Optimizer 都不能自动 Gate。
 
 ### Candidate 复用当前 DSH 模型
 
@@ -216,7 +218,7 @@ packages/dsh-plugin/       # npm Plugin、Skill、Web GUI、工具与一键安�
 packages/harbor-plugin/    # Python Adapter、Job Plugin、summary 与 Gate
 examples/deep-research/    # DSH ACP → Harbor → Promotion 参考实现
 examples/shell-minimal/    # 最小 Harbor Candidate 参考实现
-schemas/                   # Evaluator、Stack、Dataset、Context v2、Trial、Population、Optimization 与 Gate 契约
+schemas/                   # Evaluator、Stack、Dataset、Context v3、Trial、Population、Optimization 与 Gate 契约
 docs/                      # 架构、接入、Web 快速开始与安全边界
 ```
 

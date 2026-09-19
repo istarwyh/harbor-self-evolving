@@ -1,0 +1,17 @@
+Harbor 0.9.6 local validation
+Captured: 2026-09-19 Asia/Shanghai (UTC+08:00)
+Candidate: codex/release-0.9.6 working tree before release commit
+Environment: macOS 15.6.1 arm64; Node 22.22.3; npm 10.9.8; pnpm 11.25.0; uv 0.12.5; Python 3.12.14
+Evidence type: local source tests and package builds; synthetic fixtures; no model/provider calls
+
+Results:
+- ./hse test: passed with exit code 0
+- Python test suite: 321 passed in 16.64 seconds
+- Node test suite: 593 passed; 0 failed, cancelled, skipped or todo
+- Python build: harbor_dsh_evolution-0.9.6-py3-none-any.whl and harbor_dsh_evolution-0.9.6.tar.gz built successfully
+- npm pack: dsh-harbor-evolution-0.9.6.tgz; 53 files; package version 0.9.6
+- ./hse doctor: passed; execution environment host; Docker not required; Harbor 0.21.0 and dsh-evolution discovered
+- harbor-dsh host-check: valid=true with HOST_RUNTIME_READY
+- git diff --check, bash -n hse, Node entrypoint syntax and repeated Web client build: passed
+
+Boundary: this record does not claim a real Candidate, Historical Session, paid-model, real-provider, Docker, business-quality or complete PRD acceptance run.

@@ -37,6 +37,7 @@ test('setup paths use isolated runtime and DSH homes', () => {
   assert.equal(options.projectRoot, '/workspace/agent')
   assert.equal(options.dshHome, '/users/tester/.dsh')
   assert.equal(options.harborBin, '/users/tester/.local/share/harbor-dsh-evolution/.venv/bin/harbor')
+  assert.equal(options.executionEnvironment, 'host')
 })
 
 test('profile patch replaces only harbor-evolution and preserves other entries', () => {
@@ -60,6 +61,7 @@ test('profile patch replaces only harbor-evolution and preserves other entries',
   })
   assert.match(updated, /model: example/)
   assert.match(updated, /projectRoot: "\/new agent"/)
+  assert.match(updated, /executionEnvironment: "host"/)
   assert.match(updated, /- insert:\n    - id: custom/)
   assert.equal((updated.match(/- id: harbor-evolution/g) ?? []).length, 1)
 })
@@ -143,4 +145,5 @@ test('setup installs both runtimes, writes an idempotent profile patch, and veri
   const sourceBuildCalls = calls.filter(call => call.command === 'npm' && call.args[0] === 'run' && call.args[1] === 'build')
   assert.equal(sourceBuildCalls.length, 2)
   assert.equal(sourceBuildCalls[0].options.cwd, pluginSource)
+  assert.equal(calls.some(call => call.command === 'docker'), false)
 })

@@ -1,17 +1,19 @@
 # 本地 DSH Web 快速开始
 
-版本组合：支持 `conversation.contexts.register` 的配套宿主可使用普通消息自动上下文；Plugin + Skill `0.9.5`、Harbor Adapter `0.9.5`、Harbor `0.21.x`。旧宿主保留 Ask AI / `@harbor` 显式引用，单独升级插件不会增加宿主能力。
+版本组合：支持 `conversation.contexts.register` 的配套宿主可使用普通消息自动上下文；Plugin + Skill `0.9.6`、Harbor Adapter `0.9.6`、Harbor `0.21.x`。旧宿主保留 Ask AI / `@harbor` 显式引用，单独升级插件不会增加宿主能力。
 
 ## 安装与重启
 
-要求 Docker、Node.js 22+、pnpm、uv。在业务 Agent 工作区运行：
+要求 Node.js 22+、pnpm、uv；默认宿主机模式不需要 Docker。在业务 Agent 工作区运行：
 
 ```bash
 cd /absolute/path/to/agent-workspace
-npx --yes dsh-harbor-evolution@0.9.5 setup --project-root "$PWD"
+npx --yes dsh-harbor-evolution@0.9.6 setup --project-root "$PWD"
 ```
 
 GitHub URL 是文档/源码入口，正式用户仍使用 npm 安装；不要直接 link 新 checkout。安装器会建立独立 Harbor venv、安装同版本 Python Adapter、把 Plugin + Skill 写入 `web` profile、保存 CLI 路径，并验证 `dsh-evolution` 与 `dsh-historical-evaluation` 两个 Harbor entry point。
+
+安装后默认写入 `executionEnvironment: "host"`。评测命令会以当前用户直接访问宿主机文件、进程和网络，不提供隔离或资源限制；确保任务所需依赖已经安装即可。只有显式改成 `executionEnvironment: "docker"` 时才需要 Docker。
 
 停止旧 DSH 进程，复制安装器输出的启动命令：
 
@@ -42,6 +44,9 @@ harbor_dataset_validate
 harbor_context_preview
 harbor_eval_run
 harbor_eval_result
+harbor_resolve_page_context
+harbor_get_evidence
+harbor_propose_action
 harbor_evaluator_inspect
 harbor_evaluator_update
 harbor_ground_truth_init
@@ -56,7 +61,7 @@ harbor_candidate_compare
 最简单的入口不需要输入命令：
 
 1. 打开对话页的 `Harbor` Tab，确认当前工作空间正确。
-2. 点击 `评测最近会话`。页面只读预览最多 10 条合格会话的安全元数据。
+2. 点击 `评测最近会话`。Web 入口会只读预览并自动选取最多 3 条合格会话的安全元数据；Agent/Skill 工具可显式请求最多 10 条。
 3. 核对会话数量、Evaluator/Judge、模型耦合、预计请求、有效期和本地证据目录。
 4. 点击 `确认并开始评测`。Job 在后台运行；窗口可以关闭，完成后 Workbench 会自动打开对应 Job。
 
@@ -129,9 +134,9 @@ Workbench 会跟随 DSH 语言设置展示九个阶段。「候选版本」先�
 | 现象 | 处理 |
 | --- | --- |
 | 插件没有 Harbor Tab | 确认装入 `web` profile，停止旧进程并重启 |
-| 工具存在但 Skill 不出现 | 确认 `harbor-evolution` 版本为 `0.9.5` 并重启 |
+| 工具存在但 Skill 不出现 | 确认 `harbor-evolution` 版本为 `0.9.6` 并重启 |
 | `spawn harbor ENOENT` | 重新运行 setup 保存绝对 CLI 路径 |
-| Harbor 找不到 `dsh-evolution` 或 `dsh-historical-evaluation` | Adapter 与 Harbor 不在同一 venv，或仍是旧版；重新运行 0.9.5 setup |
+| Harbor 找不到 `dsh-evolution` 或 `dsh-historical-evaluation` | Adapter 与 Harbor 不在同一 venv，或仍是旧版；重新运行 0.9.6 setup |
 | Preview 报 `NO_ELIGIBLE_SESSIONS` | 当前 exact-cwd 没有合格已完成业务会话；先完成真实任务或提供显式 Query/Dataset |
 | Historical Job 显示 `completed-unscored` | 正常证据弃权；查看缺失 Criterion 和 coverage，不要当成质量 0 分 |
 | Apple Silicon 安装时编译 `cryptography` 失败 | 检查是否误选 x86_64 Python；按 troubleshooting 使用 `uv` managed Python |

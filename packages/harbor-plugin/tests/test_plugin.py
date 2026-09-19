@@ -46,7 +46,8 @@ async def test_plugin_persists_strict_identity_artifacts(tmp_path: Path):
     await plugin.on_job_start(fake_job(tmp_path, dataset))
     job = tmp_path / "jobs" / "job"
     context = json.loads((job / "evaluation-context.json").read_text())
-    assert context["schema_version"] == 2
+    assert context["schema_version"] == 3
+    assert context["execution_environment"]["kind"] == "host"
     assert context["dataset"]["dataset_id"] == "vertical-search"
     assert context["candidate_model_binding"] == MODEL_BINDING
     assert (job / "dataset-manifest.json").is_file()
