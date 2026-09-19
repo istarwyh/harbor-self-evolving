@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" role="img">
+<title>Harbor Self-Evolving architecture</title>
+<style>text{font-family:'Helvetica Neue',Helvetica,Arial,'PingFang SC','Microsoft YaHei',sans-serif}.t{fill:#0f172a;font-size:25px;font-weight:700}.s{fill:#64748b;font-size:13px}.n{fill:#0f172a;font-size:15px;font-weight:650}.d{fill:#475569;font-size:12px}.tag{fill:#0b6f8f;font-size:11px;font-weight:700;letter-spacing:.7px}</style>
+<defs><marker id="ab" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#2563eb"/></marker><marker id="ag" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#059669"/></marker><marker id="ap" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#7c3aed"/></marker><filter id="sh" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#0f172a" flood-opacity=".09"/></filter></defs>
+<rect width="960" height="600" fill="#f8fafc"/>
+<text class="t" x="48" y="52">Harbor Self-Evolving architecture</text>
+<text class="s" x="48" y="77">Native DSH experience, strict Harbor identities, separate deployment authority</text>
+<g filter="url(#sh)"><rect x="48" y="120" width="200" height="110" rx="12" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/></g>
+<text class="tag" x="66" y="144">INPUT</text>
+<text class="n" x="66" y="167">DeepSeek Harness</text>
+<text class="d" x="66" y="189">Agent · Session · Web GUI</text>
+<text class="d" x="66" y="206">current workspace</text>
+<g filter="url(#sh)"><rect x="300" y="105" width="200" height="140" rx="12" fill="#f0fdfa" stroke="#99f6e4" stroke-width="1.5"/></g>
+<text class="tag" x="318" y="129">PRODUCT</text>
+<text class="n" x="318" y="152">DSH Plugin</text>
+<text class="d" x="318" y="174">19 tools · Workbench</text>
+<text class="d" x="318" y="191">Host services · approvals</text>
+<g filter="url(#sh)"><rect x="552" y="105" width="160" height="140" rx="12" fill="#faf5ff" stroke="#e9d5ff" stroke-width="1.5"/></g>
+<text class="tag" x="570" y="129">POLICY</text>
+<text class="n" x="570" y="152">Skill</text>
+<text class="d" x="570" y="174">path selection</text>
+<text class="d" x="570" y="191">one controlled change</text>
+<g filter="url(#sh)"><rect x="760" y="105" width="152" height="140" rx="12" fill="#fff7ed" stroke="#fed7aa" stroke-width="1.5"/></g>
+<text class="tag" x="778" y="129">RUNTIME</text>
+<text class="n" x="778" y="152">Python Adapter</text>
+<text class="d" x="778" y="174">Generator · Evaluator</text>
+<text class="d" x="778" y="191">Optimizer wiring</text>
+<g filter="url(#sh)"><rect x="300" y="350" width="200" height="110" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/></g>
+<text class="tag" x="318" y="374">IDENTITY</text>
+<text class="n" x="318" y="397">Immutable artifacts</text>
+<text class="d" x="318" y="419">Candidate · Dataset</text>
+<text class="d" x="318" y="436">Stack · Context · Job</text>
+<g filter="url(#sh)"><rect x="552" y="350" width="160" height="110" rx="12" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.5"/></g>
+<text class="tag" x="570" y="374">OBSERVE</text>
+<text class="n" x="570" y="397">Evidence</text>
+<text class="d" x="570" y="419">Trials · criteria</text>
+<text class="d" x="570" y="436">validity · coverage</text>
+<g filter="url(#sh)"><rect x="760" y="350" width="152" height="110" rx="12" fill="#fef2f2" stroke="#fecaca" stroke-width="1.5"/></g>
+<text class="tag" x="778" y="374">DECIDE</text>
+<text class="n" x="778" y="397">Gate</text>
+<text class="d" x="778" y="419">PROMOTE / REJECT</text>
+<text class="d" x="778" y="436">no deployment</text>
+<path d="M248 175 L300 175 L300 175" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#ab)"/>
+<rect x="247.0" y="155" width="54" height="18" rx="4" fill="#f8fafc" opacity=".96"/>
+<text class="s" x="274.0" y="168" text-anchor="middle">native</text>
+<path d="M500 175 L552 175 L552 175" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#ap)"/>
+<rect x="481.5" y="155" width="89" height="18" rx="4" fill="#f8fafc" opacity=".96"/>
+<text class="s" x="526.0" y="168" text-anchor="middle">orchestrate</text>
+<path d="M712 175 L760 175 L760 175" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#ab)"/>
+<rect x="705.5" y="155" width="61" height="18" rx="4" fill="#f8fafc" opacity=".96"/>
+<text class="s" x="736.0" y="168" text-anchor="middle">execute</text>
+<path d="M860 245 L860 245 L860 350" fill="none" stroke="#059669" stroke-width="2" marker-end="url(#ag)"/>
+<rect x="833.0" y="225" width="54" height="18" rx="4" fill="#f8fafc" opacity=".96"/>
+<text class="s" x="860.0" y="238" text-anchor="middle">record</text>
+<path d="M760 405 L712 405 L712 405" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#ap)"/>
+<rect x="709.0" y="385" width="54" height="18" rx="4" fill="#f8fafc" opacity=".96"/>
+<text class="s" x="736.0" y="398" text-anchor="middle">policy</text>
+<path d="M552 405 L500 405 L500 405" fill="none" stroke="#059669" stroke-width="2" marker-end="url(#ag)"/>
+<rect x="499.0" y="385" width="54" height="18" rx="4" fill="#f8fafc" opacity=".96"/>
+<text class="s" x="526.0" y="398" text-anchor="middle">typed</text>
+<path d="M400 350 L400 350 L400 245" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#ab)"/>
+<rect x="369.5" y="330" width="61" height="18" rx="4" fill="#f8fafc" opacity=".96"/>
+<text class="s" x="400.0" y="343" text-anchor="middle">inspect</text>
+<line x1="48" y1="562" x2="76" y2="562" stroke="#2563eb" stroke-width="2"/>
+<text class="s" x="84" y="566">control</text>
+<line x1="198" y1="562" x2="226" y2="562" stroke="#059669" stroke-width="2"/>
+<text class="s" x="234" y="566">evidence</text>
+<line x1="348" y1="562" x2="376" y2="562" stroke="#7c3aed" stroke-width="2"/>
+<text class="s" x="384" y="566">policy</text>
+</svg>

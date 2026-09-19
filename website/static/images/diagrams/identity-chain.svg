@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" role="img">
+<title>Evaluation identity chain</title>
+<style>text{font-family:'Helvetica Neue',Helvetica,Arial,'PingFang SC','Microsoft YaHei',sans-serif}.t{fill:#0f172a;font-size:25px;font-weight:700}.s{fill:#64748b;font-size:13px}.n{fill:#0f172a;font-size:15px;font-weight:650}.d{fill:#475569;font-size:12px}.tag{fill:#0b6f8f;font-size:11px;font-weight:700;letter-spacing:.7px}</style>
+<defs><marker id="ab" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#2563eb"/></marker><marker id="ag" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#059669"/></marker><marker id="ap" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#7c3aed"/></marker><filter id="sh" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#0f172a" flood-opacity=".09"/></filter></defs>
+<rect width="960" height="600" fill="#f8fafc"/>
+<text class="t" x="48" y="52">Evaluation identity chain</text>
+<text class="s" x="48" y="77">Comparability is an explicit contract, not a repository name</text>
+<g filter="url(#sh)"><rect x="60" y="120" width="180" height="90" rx="12" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/></g>
+<text class="n" x="78" y="152">Candidate Manifest</text>
+<text class="d" x="78" y="174">source + composition</text>
+<g filter="url(#sh)"><rect x="280" y="120" width="180" height="90" rx="12" fill="#f0fdfa" stroke="#99f6e4" stroke-width="1.5"/></g>
+<text class="n" x="298" y="152">Dataset Manifest</text>
+<text class="d" x="298" y="174">tasks + source digest</text>
+<g filter="url(#sh)"><rect x="500" y="120" width="180" height="90" rx="12" fill="#faf5ff" stroke="#e9d5ff" stroke-width="1.5"/></g>
+<text class="n" x="518" y="152">Evaluation Stack</text>
+<text class="d" x="518" y="174">roles + versions</text>
+<g filter="url(#sh)"><rect x="720" y="120" width="180" height="90" rx="12" fill="#fff7ed" stroke="#fed7aa" stroke-width="1.5"/></g>
+<text class="n" x="738" y="152">Context</text>
+<text class="d" x="738" y="174">runtime + models</text>
+<path d="M240 165 L280 165 L280 165" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#ab)"/>
+<rect x="233.0" y="145" width="54" height="18" rx="4" fill="#f8fafc" opacity=".96"/>
+<text class="s" x="260.0" y="158" text-anchor="middle">bind</text>
+<path d="M460 165 L500 165 L500 165" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#ab)"/>
+<rect x="453.0" y="145" width="54" height="18" rx="4" fill="#f8fafc" opacity=".96"/>
+<text class="s" x="480.0" y="158" text-anchor="middle">bind</text>
+<path d="M680 165 L720 165 L720 165" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#ab)"/>
+<rect x="673.0" y="145" width="54" height="18" rx="4" fill="#f8fafc" opacity=".96"/>
+<text class="s" x="700.0" y="158" text-anchor="middle">bind</text>
+<g filter="url(#sh)"><rect x="280" y="300" width="400" height="95" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/></g>
+<text class="tag" x="298" y="324">IMMUTABLE RECORD</text>
+<text class="n" x="298" y="347">Job identity</text>
+<text class="d" x="298" y="369">all frozen inputs + execution receipt</text>
+<path d="M150 210 L150 260 L480 260 L480 300" fill="none" stroke="#059669" stroke-width="1.7" marker-end="url(#ag)"/>
+<path d="M370 210 L370 260 L480 260 L480 300" fill="none" stroke="#059669" stroke-width="1.7" marker-end="url(#ag)"/>
+<path d="M590 210 L590 260 L480 260 L480 300" fill="none" stroke="#059669" stroke-width="1.7" marker-end="url(#ag)"/>
+<path d="M810 210 L810 260 L480 260 L480 300" fill="none" stroke="#059669" stroke-width="1.7" marker-end="url(#ag)"/>
+<g filter="url(#sh)"><rect x="280" y="455" width="180" height="78" rx="12" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.5"/></g>
+<text class="n" x="298" y="487">Trials</text>
+<text class="d" x="298" y="509">output · observations</text>
+<g filter="url(#sh)"><rect x="500" y="455" width="180" height="78" rx="12" fill="#f0fdfa" stroke="#99f6e4" stroke-width="1.5"/></g>
+<text class="n" x="518" y="487">Evidence</text>
+<text class="d" x="518" y="509">validity · coverage</text>
+<path d="M480 395 L370 395 L370 455" fill="none" stroke="#059669" stroke-width="2" marker-end="url(#ag)"/>
+<rect x="380.5" y="375" width="89" height="18" rx="4" fill="#f8fafc" opacity=".96"/>
+<text class="s" x="425.0" y="388" text-anchor="middle">materialize</text>
+<path d="M460 494 L500 494 L500 494" fill="none" stroke="#059669" stroke-width="2" marker-end="url(#ag)"/>
+<rect x="449.5" y="474" width="61" height="18" rx="4" fill="#f8fafc" opacity=".96"/>
+<text class="s" x="480.0" y="487" text-anchor="middle">explain</text>
+<line x1="48" y1="562" x2="76" y2="562" stroke="#2563eb" stroke-width="2"/>
+<text class="s" x="84" y="566">identity binding</text>
+<line x1="198" y1="562" x2="226" y2="562" stroke="#059669" stroke-width="2"/>
+<text class="s" x="234" y="566">evidence materialization</text>
+</svg>

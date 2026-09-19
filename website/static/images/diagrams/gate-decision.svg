@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" role="img">
+<title>Deterministic Promotion Gate</title>
+<style>text{font-family:'Helvetica Neue',Helvetica,Arial,'PingFang SC','Microsoft YaHei',sans-serif}.t{fill:#0f172a;font-size:25px;font-weight:700}.s{fill:#64748b;font-size:13px}.n{fill:#0f172a;font-size:15px;font-weight:650}.d{fill:#475569;font-size:12px}.tag{fill:#0b6f8f;font-size:11px;font-weight:700;letter-spacing:.7px}</style>
+<defs><marker id="ab" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#2563eb"/></marker><marker id="ag" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#059669"/></marker><marker id="ap" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#7c3aed"/></marker><filter id="sh" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#0f172a" flood-opacity=".09"/></filter></defs>
+<rect width="960" height="600" fill="#f8fafc"/>
+<text class="t" x="48" y="52">Deterministic Promotion Gate</text>
+<text class="s" x="48" y="77">Fixed Jobs + fixed Policy yield a repeatable recommendation</text>
+<g filter="url(#sh)"><rect x="65" y="150" width="210" height="100" rx="12" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/></g>
+<text class="n" x="83" y="182">Baseline Job</text>
+<text class="d" x="83" y="204">comparable identities</text>
+<text class="d" x="83" y="221">valid score + coverage</text>
+<g filter="url(#sh)"><rect x="65" y="350" width="210" height="100" rx="12" fill="#f0fdfa" stroke="#99f6e4" stroke-width="1.5"/></g>
+<text class="n" x="83" y="382">Candidate Job</text>
+<text class="d" x="83" y="404">same contract</text>
+<text class="d" x="83" y="421">regressions + evidence</text>
+<g filter="url(#sh)"><rect x="365" y="250" width="210" height="110" rx="12" fill="#faf5ff" stroke="#e9d5ff" stroke-width="1.5"/></g>
+<text class="n" x="383" y="282">Promotion Policy</text>
+<text class="d" x="383" y="304">minimum improvement</text>
+<text class="d" x="383" y="321">regression + coverage rules</text>
+<g filter="url(#sh)"><rect x="675" y="150" width="220" height="100" rx="12" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.5"/></g>
+<text class="n" x="693" y="182">PROMOTE</text>
+<text class="d" x="693" y="204">policy satisfied</text>
+<text class="d" x="693" y="221">recommendation only</text>
+<g filter="url(#sh)"><rect x="675" y="350" width="220" height="100" rx="12" fill="#fef2f2" stroke="#fecaca" stroke-width="1.5"/></g>
+<text class="n" x="693" y="382">REJECT</text>
+<text class="d" x="693" y="404">policy not satisfied</text>
+<text class="d" x="693" y="421">inspect evidence</text>
+<path d="M275 200 L365 200 L365 285" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#ab)"/>
+<rect x="286.0" y="180" width="68" height="18" rx="4" fill="#f8fafc" opacity=".96"/>
+<text class="s" x="320.0" y="193" text-anchor="middle">baseline</text>
+<path d="M275 400 L365 400 L365 325" fill="none" stroke="#059669" stroke-width="2" marker-end="url(#ag)"/>
+<rect x="282.5" y="380" width="75" height="18" rx="4" fill="#f8fafc" opacity=".96"/>
+<text class="s" x="320.0" y="393" text-anchor="middle">candidate</text>
+<path d="M575 285 L675 285 L675 200" fill="none" stroke="#059669" stroke-width="2" marker-end="url(#ag)"/>
+<rect x="598.0" y="265" width="54" height="18" rx="4" fill="#f8fafc" opacity=".96"/>
+<text class="s" x="625.0" y="278" text-anchor="middle">pass</text>
+<path d="M575 325 L675 325 L675 400" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#ap)"/>
+<rect x="598.0" y="305" width="54" height="18" rx="4" fill="#f8fafc" opacity=".96"/>
+<text class="s" x="625.0" y="318" text-anchor="middle">fail</text>
+<text class="s" x="480" y="515" text-anchor="middle">Model/Judge outputs may be stochastic; Gate logic is deterministic for fixed inputs.</text>
+<line x1="48" y1="562" x2="76" y2="562" stroke="#2563eb" stroke-width="2"/>
+<text class="s" x="84" y="566">baseline</text>
+<line x1="198" y1="562" x2="226" y2="562" stroke="#059669" stroke-width="2"/>
+<text class="s" x="234" y="566">candidate/evidence</text>
+<line x1="348" y1="562" x2="376" y2="562" stroke="#7c3aed" stroke-width="2"/>
+<text class="s" x="384" y="566">policy decision</text>
+</svg>

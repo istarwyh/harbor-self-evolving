@@ -1,0 +1,129 @@
+sections: [hero, metrics, capabilities, steps, gallery, principles, faq, command-box, cta]
+
+hero:
+  eyebrow: Harbor Self-Evolving 0.9.6 · Beta
+  title_lines:
+    - 让 Agent
+    - 每一次都进步。
+  lead: >
+    面向 DeepSeek Harness 的持续评测与受控自进化插件。固定 Candidate、Dataset、评测尺子和运行环境身份；
+    从真实会话或可比回归中发现问题；一次只改变一个受控面；最后由确定性 Gate 给出 PROMOTE / REJECT 建议。
+  note: Gate 是建议，不是部署。默认 Host 模式不是沙箱。
+  image:
+    src: images/harbor-ocean.jpg
+    alt: 深蓝港湾中，鲸鱼从灯塔上方跃起的 Harbor Self-Evolving 品牌图。
+  media: { ratio: '1.1fr 1fr', max_width: 44rem, hide_below: md }
+  actions:
+    - { label: 安装并开始, url: docs/start/, icon: fa-solid fa-rocket, style: primary }
+    - { label: 了解产品, url: product/, icon: fa-solid fa-compass, style: ghost }
+  detail: { label: 在 GitHub 查看源码与发布, url: 'https://github.com/istarwyh/harbor-self-evolving', external: true, icon: fa-brands fa-github }
+
+metrics:
+  eyebrow: 可核对的事实
+  title: 一套完整评测面，而不是魔法循环
+  columns: 4
+  items:
+    - { value: 3, label: 个协作交付物, desc: DSH Plugin · Skill · Python Adapter, icon: fa-solid fa-cubes }
+    - { value: 19, label: 个严格 Agent 工具, desc: 10 个审批写操作 · 9 个只读/内存操作, icon: fa-solid fa-screwdriver-wrench }
+    - { value: 2, label: 条评测路径, desc: Historical 诊断 · Candidate 回归, icon: fa-solid fa-code-branch }
+    - { value: 1, label: 个确定性 Gate, desc: 与 Optimizer 保持分离, icon: fa-solid fa-scale-balanced }
+
+capabilities:
+  eyebrow: 三个交付物，一份契约
+  title: DSH 原生体验，Harbor 级证据
+  desc: 每一层都有窄职责，也都有明确的信任边界。
+  items:
+    - ref: 01 / DSH PLUGIN
+      title: 在 Agent 已经工作的地方工作
+      url: product/dsh-plugin/
+      motto: 原生工具、Workbench、上下文与受审动作
+      bullets:
+        - 19 个严格工具覆盖安装、诊断、评测、治理与 Gate。
+        - Web UI 展示 Trial、Evidence、Artifact、Operation 与 Settings。
+        - Agent 侧 mutation 需要一次性批准；读取保持限量与脱敏。
+      value: Plugin 把 DSH 交互连接到不可变的 Harbor 评测身份。
+      visual: { type: card, icon: fa-solid fa-window-maximize, title: DSH Workbench, lines: [Historical 启动器, Candidate 流水线, Evidence 阅读器, 受审动作] }
+    - ref: 02 / BUNDLED SKILL
+      title: 编排流程，但不隐藏边界
+      url: product/#skill
+      motto: 识别 → 诊断 → 单次改动 → 回归 → Gate
+      bullets:
+        - 没有 Dataset 时，从最近完成的 Session 开始。
+        - 昂贵 Job 前先固定 Candidate、Dataset、Stack 与 Context 身份。
+        - 从不把 Gate 说成部署权限。
+      value: 官方 Skill 由本项目维护，不表示 DeepSeek 官方背书。
+      visual: { type: image, src: images/diagrams/evolution-loop.svg, alt: 从证据到单次改动与回归的受控 Agent 进化循环。 }
+    - ref: 03 / PYTHON ADAPTER
+      title: 通过 Harbor 评测模型运行
+      url: product/#adapter
+      motto: Generator · Evaluator · Optimizer · Gate
+      bullets:
+        - 0.9.6 默认 Host 执行；Docker 为显式 opt-in。
+        - Candidate Context v3 与 Historical Context v2 是不同协议。
+        - Job 记录稳定身份与 typed evidence，供后续比较。
+      value: 身份与证据成为可检查 Artifact，而不是宣传文案。
+      visual: { type: image, src: images/diagrams/system-architecture.svg, alt: DSH Plugin、Skill 与 Python Adapter 架构。 }
+
+steps:
+  eyebrow: 两条入口
+  title: 从真实问题开始，以受控决策结束
+  items:
+    - { title: 诊断最近 Session, icon: fa-solid fa-clock-rotate-left, desc: '预览 DSH 可见历史的限量脱敏投影；披露 Judge 与数据边界；确认；每条 Session 生成一个 Trial。' }
+    - { title: 冻结 Candidate, icon: fa-solid fa-snowflake, desc: '回归前固定 Candidate，并绑定 Dataset、Evaluation Stack、runtime 与 Context 身份。' }
+    - { title: 只改一个受控面, icon: fa-solid fa-sliders, desc: '通过显式 diff 改进 Agent 或 Evaluator，再运行可比证据。' }
+    - { title: 应用 Gate, icon: fa-solid fa-scale-balanced, desc: '对固定 Gate 输入，PROMOTE / REJECT 是确定性建议；部署仍由外部 CI/CD 决定。' }
+
+gallery:
+  eyebrow: 证据，不是装饰
+  title: 信任分数前，先看清系统
+  desc: 架构图解释当前契约；UI 图片明确标注为 synthetic 历史证据。
+  columns: 3
+  link_label: 查看
+  items:
+    - { title: 身份优先的架构, badge: 当前契约, image: images/diagrams/system-architecture.svg, alt: 系统架构图, desc: 'DSH、Harbor Adapter、评测栈、不可变 Artifact 与确定性 Gate。', url: docs/architecture/ }
+    - { title: Historical 诊断, badge: Synthetic · v0.9.3, image: images/screenshots/historical-preview.png, alt: 合成的 Historical Session 预览与披露卡, desc: '组件/服务 fixture；未使用真实 provider、Session 或 Harbor Job。', url: docs/workflows/historical/ }
+    - { title: 原生 Workbench, badge: Synthetic · v0.9.5, image: images/screenshots/workbench-desktop.png, alt: 合成的 Harbor Workbench 桌面视图, desc: '经过裁切的组件 fixture；不能证明真实 0.9.6 评测。', url: product/dsh-plugin/ }
+
+principles:
+  eyebrow: 设计原则
+  title: 进步必须可检查
+  columns: 3
+  items:
+    - { icon: fa-solid fa-fingerprint, title: 先身份，后分数, desc: 比较前固定 Candidate、Dataset、Evaluation Stack、runtime 与 Context。 }
+    - { icon: fa-solid fa-ruler-combined, title: 先有效性，后平均值, desc: 无效证据、abstention、coverage 与 raw reward 保持区分。 }
+    - { icon: fa-solid fa-code-compare, title: 一次只改一个面, desc: 每轮只有一个受审改动，才能保留归因。 }
+    - { icon: fa-solid fa-shield-halved, title: 权限可见, desc: mutation、provider 访问与本地执行分别披露边界。 }
+    - { icon: fa-solid fa-file-circle-check, title: 证据胜于断言, desc: 每个发布主张都回链源码、测试或带标签归档。 }
+    - { icon: fa-solid fa-ship, title: Gate 不是部署, desc: 晋级建议与生产权限刻意分离。 }
+
+faq:
+  eyebrow: 先讲边界
+  title: Harbor Self-Evolving 做什么，又不做什么
+  items:
+    - question: 这是容器镜像仓库 CNCF Harbor 吗？
+      answer: 不是。本项目的 Harbor 指面向 DeepSeek Harness Agent 的评测与受控进化运行时。
+      open: true
+    - question: 每个完成的 Job 都会让 Agent 进步吗？
+      answer: 不会。Job 完成只是执行状态；有效分数、可比性、策略阈值和 Gate 才决定是否建议晋级。
+    - question: Gate 是确定性的吗？
+      answer: 对固定输入，Gate 逻辑是确定性的；Candidate 与 Judge 模型输出仍可能随机，因此重复 Job 可能不同。
+    - question: PROMOTE 会自动部署吗？
+      answer: 不会。Harbor 产出证据与建议；外部 CI/CD 或人工 owner 保留部署与 Champion 权限。
+    - question: Host 模式是沙箱吗？
+      answer: 不是。默认 Host 模式不提供容器隔离、用户切换、网络策略或 CPU/内存限制，任务以当前用户权限直接运行。
+    - question: 这是 DeepSeek 官方背书吗？
+      answer: 不是。官方 Skill 由本项目维护，不表示 DeepSeek 官方背书。
+
+command-box:
+  eyebrow: 普通安装
+  title: 一条命令，然后重启 DSH
+  code: npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
+  lang: bash
+  note: 请在业务 Agent 工作区运行；源码安装仅供贡献者使用。
+
+cta:
+  title: 从你已经拥有的证据开始。
+  text: 评测最近完成的 Session，或带上明确 Candidate 与 Dataset 运行可比回归。
+  label: 打开快速开始
+  url: docs/start/
+  style: primary

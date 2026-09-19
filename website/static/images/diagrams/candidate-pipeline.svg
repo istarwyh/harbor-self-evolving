@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" role="img">
+<title>Candidate evaluation pipeline</title>
+<style>text{font-family:'Helvetica Neue',Helvetica,Arial,'PingFang SC','Microsoft YaHei',sans-serif}.t{fill:#0f172a;font-size:25px;font-weight:700}.s{fill:#64748b;font-size:13px}.n{fill:#0f172a;font-size:15px;font-weight:650}.d{fill:#475569;font-size:12px}.tag{fill:#0b6f8f;font-size:11px;font-weight:700;letter-spacing:.7px}</style>
+<defs><marker id="ab" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#2563eb"/></marker><marker id="ag" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#059669"/></marker><marker id="ap" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#7c3aed"/></marker><filter id="sh" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#0f172a" flood-opacity=".09"/></filter></defs>
+<rect width="960" height="600" fill="#f8fafc"/>
+<text class="t" x="48" y="52">Candidate evaluation pipeline</text>
+<text class="s" x="48" y="77">Current protocol: candidate-evaluation-context/v3</text>
+<g filter="url(#sh)"><rect x="45" y="125" width="180" height="92" rx="12" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/></g>
+<text class="tag" x="63" y="149">01</text>
+<text class="n" x="63" y="172">Snapshot</text>
+<text class="d" x="63" y="194">manifest</text>
+<g filter="url(#sh)"><rect x="270" y="125" width="180" height="92" rx="12" fill="#f0fdfa" stroke="#99f6e4" stroke-width="1.5"/></g>
+<text class="tag" x="288" y="149">02</text>
+<text class="n" x="288" y="172">Validate</text>
+<text class="d" x="288" y="194">Dataset</text>
+<g filter="url(#sh)"><rect x="495" y="125" width="180" height="92" rx="12" fill="#fff7ed" stroke="#fed7aa" stroke-width="1.5"/></g>
+<text class="tag" x="513" y="149">03</text>
+<text class="n" x="513" y="172">Doctor</text>
+<text class="d" x="513" y="194">Stack</text>
+<g filter="url(#sh)"><rect x="720" y="125" width="180" height="92" rx="12" fill="#faf5ff" stroke="#e9d5ff" stroke-width="1.5"/></g>
+<text class="tag" x="738" y="149">04</text>
+<text class="n" x="738" y="172">Context</text>
+<text class="d" x="738" y="194">v3 + baselines</text>
+<g filter="url(#sh)"><rect x="45" y="335" width="180" height="92" rx="12" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/></g>
+<text class="tag" x="63" y="359">05</text>
+<text class="n" x="63" y="382">Run</text>
+<text class="d" x="63" y="404">diagnostic</text>
+<g filter="url(#sh)"><rect x="270" y="335" width="180" height="92" rx="12" fill="#f0fdfa" stroke="#99f6e4" stroke-width="1.5"/></g>
+<text class="tag" x="288" y="359">06</text>
+<text class="n" x="288" y="382">Change</text>
+<text class="d" x="288" y="404">one surface</text>
+<g filter="url(#sh)"><rect x="495" y="335" width="180" height="92" rx="12" fill="#fff7ed" stroke="#fed7aa" stroke-width="1.5"/></g>
+<text class="tag" x="513" y="359">07</text>
+<text class="n" x="513" y="382">Regress</text>
+<text class="d" x="513" y="404">eligible Job</text>
+<g filter="url(#sh)"><rect x="720" y="335" width="180" height="92" rx="12" fill="#faf5ff" stroke="#e9d5ff" stroke-width="1.5"/></g>
+<text class="tag" x="738" y="359">08</text>
+<text class="n" x="738" y="382">Gate</text>
+<text class="d" x="738" y="404">policy</text>
+<path d="M225 171 L270 171 L270 171" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#ab)"/>
+<path d="M450 171 L495 171 L495 171" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#ab)"/>
+<path d="M675 171 L720 171 L720 171" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#ab)"/>
+<path d="M855 217 L855 217 L855 335" fill="none" stroke="#059669" stroke-width="2" marker-end="url(#ag)"/>
+<rect x="821.0" y="197" width="68" height="18" rx="4" fill="#f8fafc" opacity=".96"/>
+<text class="s" x="855.0" y="210" text-anchor="middle">evidence</text>
+<path d="M225 381 L270 381 L270 381" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#ap)"/>
+<path d="M450 381 L495 381 L495 381" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#ap)"/>
+<path d="M675 381 L720 381 L720 381" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#ap)"/>
+<g filter="url(#sh)"><rect x="300" y="520" width="360" height="48" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/></g>
+<text class="n" x="318" y="552">External CI/CD owns deployment</text>
+<text class="d" x="318" y="574">Gate recommendation ≠ production mutation</text>
+<line x1="48" y1="562" x2="76" y2="562" stroke="#2563eb" stroke-width="2"/>
+<text class="s" x="84" y="566">preflight</text>
+<line x1="198" y1="562" x2="226" y2="562" stroke="#7c3aed" stroke-width="2"/>
+<text class="s" x="234" y="566">evolution</text>
+<line x1="348" y1="562" x2="376" y2="562" stroke="#059669" stroke-width="2"/>
+<text class="s" x="384" y="566">evidence</text>
+</svg>

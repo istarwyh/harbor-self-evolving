@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" role="img">
+<title>Trust boundaries</title>
+<style>text{font-family:'Helvetica Neue',Helvetica,Arial,'PingFang SC','Microsoft YaHei',sans-serif}.t{fill:#0f172a;font-size:25px;font-weight:700}.s{fill:#64748b;font-size:13px}.n{fill:#0f172a;font-size:15px;font-weight:650}.d{fill:#475569;font-size:12px}.tag{fill:#0b6f8f;font-size:11px;font-weight:700;letter-spacing:.7px}</style>
+<defs><marker id="ab" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#2563eb"/></marker><marker id="ag" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#059669"/></marker><marker id="ap" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#7c3aed"/></marker><filter id="sh" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#0f172a" flood-opacity=".09"/></filter></defs>
+<rect width="960" height="600" fill="#f8fafc"/>
+<text class="t" x="48" y="52">Trust boundaries</text>
+<text class="s" x="48" y="77">Every boundary protects something specific—and leaves something trusted</text>
+<g filter="url(#sh)"><rect x="55" y="115" width="230" height="105" rx="12" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/></g>
+<text class="n" x="73" y="147">Browser boundary</text>
+<text class="d" x="73" y="169">same-origin CSRF defense</text>
+<text class="d" x="73" y="186">trusted loopback assumption</text>
+<g filter="url(#sh)"><rect x="365" y="115" width="230" height="105" rx="12" fill="#f0fdfa" stroke="#99f6e4" stroke-width="1.5"/></g>
+<text class="n" x="383" y="147">Session/project</text>
+<text class="d" x="383" y="169">owner-bound tokens</text>
+<text class="d" x="383" y="186">exact cwd for Agent tools</text>
+<g filter="url(#sh)"><rect x="675" y="115" width="230" height="105" rx="12" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.5"/></g>
+<text class="n" x="693" y="147">Evidence reads</text>
+<text class="d" x="693" y="169">bounded · redacted</text>
+<text class="d" x="693" y="186">explicitly untrusted</text>
+<g filter="url(#sh)"><rect x="55" y="335" width="230" height="105" rx="12" fill="#faf5ff" stroke="#e9d5ff" stroke-width="1.5"/></g>
+<text class="n" x="73" y="367">Model Broker</text>
+<text class="d" x="73" y="389">no upstream model secrets</text>
+<text class="d" x="73" y="406">request + byte limits</text>
+<g filter="url(#sh)"><rect x="365" y="335" width="230" height="105" rx="12" fill="#fef2f2" stroke="#fecaca" stroke-width="1.5"/></g>
+<text class="n" x="383" y="367">Host runtime</text>
+<text class="d" x="383" y="389">current-user permissions</text>
+<text class="d" x="383" y="406">no sandbox or resource policy</text>
+<g filter="url(#sh)"><rect x="675" y="335" width="230" height="105" rx="12" fill="#fff7ed" stroke="#fed7aa" stroke-width="1.5"/></g>
+<text class="n" x="693" y="367">Deployment</text>
+<text class="d" x="693" y="389">evidence + recommendation</text>
+<text class="d" x="693" y="406">external authority required</text>
+<path d="M285 168 L365 168 L365 168" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#ab)"/>
+<rect x="294.5" y="148" width="61" height="18" rx="4" fill="#f8fafc" opacity=".96"/>
+<text class="s" x="325.0" y="161" text-anchor="middle">request</text>
+<path d="M595 168 L675 168 L675 168" fill="none" stroke="#059669" stroke-width="2" marker-end="url(#ag)"/>
+<rect x="597.5" y="148" width="75" height="18" rx="4" fill="#f8fafc" opacity=".96"/>
+<text class="s" x="635.0" y="161" text-anchor="middle">typed ref</text>
+<path d="M285 388 L365 388 L365 388" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#ap)"/>
+<rect x="284.0" y="368" width="82" height="18" rx="4" fill="#f8fafc" opacity=".96"/>
+<text class="s" x="325.0" y="381" text-anchor="middle">capability</text>
+<path d="M595 388 L675 388 L675 388" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#ap)"/>
+<rect x="604.5" y="368" width="61" height="18" rx="4" fill="#f8fafc" opacity=".96"/>
+<text class="s" x="635.0" y="381" text-anchor="middle">handoff</text>
+<line x1="48" y1="562" x2="76" y2="562" stroke="#2563eb" stroke-width="2"/>
+<text class="s" x="84" y="566">browser/control</text>
+<line x1="198" y1="562" x2="226" y2="562" stroke="#059669" stroke-width="2"/>
+<text class="s" x="234" y="566">bounded evidence</text>
+<line x1="348" y1="562" x2="376" y2="562" stroke="#7c3aed" stroke-width="2"/>
+<text class="s" x="384" y="566">capability/handoff</text>
+</svg>

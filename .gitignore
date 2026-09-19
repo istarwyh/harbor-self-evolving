@@ -16,3 +16,9 @@ jobs/*
 examples/**/candidate-manifest.json
 examples/**/node_modules/
 packages/**/node_modules/
+
+# Hugo website build output and caches.
+website/public/
+website/resources/
+website/.hugo_cache/
+website/.hugo_build.lock

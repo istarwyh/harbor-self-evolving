@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" role="img">
+<title>Historical Session evaluation flow</title>
+<style>text{font-family:'Helvetica Neue',Helvetica,Arial,'PingFang SC','Microsoft YaHei',sans-serif}.t{fill:#0f172a;font-size:25px;font-weight:700}.s{fill:#64748b;font-size:13px}.n{fill:#0f172a;font-size:15px;font-weight:650}.d{fill:#475569;font-size:12px}.tag{fill:#0b6f8f;font-size:11px;font-weight:700;letter-spacing:.7px}</style>
+<defs><marker id="ab" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#2563eb"/></marker><marker id="ag" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#059669"/></marker><marker id="ap" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#7c3aed"/></marker><filter id="sh" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#0f172a" flood-opacity=".09"/></filter></defs>
+<rect width="960" height="600" fill="#f8fafc"/>
+<text class="t" x="48" y="52">Historical Session evaluation flow</text>
+<text class="s" x="48" y="77">Current protocol: historical-generation-evaluation-context/v2</text>
+<g filter="url(#sh)"><rect x="35" y="205" width="135" height="115" rx="12" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/></g>
+<text class="n" x="53" y="237">Discover</text>
+<text class="d" x="53" y="259">recent completed</text>
+<text class="d" x="53" y="276">top-level Sessions</text>
+<g filter="url(#sh)"><rect x="185" y="205" width="135" height="115" rx="12" fill="#f0fdfa" stroke="#99f6e4" stroke-width="1.5"/></g>
+<text class="n" x="203" y="237">Preview</text>
+<text class="d" x="203" y="259">safe metadata</text>
+<text class="d" x="203" y="276">reason counts</text>
+<g filter="url(#sh)"><rect x="335" y="205" width="135" height="115" rx="12" fill="#fff7ed" stroke="#fed7aa" stroke-width="1.5"/></g>
+<text class="n" x="353" y="237">Disclose</text>
+<text class="d" x="353" y="259">Judge · redaction</text>
+<text class="d" x="353" y="276">cost · retention</text>
+<g filter="url(#sh)"><rect x="485" y="205" width="135" height="115" rx="12" fill="#faf5ff" stroke="#e9d5ff" stroke-width="1.5"/></g>
+<text class="n" x="503" y="237">Confirm</text>
+<text class="d" x="503" y="259">owner-bound</text>
+<text class="d" x="503" y="276">selection token</text>
+<g filter="url(#sh)"><rect x="635" y="205" width="135" height="115" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/></g>
+<text class="n" x="653" y="237">Freeze</text>
+<text class="d" x="653" y="259">private redacted</text>
+<text class="d" x="653" y="276">Batch</text>
+<g filter="url(#sh)"><rect x="785" y="205" width="135" height="115" rx="12" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.5"/></g>
+<text class="n" x="803" y="237">Run</text>
+<text class="d" x="803" y="259">one Session</text>
+<text class="d" x="803" y="276">one Trial</text>
+<path d="M170 262 L185 262 L185 262" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#ab)"/>
+<path d="M320 262 L335 262 L335 262" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#ab)"/>
+<path d="M470 262 L485 262 L485 262" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#ab)"/>
+<path d="M620 262 L635 262 L635 262" fill="none" stroke="#059669" stroke-width="2" marker-end="url(#ag)"/>
+<path d="M770 262 L785 262 L785 262" fill="none" stroke="#059669" stroke-width="2" marker-end="url(#ag)"/>
+<g filter="url(#sh)"><rect x="335" y="405" width="290" height="82" rx="12" fill="#fef2f2" stroke="#fecaca" stroke-width="1.5"/></g>
+<text class="tag" x="353" y="429">BOUNDARY</text>
+<text class="n" x="353" y="452">Diagnostic result</text>
+<text class="d" x="353" y="474">coverage · abstention · completed-unscored</text>
+<text class="d" x="353" y="491">Gate N/A · no Candidate rerun</text>
+<path d="M852 320 L625 320 L625 446" fill="none" stroke="#059669" stroke-width="2" marker-end="url(#ag)"/>
+<rect x="683.5" y="300" width="110" height="18" rx="4" fill="#f8fafc" opacity=".96"/>
+<text class="s" x="738.5" y="313" text-anchor="middle">typed evidence</text>
+<line x1="48" y1="562" x2="76" y2="562" stroke="#2563eb" stroke-width="2"/>
+<text class="s" x="84" y="566">preview/control</text>
+<line x1="198" y1="562" x2="226" y2="562" stroke="#059669" stroke-width="2"/>
+<text class="s" x="234" y="566">frozen evidence</text>
+</svg>

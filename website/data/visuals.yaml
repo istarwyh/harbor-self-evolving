@@ -1,0 +1,103 @@
+# Public visual provenance ledger. Every screenshot is synthetic historical evidence.
+hero:
+  harbor-ocean.jpg:
+    source: packages/dsh-plugin/src/client/assets/harbor-ocean.jpg
+    kind: project-brand-artwork
+    note: Embedded project artwork; no product-state claim.
+screenshots:
+  empty-tasks.png:
+    source: docs/releases/v0.9.3/screenshots/01-empty-tasks.png
+    version: v0.9.3
+    kind: synthetic-component-service-fixture
+    crop: none
+    does_not_prove: Real Host, provider, Harbor Job, or 0.9.6 behavior.
+  task-controls.png:
+    source: docs/releases/v0.9.3/screenshots/02-task-controls.png
+    version: v0.9.3
+    kind: synthetic-component-service-fixture
+    crop: none
+    does_not_prove: Durable operation recovery across Host restart.
+  proposal-preview.png:
+    source: docs/releases/v0.9.3/screenshots/03-native-proposal-preview.png
+    version: v0.9.3
+    kind: synthetic-reviewed-action-fixture
+    crop: none
+    does_not_prove: The proposal was authorized or applied.
+  proposal-saved.png:
+    source: docs/releases/v0.9.3/screenshots/04-native-proposal-saved.png
+    version: v0.9.3
+    kind: synthetic-reviewed-action-fixture
+    crop: none
+    does_not_prove: Any Candidate change, evaluation, Gate, or deployment occurred.
+  historical-preview.png:
+    source: docs/releases/v0.9.3/screenshots/05-auto-preview.png
+    version: v0.9.3
+    kind: synthetic-component-service-controlled-runner
+    crop: none
+    does_not_prove: A real Session, provider, model, or Harbor Job.
+  historical-running.png:
+    source: docs/releases/v0.9.3/screenshots/06-background-running.png
+    version: v0.9.3
+    kind: synthetic-component-service-controlled-runner
+    crop: none
+    does_not_prove: Cross-restart durability or real infrastructure execution.
+  historical-failure.png:
+    source: docs/releases/v0.9.3/screenshots/08-read-failure.png
+    version: v0.9.3
+    kind: synthetic-failure-state
+    crop: none
+    does_not_prove: All failures share this recovery path.
+  ordinary-question.png:
+    source: docs/releases/v0.9.4/screenshots/01-synthetic-trial-a-ordinary-question.png
+    version: v0.9.4
+    kind: synthetic-controlled-model
+    crop: none
+    does_not_prove: A real provider interaction.
+  native-context.png:
+    source: docs/releases/v0.9.4/screenshots/02-synthetic-native-conversation.png
+    version: v0.9.4
+    kind: synthetic-controlled-model
+    crop: none
+    does_not_prove: A real provider interaction or durable context retention.
+  explicit-context.png:
+    source: docs/releases/v0.9.4/screenshots/03-synthetic-explicit-a-overrides-page-b.png
+    version: v0.9.4
+    kind: synthetic-controlled-model
+    crop: none
+    does_not_prove: Arbitrary cross-Session context access.
+  failed-draft.png:
+    source: docs/releases/v0.9.4/screenshots/04-synthetic-failure-preserves-draft.png
+    version: v0.9.4
+    kind: synthetic-controlled-model-failure
+    crop: none
+    does_not_prove: A real provider failure or universal recovery guarantee.
+  attachment-filter.png:
+    source: docs/releases/v0.9.4/screenshots/06-synthetic-selection-and-filter-attachments.png
+    version: v0.9.4
+    kind: synthetic-controlled-model
+    crop: none
+    does_not_prove: Every attachment type is safe or supported.
+  failed-draft-selection.png:
+    source: docs/releases/v0.9.4/screenshots/07-synthetic-failed-a-preserves-draft-b.png
+    version: v0.9.4
+    kind: synthetic-controlled-model-failure
+    crop: none
+    does_not_prove: A real provider failure or broad browser acceptance.
+  workbench-desktop.png:
+    source: docs/releases/v0.9.5/screenshots/01-synthetic-home-desktop.png
+    version: v0.9.5
+    kind: synthetic-component-fixture
+    crop: center 650px; local absolute-path area removed
+    does_not_prove: A real Host, model, evaluation, Candidate v3 Compare/Gate, or 0.9.6 state.
+  workbench-tablet.png:
+    source: docs/releases/v0.9.5/screenshots/02-synthetic-home-880px.png
+    version: v0.9.5
+    kind: synthetic-responsive-component-fixture
+    crop: center 650px; local absolute-path area removed
+    does_not_prove: Broad device or accessibility coverage.
+  workbench-mobile.png:
+    source: docs/releases/v0.9.5/screenshots/03-synthetic-home-500px.png
+    version: v0.9.5
+    kind: synthetic-responsive-component-fixture
+    crop: center 650px; local absolute-path area removed
+    does_not_prove: Broad device or accessibility coverage.

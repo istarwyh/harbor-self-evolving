@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" role="img">
+<title>DSH Plugin responsibility layers</title>
+<style>text{font-family:'Helvetica Neue',Helvetica,Arial,'PingFang SC','Microsoft YaHei',sans-serif}.t{fill:#0f172a;font-size:25px;font-weight:700}.s{fill:#64748b;font-size:13px}.n{fill:#0f172a;font-size:15px;font-weight:650}.d{fill:#475569;font-size:12px}.tag{fill:#0b6f8f;font-size:11px;font-weight:700;letter-spacing:.7px}</style>
+<defs><marker id="ab" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#2563eb"/></marker><marker id="ag" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#059669"/></marker><marker id="ap" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#7c3aed"/></marker><filter id="sh" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#0f172a" flood-opacity=".09"/></filter></defs>
+<rect width="960" height="600" fill="#f8fafc"/>
+<text class="t" x="48" y="52">DSH Plugin responsibility layers</text>
+<text class="s" x="48" y="77">The product surface is more than a list of tools</text>
+<g filter="url(#sh)"><rect x="165" y="105" width="630" height="66" rx="12" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/></g>
+<text class="n" x="183" y="137">Setup lifecycle</text>
+<text class="d" x="183" y="159">registry package · managed Adapter · restart</text>
+<g filter="url(#sh)"><rect x="165" y="195" width="630" height="66" rx="12" fill="#faf5ff" stroke="#e9d5ff" stroke-width="1.5"/></g>
+<text class="n" x="183" y="227">Agent orchestration</text>
+<text class="d" x="183" y="249">19 strict tools · bundled Skill</text>
+<g filter="url(#sh)"><rect x="165" y="285" width="630" height="66" rx="12" fill="#f0fdfa" stroke="#99f6e4" stroke-width="1.5"/></g>
+<text class="n" x="183" y="317">Native Web</text>
+<text class="d" x="183" y="339">Workbench · Context · Evidence · Settings</text>
+<g filter="url(#sh)"><rect x="165" y="375" width="630" height="66" rx="12" fill="#fff7ed" stroke="#fed7aa" stroke-width="1.5"/></g>
+<text class="n" x="183" y="407">Host services</text>
+<text class="d" x="183" y="429">workspace · Sessions · Broker · operations</text>
+<g filter="url(#sh)"><rect x="165" y="465" width="630" height="66" rx="12" fill="#fef2f2" stroke="#fecaca" stroke-width="1.5"/></g>
+<text class="n" x="183" y="497">Trust boundary</text>
+<text class="d" x="183" y="519">approval · redaction · bounded untrusted reads</text>
+<path d="M480 171 L480 171 L480 195" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#ab)"/>
+<path d="M480 261 L480 261 L480 285" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#ab)"/>
+<path d="M480 351 L480 351 L480 375" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#ab)"/>
+<path d="M480 441 L480 441 L480 465" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#ab)"/>
+</svg>

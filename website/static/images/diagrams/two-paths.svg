@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" role="img">
+<title>Two evaluation paths</title>
+<style>text{font-family:'Helvetica Neue',Helvetica,Arial,'PingFang SC','Microsoft YaHei',sans-serif}.t{fill:#0f172a;font-size:25px;font-weight:700}.s{fill:#64748b;font-size:13px}.n{fill:#0f172a;font-size:15px;font-weight:650}.d{fill:#475569;font-size:12px}.tag{fill:#0b6f8f;font-size:11px;font-weight:700;letter-spacing:.7px}</style>
+<defs><marker id="ab" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#2563eb"/></marker><marker id="ag" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#059669"/></marker><marker id="ap" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#7c3aed"/></marker><filter id="sh" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#0f172a" flood-opacity=".09"/></filter></defs>
+<rect width="960" height="600" fill="#f8fafc"/>
+<text class="t" x="48" y="52">Two evaluation paths</text>
+<text class="s" x="48" y="77">Historical diagnoses reality; Candidate regression can support promotion</text>
+<g filter="url(#sh)"><rect x="70" y="125" width="260" height="120" rx="12" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/></g>
+<text class="tag" x="88" y="149">NON-PROMOTION</text>
+<text class="n" x="88" y="172">Historical diagnosis</text>
+<text class="d" x="88" y="194">recent completed Sessions</text>
+<text class="d" x="88" y="211">bounded projection · redaction</text>
+<g filter="url(#sh)"><rect x="70" y="350" width="260" height="120" rx="12" fill="#faf5ff" stroke="#e9d5ff" stroke-width="1.5"/></g>
+<text class="tag" x="88" y="374">PROMOTION-ELIGIBLE</text>
+<text class="n" x="88" y="397">Candidate regression</text>
+<text class="d" x="88" y="419">frozen Candidate + Dataset</text>
+<text class="d" x="88" y="436">Stack + Context v3</text>
+<g filter="url(#sh)"><rect x="410" y="125" width="220" height="120" rx="12" fill="#f0fdfa" stroke="#99f6e4" stroke-width="1.5"/></g>
+<text class="n" x="428" y="157">Historical Job</text>
+<text class="d" x="428" y="179">one Session = one Trial</text>
+<text class="d" x="428" y="196">applicability · coverage</text>
+<g filter="url(#sh)"><rect x="410" y="350" width="220" height="120" rx="12" fill="#fff7ed" stroke="#fed7aa" stroke-width="1.5"/></g>
+<text class="n" x="428" y="382">Candidate Job</text>
+<text class="d" x="428" y="404">comparable baseline</text>
+<text class="d" x="428" y="421">valid evidence · regressions</text>
+<g filter="url(#sh)"><rect x="730" y="235" width="170" height="125" rx="12" fill="#fef2f2" stroke="#fecaca" stroke-width="1.5"/></g>
+<text class="n" x="748" y="267">Decision boundary</text>
+<text class="d" x="748" y="289">Historical: Gate N/A</text>
+<text class="d" x="748" y="306">Candidate: Gate policy</text>
+<path d="M330 185 L410 185 L410 185" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#ab)"/>
+<rect x="322.0" y="165" width="96" height="18" rx="4" fill="#f8fafc" opacity=".96"/>
+<text class="s" x="370.0" y="178" text-anchor="middle">freeze batch</text>
+<path d="M330 410 L410 410 L410 410" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#ap)"/>
+<rect x="308.0" y="390" width="124" height="18" rx="4" fill="#f8fafc" opacity=".96"/>
+<text class="s" x="370.0" y="403" text-anchor="middle">fixed identities</text>
+<path d="M630 185 L730 185 L730 265" fill="none" stroke="#059669" stroke-width="2" marker-end="url(#ag)"/>
+<rect x="646.0" y="165" width="68" height="18" rx="4" fill="#f8fafc" opacity=".96"/>
+<text class="s" x="680.0" y="178" text-anchor="middle">diagnose</text>
+<path d="M630 410 L730 410 L730 330" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#ap)"/>
+<rect x="649.5" y="390" width="61" height="18" rx="4" fill="#f8fafc" opacity=".96"/>
+<text class="s" x="680.0" y="403" text-anchor="middle">compare</text>
+<line x1="48" y1="562" x2="76" y2="562" stroke="#2563eb" stroke-width="2"/>
+<text class="s" x="84" y="566">historical</text>
+<line x1="198" y1="562" x2="226" y2="562" stroke="#7c3aed" stroke-width="2"/>
+<text class="s" x="234" y="566">candidate</text>
+<line x1="348" y1="562" x2="376" y2="562" stroke="#059669" stroke-width="2"/>
+<text class="s" x="384" y="566">evidence</text>
+</svg>

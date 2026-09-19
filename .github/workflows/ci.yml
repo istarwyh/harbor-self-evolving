@@ -36,3 +36,40 @@ jobs:
       - name: Verify committed Web client is current
         run: git diff --exit-code -- lib/client.js
       - run: npm pack --dry-run
+
+  website:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      HUGO_VERSION: 0.165.0
+      HUGO_DEB_SHA256: b4fab4477743c0f1fcfe85072a71156d78f97e4724f0d8bb3b1b1ff2f53ce3ac
+      GOWORK: off
+      HUGO_MODULE_WORKSPACE: off
+      HUGO_CACHEDIR: ${{ github.workspace }}/.hugo_cache
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: website/go.mod
+          cache-dependency-path: website/go.sum
+      - name: Install verified Hugo Extended
+        run: |
+          curl --fail --location --silent --show-error \
+            --output "${RUNNER_TEMP}/hugo.deb" \
+            "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.deb"
+          echo "${HUGO_DEB_SHA256}  ${RUNNER_TEMP}/hugo.deb" | sha256sum --check --strict
+          sudo dpkg -i "${RUNNER_TEMP}/hugo.deb"
+      - name: Download pinned OINK module
+        working-directory: website
+        run: go mod download github.com/pgsty/oink@v1.0.0
+      - name: Build warning-strict project site
+        working-directory: website
+        run: |
+          hugo --cleanDestinationDir --gc --minify --environment production \
+            --printPathWarnings --panicOnWarning \
+            --baseURL "https://istarwyh.github.io/harbor-self-evolving/"
+      - name: Validate public artifact
+        run: python3 website/scripts/check_public.py website/public --base-path /harbor-self-evolving/

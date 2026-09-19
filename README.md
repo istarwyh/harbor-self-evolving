@@ -2,6 +2,8 @@
 
 面向 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的 Harbor 持续评测与受控自进化插件。
 
+**产品网站与双语文档：<https://istarwyh.github.io/harbor-self-evolving/>**
+
 这个仓库的首要交付物不是一个需要复制后改造的业务模板，而是可安装的产品组合：
 
 | 交付物 | 用户得到什么 |
