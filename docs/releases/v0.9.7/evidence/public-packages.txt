@@ -1,0 +1,40 @@
+Harbor Self-Evolving 0.9.7 public package verification
+Date: 2026-09-20, Asia/Shanghai (UTC+08:00)
+Source/tag commit: a9f2afebe7e21892a114092ed6666481ed8b43f7
+Tag: v0.9.7
+Evidence type: public-release/package-provenance; no model calls
+
+Published metadata:
+https://registry.npmjs.org/dsh-harbor-evolution/0.9.7
+https://pypi.org/project/harbor-dsh-evolution/0.9.7/
+npm latest and PyPI default version both resolved to 0.9.7.
+
+Release inputs downloaded from:
+https://github.com/istarwyh/harbor-self-evolving/actions/runs/35484135903 (npm-distribution)
+https://github.com/istarwyh/harbor-self-evolving/actions/runs/35484135836 (python-distributions)
+All three public registry downloads are byte-identical to the corresponding workflow artifacts. The same workflow artifacts were attached to GitHub Release v0.9.7.
+
+SHA-256:
+ab231a11db0945f663e76ee79dccbb8abb08521f36c106ffdd07b2652c539bcb  dsh-harbor-evolution-0.9.7.tgz
+deb21bff7389bf25c96f996d22ecb517cbdbc274231ebbbc59db7a207d22c849  harbor_dsh_evolution-0.9.7-py3-none-any.whl
+86286c58c1ee0e72ca607408c4429b4b7423e95192370c6b1a9e2ec88d2c0d86  harbor_dsh_evolution-0.9.7.tar.gz
+
+Installed-package smoke, fresh owned directories:
+- npm installed dsh-harbor-evolution@0.9.7 from the public registry with scripts disabled. The ESM main module exported name=harbor-evolution and the dsh-harbor CLI printed its documented usage contract.
+- uv installed the byte-identical public Python wheel into a fresh Python 3.12 environment. Python imported harbor_dsh_evolution as 0.9.7; harbor-dsh, dsh-evolution and dsh-historical-evaluation entrypoints were present; harbor plugins list showed both plugins; harbor-dsh host-check returned HOST_RUNTIME_READY.
+
+Provenance:
+- npm 12.0.2 audit signatures verified 20 registry signatures and two attestations in the installed graph. The dsh-harbor-evolution SLSA statement binds the public SHA-512 subject to source commit a9f2afebe7e21892a114092ed6666481ed8b43f7, refs/tags/v0.9.7, .github/workflows/publish-npm.yml and run 35484135903/attempts/1.
+- pypi-attestations cryptographically verified both public files against repository https://github.com/istarwyh/harbor-self-evolving and PyPI's Integrity API provenance.
+
+Workflow status:
+- Main CI 35484087947, tag CI 35484135784, npm Trusted Publishing 35484135903, PyPI Trusted Publishing 35484135836 and Pages deployment 35484087985 all succeeded.
+- Non-blocking platform annotations remained: GitHub forced upload-artifact's deprecated Node 20 action runtime to Node 24, and ubuntu-latest announced its future Ubuntu 26 migration.
+- Local npm signature verification used npm 12.0.2 with Node 22.19.0 and emitted npm's compatibility warning (npm 12.0.2 declares support from Node 22.22.2); signature/attestation verification still completed successfully. CI publishing itself used Node 22.22.2.
+
+Public site checks:
+- The English and Chinese home pages, English and Chinese 0.9.7 release pages, and the Plugin page returned HTTP 200 after Pages run 35484087985.
+- Deployed content contained the 0.9.7 identity, the required Chinese slogan split across its visual heading, and the Candidate Context v3 support statement.
+
+Boundaries:
+No real model, business workspace, Candidate, Historical Session or Docker evaluation was used. Package provenance establishes origin and byte identity, not business-quality evaluation. Installed desktop/Host application compatibility outside the tested package entrypoints remains outside this package-only verification.
