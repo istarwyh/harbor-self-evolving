@@ -6,7 +6,7 @@
 - 验收环境：macOS 15.6.1 arm64、Node 22.19.0、npm 10.9.3、pnpm 11.7.0、项目 Python 3.12.14；GitHub Actions Node 22.22.2 / Python 3.12；本地源码、公开 package 与 Pages。
 - 数据与模型：没有运行真实 Candidate、Historical Session 或外部模型评测；产品测试使用临时目录、合成任务和进程级 fixture，网站验证使用静态构建与公开页面。
 - 包发布状态：npm 0.9.7 与 PyPI 0.9.7 已公开且默认版本均为 0.9.7；GitHub Release 使用正式 tag，并附三份与 workflow/public registry 逐字节一致的 package 制品。
-- 资料归档状态：本地与公开包验证已归档；`harbor-0.9.7-verification.zip` 与校验清单将在本次发布后归档提交完成后附到 Release。
+- 资料归档状态：本地与公开包验证已归档；`harbor-0.9.7-verification.zip` 与 `SHA256SUMS.txt` 已附到 Release，并完成匿名下载、checksum、解压与相对证据链接核对。
 
 ## 这次改了什么
 
@@ -61,13 +61,13 @@
 | 与本次改动相关的测试/验收 | `npm run check`、Python `pytest`、Hugo strict build、`website/scripts/check_public.py`、[本地验证摘要](evidence/local-validation.txt) | Node 596/596、Python 321/321、网站 99 EN / 97 ZH 与 425-entry public 检查通过；19 个已记录 Harbor artifact-overlap warning；无真实模型调用 |
 | npm 包与对应发布运行 | [OIDC run 35484135903](https://github.com/istarwyh/harbor-self-evolving/actions/runs/35484135903) 与[公开验证记录](evidence/public-packages.txt) | 成功；public tgz 与 workflow artifact 逐字节一致，latest=0.9.7，隔离安装、ESM/CLI 与 npm signatures/attestations 通过 |
 | PyPI wheel/sdist 与对应发布运行 | [run 35484135836](https://github.com/istarwyh/harbor-self-evolving/actions/runs/35484135836) 与[公开验证记录](evidence/public-packages.txt) | 成功；两个 public file 与 workflow artifact 逐字节一致，默认版本=0.9.7，隔离导入、entrypoints、两个 Harbor plugin、Host check 与 PyPI attestation cryptographic verification 通过 |
-| GitHub Release 与附件 | [v0.9.7](https://github.com/istarwyh/harbor-self-evolving/releases/tag/v0.9.7) | 正式 tag 与三份 package 制品已公开；验证 ZIP 与校验清单待本发布后归档提交生成 |
+| GitHub Release 与附件 | [v0.9.7](https://github.com/istarwyh/harbor-self-evolving/releases/tag/v0.9.7) | 正式 tag、三份 package 制品、验证 ZIP 与校验清单均已公开；五个附件已匿名下载，checksum 通过，ZIP 解压及相对证据链接有效 |
 
 主线 CI [35484087947](https://github.com/istarwyh/harbor-self-evolving/actions/runs/35484087947)、tag CI [35484135784](https://github.com/istarwyh/harbor-self-evolving/actions/runs/35484135784)、npm/PyPI Trusted Publishing 与 Pages 部署均成功。公开制品摘要、provenance、安装烟测和边界见[公开验证记录](evidence/public-packages.txt)。
 
 ## 未完成项与验证边界
 
-- 本地完整 Node/Python/网站验证、主线/tag CI、npm/PyPI Trusted Publishing、GitHub Release、Pages 与公开包烟测已完成；当前仅剩本发布后归档提交、验证 ZIP 与校验清单附件。
+- 本地完整 Node/Python/网站验证、主线/tag CI、npm/PyPI Trusted Publishing、GitHub Release、Pages、公开包烟测与验证资料附件核对均已完成。
 - Python 保留 19 个 Harbor artifact-overlap warning；首次本地 Node 并发运行还出现 1 次未复现的 durable-operation invalid-record 失败，focused/full rerun均通过，等待 CI Linux 独立核对。
 - 未运行真实供应商模型、真实 Candidate/Historical Session 数据或付费 Harbor 评测，因此不外推业务质量结论。
 - 默认 Host 模式不是 sandbox；same-origin 是浏览器 CSRF 防线而不是调用者身份认证；确定性 Gate 只针对固定输入且不等于 deployment。
@@ -77,6 +77,6 @@
 
 - 版本发布页：[Harbor v0.9.7](https://github.com/istarwyh/harbor-self-evolving/releases/tag/v0.9.7)。
 - 完整验收记录 / 相关提交或 PR：产品提交 [`a9f2afe`](https://github.com/istarwyh/harbor-self-evolving/commit/a9f2afebe7e21892a114092ed6666481ed8b43f7)；主线与 tag CI 链接见上。
-- 验证资料包：[harbor-0.9.7-verification.zip](https://github.com/istarwyh/harbor-self-evolving/releases/download/v0.9.7/harbor-0.9.7-verification.zip)，从本次发布后归档提交生成；附件上传与匿名下载核对完成后补充最终状态。
+- 验证资料包：[harbor-0.9.7-verification.zip](https://github.com/istarwyh/harbor-self-evolving/releases/download/v0.9.7/harbor-0.9.7-verification.zip)，从发布后归档提交生成；已与 `SHA256SUMS.txt` 一起完成匿名下载、校验和、解压与相对证据链接核对。
 
 归档提交完成后，将在 Release 中链接本文件的永久提交 URL。公开包、GitHub Release、验证 ZIP 与 Pages 是独立状态，分别核对后再宣称完成。
