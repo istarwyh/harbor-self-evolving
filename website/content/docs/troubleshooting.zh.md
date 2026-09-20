@@ -2,7 +2,7 @@
 title: 故障排查
 weight: 80
 description: 诊断安装、profile、Dataset、Context、Historical 与执行环境问题，不夸大成功。
-verified_against_version: 0.9.6
+verified_against_version: 0.9.7
 source_refs: [docs/dsh-web-quickstart.md, docs/troubleshooting.md]
 ---
 
@@ -32,8 +32,8 @@ Web 只看到当前 DSH 可访问、最近完成的顶层 Session。Agent previe
 
 ## Apple Silicon 与 Docker {#apple-silicon}
 
-0.9.6 Host-first，因此 Docker 不是默认前置条件。显式使用 Docker 时，单独验证 image architecture 与 runtime，并且不要把证据和 Host baseline 混用。
+0.9.7 Host-first，因此 Docker 不是默认前置条件。显式使用 Docker 时，单独验证 image architecture 与 runtime，并且不要把证据和 Host baseline 混用。
 
 ## Web Compare/Gate 被关闭 {#context-v3}
 
-Candidate Context v3 是 0.9.6 已知 Web 合约问题。Adapter 产物可能有效，但 Dashboard 将其标为 unsupported/invalid。请使用 Agent/tool 证据并等待修复版本，不要重写或降级 Context Artifact。
+0.9.7 Dashboard 已支持 Candidate Context v3。如果 Job 仍显示 unsupported 或 invalid，请检查精确 Context schema、protocol、Artifact validation、mode 与可比身份；不要重写或降级 Context Artifact。

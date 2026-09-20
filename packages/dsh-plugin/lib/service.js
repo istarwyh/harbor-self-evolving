@@ -49,7 +49,7 @@ import {
   validateDataset,
   resolveWithin,
 } from './evolution.js'
-import { createVersionChecker, installVersionUpdate } from './version.js'
+import { createVersionChecker } from './version.js'
 import {
   HarborUiContextRegistry,
   HARBOR_RESOLVED_CONTEXT_SCHEMA,
@@ -900,7 +900,6 @@ export class EvolutionService {
     this.metadata = metadata
     this.modelRuntime = modelRuntime
     this.versionChecker = metadata.versionChecker ?? createVersionChecker()
-    this.versionUpdater = metadata.versionUpdater ?? installVersionUpdate
     this.uiContexts = metadata.uiContexts ?? new HarborUiContextRegistry(metadata.uiContextOptions)
     this.trialSelections = metadata.trialSelections ?? new TrialSelectionRegistry(metadata.uiContextOptions)
     this.actionDrafts = new ActionDraftController({
@@ -1139,26 +1138,14 @@ export class EvolutionService {
     }
     return this.versionChecker({
       currentVersion: this.metadata.pluginVersion ?? 'development',
+      profile: config.profile,
       projectRoot: config.projectRoot,
+      jobsDir: config.jobsDir,
+      dshHome: config.dshHome,
+      runtimeDir: config.runtimeDir,
+      executionEnvironment: config.executionEnvironment,
       refresh: args.refresh === true || args.refresh === 'true',
     })
-  }
-
-  async updateVersion(args = {}) {
-    let config = this.config
-    if (args.workspace) ({ config } = await this._webContext(args))
-    else {
-      try { ({ config } = await this._webContext(args)) } catch {}
-    }
-    const version = await this.versionChecker({
-      currentVersion: this.metadata.pluginVersion ?? 'development',
-      projectRoot: config.projectRoot,
-      refresh: true,
-    })
-    if (version.status !== 'update-available' || !version.latestVersion) {
-      return { status: 'up-to-date', currentVersion: version.currentVersion }
-    }
-    return this.versionUpdater({ latestVersion: version.latestVersion, projectRoot: config.projectRoot })
   }
 
   async modelBinding() {

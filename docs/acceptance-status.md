@@ -9,6 +9,7 @@
 - 支持 `conversation.contexts.register` 的宿主会在 Harbor 页面发送普通消息时冻结页面或选区上下文；显式 Ask AI / `@harbor` 优先。
 - Web 的 Historical 快速入口最多选择 3 条最近合格会话；Agent/Skill 工具可显式请求最多 10 条。
 - Candidate 使用自有、锁定的 ACP 运行时；Host Model Broker 不向 Candidate 暴露上游凭据。
+- Web Workbench 接受 Candidate Context v3，并按 protocol 显式识别 Historical Context v2；版本检查只复制绑定完整安装身份的审阅式命令，不从浏览器执行 registry 包。
 
 ## 仍未完成或未被现有证据证明
 
@@ -21,6 +22,7 @@
 
 ## 证据入口
 
+- [0.9.7 发布记录](releases/v0.9.7/README.md)：当前 Context Web 合约、安装身份与双语产品站。
 - [0.9.6 发布记录](releases/v0.9.6/README.md)：默认 Host 执行、Docker 显式可选与执行环境可比性。
 - [0.9.5 发布记录](releases/v0.9.5/README.md)：紧凑首页、强制页面上下文与历史会话数据边界。
 - [0.9.4 发布记录](releases/v0.9.4/README.md)：普通消息自动页面上下文与失败恢复。

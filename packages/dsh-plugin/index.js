@@ -29,6 +29,9 @@ function checkoutExecutable(name) {
 export const Config = Schema.object({
   projectRoot: Schema.string().default('.'),
   jobsDir: Schema.string().default('jobs'),
+  profile: Schema.string().default(''),
+  dshHome: Schema.string().default(''),
+  runtimeDir: Schema.string().default(''),
   harborBin: Schema.string().default(''),
   harborDshBin: Schema.string().default(''),
   agentImportPath: Schema.string().default('harbor_dsh_evolution.agent:DshCandidateAgent'),

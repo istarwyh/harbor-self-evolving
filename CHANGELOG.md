@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+## 0.9.7 - 2026-09-20
+
+- Repair the Web Workbench contract for current artifacts: Candidate Evaluation Context v3 is valid and enables Compare/Gate when the Job mode permits it; Historical Evaluation Context v2 is recognized explicitly by protocol, while documented Candidate v2 and Historical v1 artifacts remain readable.
+- Keep browser updates review-only. Settings checks the npm registry and exposes an exact copyable setup command only when the complete installation identity is available; it does not execute registry packages from the browser. Setup now records the DSH profile, DSH home, Jobs directory, managed Python runtime and Host/Docker choice so future commands can preserve them.
+- Launch the bilingual Harbor product and documentation site, including the slogan “让 Agent 每一次都进步”, complete Plugin/Skill/Adapter coverage, concept chapters for Dataset/Generator/Evaluator/Optimizer/meta-evaluation, 26 visual groups, release history, security boundaries and an explicit roadmap.
+- Validation and publication status: local and CI verification, Trusted Publishing, public package checks and the GitHub Release evidence archive are recorded in the [0.9.7 archive](docs/releases/v0.9.7/README.md). No real-provider model evaluation or business-quality baseline is implied.
+
 ## 0.9.6 - 2026-09-19
 
 - Make direct Host execution the default for Candidate, Historical Session and bounded diagnostic Harbor jobs. Run Agent, Verifier and task commands as the current user without Docker, isolation, network policy or resource limits; retain Docker as an explicit `executionEnvironment: "docker"` opt-in.

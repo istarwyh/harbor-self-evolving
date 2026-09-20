@@ -3,7 +3,7 @@ title: Concepts and trustworthy scores
 linkTitle: Concepts
 weight: 40
 description: Dataset, Generator, Evaluator, Optimizer, train/validation/test splits, meta-evaluation, trustworthy scores and promotion semantics.
-verified_against_version: 0.9.6
+verified_against_version: 0.9.7
 source_refs: [README.md, docs/architecture.md, docs/evaluator-interface.md]
 ---
 

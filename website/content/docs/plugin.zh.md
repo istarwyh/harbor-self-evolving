@@ -4,7 +4,7 @@ linkTitle: Plugin Workbench
 description: 在 DSH 原生 Workbench 中导航，绑定页面上下文，检查证据，并在执行前审阅动作。
 weight: 30
 aliases: [/zh/docs/plugin/workbench/, /zh/docs/plugin/context/, /zh/docs/plugin/actions/, /zh/docs/plugin/settings/]
-verified_against_version: 0.9.6
+verified_against_version: 0.9.7
 source_refs: [packages/dsh-plugin/README.md, packages/dsh-plugin/src/client/index.jsx]
 ---
 
@@ -43,4 +43,4 @@ Settings 展示 project root 来源、Stack/jobs/CLI 检查、credential policy�
 后台 operation 可以显示 progress、partial evidence、取消与导航，但持久化能力因 operation 而异。未知状态不能伪装为成功，失败也不能静默重试。
 
 > [!WARNING]
-> 0.9.6 尚未完整支持 Candidate Context v3 Web Compare/Gate。参见 [Plugin 已知问题](https://istarwyh.github.io/harbor-self-evolving/zh/product/dsh-plugin/#limits)。
+> 0.9.7 已接受 Candidate Context v3，并显式识别 Historical Context v2。Compare/Gate 仍由 Artifact 有效性、身份可比性、mode 与 policy 控制；参见 [Plugin 边界](https://istarwyh.github.io/harbor-self-evolving/zh/product/dsh-plugin/#limits)。

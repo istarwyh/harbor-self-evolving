@@ -3,7 +3,7 @@ title: Evaluator 治理与元评测
 linkTitle: Evaluator 治理
 weight: 30
 description: 检查、版本化并独立测试 Evaluator，而不是把评分规则当作神谕。
-verified_against_version: 0.9.6
+verified_against_version: 0.9.7
 source_refs: [docs/evaluator-interface.md, schemas]
 ---
 

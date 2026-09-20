@@ -4,7 +4,7 @@ linkTitle: Plugin Workbench
 description: Navigate the native DSH Workbench, bind page context, inspect evidence and review actions before execution.
 weight: 30
 aliases: [/docs/plugin/workbench/, /docs/plugin/context/, /docs/plugin/actions/, /docs/plugin/settings/]
-verified_against_version: 0.9.6
+verified_against_version: 0.9.7
 source_refs: [packages/dsh-plugin/README.md, packages/dsh-plugin/src/client/index.jsx]
 ---
 
@@ -43,4 +43,4 @@ Settings exposes project root source, Stack/jobs/CLI checks, credential policy, 
 Background operations can expose progress, partial evidence, cancellation and navigation, but durability varies. Unknown state must not be rendered as success, and failure must not trigger silent retry.
 
 > [!WARNING]
-> Candidate Context v3 Web Compare/Gate is not fully supported in 0.9.6. See [the Plugin known issue](https://istarwyh.github.io/harbor-self-evolving/product/dsh-plugin/#limits).
+> 0.9.7 accepts Candidate Context v3 and explicitly recognizes Historical Context v2. Compare/Gate remain gated by artifact validity, comparable identities, mode and policy; see [Plugin limits](https://istarwyh.github.io/harbor-self-evolving/product/dsh-plugin/#limits).

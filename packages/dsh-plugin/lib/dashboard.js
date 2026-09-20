@@ -177,7 +177,7 @@ const HISTORICAL_JOB_KIND = 'historical-generation-evaluation'
 function normalizedJobKind(summary, context) {
   const declared = summary?.job_kind ?? context?.job_kind
   if (typeof declared === 'string' && declared) return declared
-  if (context?.protocol === 'historical-generation-evaluation-context/v1') return HISTORICAL_JOB_KIND
+  if (['historical-generation-evaluation-context/v1', 'historical-generation-evaluation-context/v2'].includes(context?.protocol)) return HISTORICAL_JOB_KIND
   return CANDIDATE_JOB_KIND
 }
 
@@ -209,15 +209,23 @@ function evaluatorMetaEvaluation(summary, context) {
 function capabilityMap(summary, context, lifecycle, registry, stack) {
   const jobKind = normalizedJobKind(summary, context)
   const historicalGeneration = jobKind === HISTORICAL_JOB_KIND
-  const contextV2 = context?.schema_version === 2
-  const historicalContext = context?.schema_version === 1
+  const candidateContextV3 = !historicalGeneration && context?.schema_version === 3
+  const contextV2 = !historicalGeneration && context?.schema_version === 2
+  const historicalContextV2 = historicalGeneration
+    && context?.schema_version === 2
+    && context?.protocol === 'historical-generation-evaluation-context/v2'
+  const historicalContextV1 = historicalGeneration
+    && context?.schema_version === 1
     && context?.protocol === 'historical-generation-evaluation-context/v1'
+  const contextSupported = candidateContextV3 || contextV2 || historicalContextV2 || historicalContextV1
   const scoreValidity = summary?.schema_version === 3
     || summary?.schema_version === 4
   return {
     jobKind,
     contextV2,
-    contextSupported: contextV2 || historicalContext,
+    candidateContextV3,
+    historicalContextV2,
+    contextSupported,
     historicalGeneration,
     candidateEvaluation: !historicalGeneration,
     trialLifecycle: lifecycle?.schema_version === 1,
@@ -225,11 +233,11 @@ function capabilityMap(summary, context, lifecycle, registry, stack) {
     evidenceProvenance: scoreValidity,
     artifactRegistry: [1, 2].includes(registry?.schema_version),
     source: historicalGeneration,
-    compare: contextV2 && !historicalGeneration,
+    compare: (candidateContextV3 || contextV2) && !historicalGeneration,
     evaluatorGovernance: stack?.schema_version === 1,
     evaluatorMetaEvaluation: evaluatorMetaEvaluation(summary, context),
-    gate: contextV2 && !historicalGeneration && summary?.mode === 'promotion-eligible',
-    readOnlyLegacy: !contextV2 && !historicalContext,
+    gate: (candidateContextV3 || contextV2) && !historicalGeneration && summary?.mode === 'promotion-eligible',
+    readOnlyLegacy: !contextSupported,
   }
 }
 
@@ -552,7 +560,7 @@ function schemaIssue(key, value) {
   if (value?.__readError) return value.__readError
   if (!isObject(value)) return 'artifact must be an object'
   const versions = {
-    summary: [2, 3, 4], candidate: [1], dataset: [1], datasetPreview: [1], stack: [1], stackSources: [1], context: [1, 2], contract: [1],
+    summary: [2, 3, 4], candidate: [1], dataset: [1], datasetPreview: [1], stack: [1], stackSources: [1], context: [1, 2, 3], contract: [1],
     doctor: [1], population: [1, 2, 3], lifecycle: [1], registry: [1, 2], diagnosis: [1, 2], optimization: [1, 2, 3], promotion: [2], completion: [1],
   }[key]
   if (versions && !versions.includes(value.schema_version)) return `schema_version must be one of ${versions.join(', ')}`

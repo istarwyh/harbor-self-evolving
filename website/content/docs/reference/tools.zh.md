@@ -3,7 +3,7 @@ title: 19 个 Harbor Agent 工具
 linkTitle: 19 个工具
 weight: 10
 description: 每个 Plugin 工具的输入边界、mutation/approval 语义、输出证据与下一步。
-verified_against_version: 0.9.6
+verified_against_version: 0.9.7
 source_refs: [packages/dsh-plugin/index.js, README.md]
 ---
 

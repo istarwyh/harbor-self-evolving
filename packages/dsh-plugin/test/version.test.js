@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { compareSemver, createVersionChecker, installVersionUpdate, NPM_LATEST_URL, renderUpdateCommand } from '../lib/version.js'
+import { compareSemver, completeInstallationIdentity, createVersionChecker, NPM_LATEST_URL, renderUpdateCommand } from '../lib/version.js'
 
 test('semantic versions compare stable and prerelease releases correctly', () => {
   assert.equal(compareSemver('0.7.0', '0.7.1'), -1)
@@ -21,36 +21,38 @@ test('version checker returns an exact, safely quoted update command and caches 
       return { ok: true, async json() { return { name: 'dsh-harbor-evolution', version: '0.8.0' } } }
     },
   })
-  const input = { currentVersion: '0.7.0', projectRoot: "/tmp/Agent's workspace" }
+  const input = {
+    currentVersion: '0.7.0',
+    profile: 'research',
+    projectRoot: "/tmp/Agent's workspace",
+    jobsDir: 'evidence/jobs',
+    dshHome: '/tmp/dsh home',
+    runtimeDir: '/tmp/harbor runtime',
+    executionEnvironment: 'docker',
+  }
   const first = await checker(input)
   const second = await checker(input)
 
   assert.equal(first.status, 'update-available')
   assert.equal(first.latestVersion, '0.8.0')
-  assert.equal(first.command, `npx --yes dsh-harbor-evolution@0.8.0 setup --project-root '/tmp/Agent'"'"'s workspace'`)
+  assert.equal(first.command, `npx --yes dsh-harbor-evolution@0.8.0 setup --profile 'research' --project-root '/tmp/Agent'"'"'s workspace' --jobs-dir 'evidence/jobs' --dsh-home '/tmp/dsh home' --runtime-dir '/tmp/harbor runtime' --execution-environment 'docker'`)
+  assert.equal(first.updateBlockedReason, undefined)
   assert.equal(second.source, 'cache')
   assert.equal(requests, 1)
-  assert.equal(renderUpdateCommand('0.8.0', '/tmp/project'), "npx --yes dsh-harbor-evolution@0.8.0 setup --project-root '/tmp/project'")
+  assert.equal(completeInstallationIdentity(input), true)
+  assert.equal(renderUpdateCommand('0.8.0', input), first.command)
 })
 
-test('one-click update runs the exact registry package setup without a shell', async () => {
-  const calls = []
-  const result = await installVersionUpdate({
-    latestVersion: '0.9.7',
-    projectRoot: "/tmp/Agent's workspace",
-  }, {
-    npx: 'npx-test',
-    run: async (...args) => { calls.push(args); return { code: 0 } },
-  })
+test('update command is withheld when exact installation identity is unavailable', async () => {
+  const result = await createVersionChecker({
+    fetchImpl: async () => ({ ok: true, async json() { return { name: 'dsh-harbor-evolution', version: '0.9.7' } } }),
+  })({ currentVersion: '0.9.6', projectRoot: '/tmp/project', jobsDir: 'jobs', executionEnvironment: 'host' })
 
-  assert.deepEqual(calls, [[
-    'npx-test',
-    ['--yes', 'dsh-harbor-evolution@0.9.7', 'setup', '--project-root', "/tmp/Agent's workspace"],
-    { cwd: "/tmp/Agent's workspace", timeoutMs: 30 * 60 * 1_000 },
-  ]])
-  assert.equal(result.status, 'installed')
-  assert.equal(result.installedVersion, '0.9.7')
-  assert.equal(result.restartRequired, true)
+  assert.equal(result.status, 'update-available')
+  assert.equal(result.command, undefined)
+  assert.equal(result.updateBlockedReason, 'INSTALLATION_IDENTITY_INCOMPLETE')
+  assert.equal(completeInstallationIdentity({ projectRoot: '/tmp/project' }), false)
+  assert.throws(() => renderUpdateCommand('0.9.7', { projectRoot: '/tmp/project' }), /complete installation identity/)
 })
 
 test('registry failure stays non-blocking and falls back to stale successful data', async () => {

@@ -47,8 +47,8 @@ async function makeHistoricalJob(projectRoot, name = 'session-diagnostic') {
     },
   }
   const context = {
-    schema_version: 1,
-    protocol: 'historical-generation-evaluation-context/v1',
+    schema_version: 2,
+    protocol: 'historical-generation-evaluation-context/v2',
     job_kind: 'historical-generation-evaluation',
     mode: 'diagnostic',
     execution_mode: 'observe-existing',
@@ -143,11 +143,38 @@ test('dashboard is a lightweight Context v3 overview', async () => {
   assert.equal(snapshot.overview.totalTrials, 4)
   assert.equal(snapshot.overview.totalExceptions, 1)
   assert.deepEqual(snapshot.overview.latestMetric, { name: 'reward', value: 0.82 })
-  assert.equal(snapshot.jobs.find(job => job.name === 'candidate-v2').status, 'partial')
+  const candidate = snapshot.jobs.find(job => job.name === 'candidate-v2')
+  assert.equal(candidate.status, 'partial')
+  assert.equal(candidate.capabilities.candidateContextV3, true)
+  assert.equal(candidate.capabilities.contextSupported, true)
+  assert.equal(candidate.capabilities.compare, true)
+  assert.equal(candidate.capabilities.gate, true)
+  assert.equal(candidate.capabilities.readOnlyLegacy, false)
   assert.equal(snapshot.jobs.find(job => job.name === 'pending').status, 'pending')
   assert.match(snapshot.jobs.find(job => job.name === 'broken').readError, /invalid JSON/)
   assert.equal(snapshot.jobs.find(job => job.name === 'legacy').capabilities.readOnlyLegacy, true)
   assert.equal('path' in snapshot.jobs[0], false)
+})
+
+test('pending Historical Context v2 is recognized from protocol without a summary', async () => {
+  const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-pending-historical-'))
+  const job = path.join(projectRoot, 'jobs', 'pending-historical')
+  await mkdir(job, { recursive: true })
+  await writeFile(path.join(job, 'evaluation-context.json'), JSON.stringify({
+    schema_version: 2,
+    protocol: 'historical-generation-evaluation-context/v2',
+    digest: 'sha256:pending-historical',
+  }))
+
+  const snapshot = await readDashboardSnapshot(config(projectRoot))
+  const pending = snapshot.jobs.find(item => item.name === 'pending-historical')
+  assert.equal(pending.status, 'pending')
+  assert.equal(pending.capabilities.historicalGeneration, true)
+  assert.equal(pending.capabilities.historicalContextV2, true)
+  assert.equal(pending.capabilities.contextSupported, true)
+  assert.equal(pending.capabilities.compare, false)
+  assert.equal(pending.capabilities.gate, false)
+  assert.equal(pending.capabilities.readOnlyLegacy, false)
 })
 
 test('dashboard normalizes Historical Generation Jobs without inventing a Candidate', async () => {
@@ -167,6 +194,7 @@ test('dashboard normalizes Historical Generation Jobs without inventing a Candid
   assert.equal(job.evaluatorMetaEvaluation.status, 'not-run')
   assert.equal(job.capabilities.contextSupported, true)
   assert.equal(job.capabilities.contextV2, false)
+  assert.equal(job.capabilities.historicalContextV2, true)
   assert.equal(job.capabilities.source, true)
   assert.equal(job.capabilities.compare, false)
   assert.equal(job.capabilities.gate, false)
@@ -200,6 +228,10 @@ test('job and trial APIs redact evidence, reject traversal, and report invalid s
   await writeFile(outside, '{"schema_version":1}')
   await symlink(outside, path.join(job, 'optimization-report.json'))
   const detail = await readJobDetail(config(projectRoot), { job: 'candidate-v2' })
+  assert.equal(detail.validation.context.status, 'valid')
+  assert.equal(detail.capabilities.candidateContextV3, true)
+  assert.equal(detail.capabilities.compare, true)
+  assert.equal(detail.capabilities.gate, true)
   assert.equal(detail.validation.optimization.status, 'invalid')
   assert.equal('process' in detail.artifacts, false)
   const trial = await readTrialDetail(config(projectRoot), { job: 'candidate-v2', trial: 'trial-0' })

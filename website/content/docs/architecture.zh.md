@@ -3,11 +3,11 @@ title: 架构与信任边界
 linkTitle: 架构
 weight: 50
 description: DSH Plugin、Skill、Python Adapter、两套 Context 协议、执行环境与确定性 Gate。
-verified_against_version: 0.9.6
+verified_against_version: 0.9.7
 source_refs: [packages/dsh-plugin/index.js, packages/harbor-plugin/src/harbor_dsh_evolution/context.py, packages/harbor-plugin/src/harbor_dsh_evolution/historical_context.py]
 ---
 
-![Harbor Self-Evolving 架构](https://istarwyh.github.io/harbor-self-evolving/images/diagrams/system-architecture.svg "当前 0.9.6 契约与带标签已知问题")
+![Harbor Self-Evolving 架构](https://istarwyh.github.io/harbor-self-evolving/images/diagrams/system-architecture.svg "当前 0.9.7 契约与显式安全边界")
 
 ## 三个产品角色 {#roles}
 
@@ -32,7 +32,7 @@ Generator、Integration、Renderer、Evaluator/Judge、Contract、Reporter、Opt
 
 ## 执行环境 {#execution}
 
-0.9.6 默认 **Host**，Docker 为显式 opt-in。执行环境身份进入 Context，因此 Host 与 Docker 结果不会静默视为可比。
+0.9.7 默认 **Host**，Docker 为显式 opt-in。执行环境身份进入 Context，因此 Host 与 Docker 结果不会静默视为可比。
 
 > [!WARNING]
 > 默认 Host 模式不提供容器隔离、用户切换、网络策略或 CPU/内存限制，任务以当前用户权限直接运行。

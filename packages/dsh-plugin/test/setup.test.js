@@ -49,6 +49,10 @@ test('profile patch replaces only harbor-evolution and preserves other entries',
     '- id: harbor-evolution',
     '  config:',
     '    projectRoot: /old',
+    '    candidateProvider: custom-provider',
+    '    modelBrokerMaxRequests: 77',
+    '    customNested:',
+    '      enabled: true',
     '- insert:',
     '    - id: custom',
     '',
@@ -56,12 +60,22 @@ test('profile patch replaces only harbor-evolution and preserves other entries',
   const updated = upsertHarborProfileEntry(source, {
     projectRoot: '/new agent',
     jobsDir: 'jobs',
+    profile: 'research',
+    dshHome: '/dsh-home',
+    runtimeDir: '/runtime',
     harborBin: '/runtime/bin/harbor',
     harborDshBin: '/runtime/bin/harbor-dsh',
   })
   assert.match(updated, /model: example/)
   assert.match(updated, /projectRoot: "\/new agent"/)
+  assert.match(updated, /profile: "research"/)
+  assert.match(updated, /dshHome: "\/dsh-home"/)
+  assert.match(updated, /runtimeDir: "\/runtime"/)
   assert.match(updated, /executionEnvironment: "host"/)
+  assert.match(updated, /candidateProvider: custom-provider/)
+  assert.match(updated, /modelBrokerMaxRequests: 77/)
+  assert.match(updated, /customNested:\n      enabled: true/)
+  assert.doesNotMatch(updated, /projectRoot: \/old/)
   assert.match(updated, /- insert:\n    - id: custom/)
   assert.equal((updated.match(/- id: harbor-evolution/g) ?? []).length, 1)
 })
@@ -133,6 +147,9 @@ test('setup installs both runtimes, writes an idempotent profile patch, and veri
   const patch = await readFile(patchFile, 'utf8')
   assert.match(patch, /^# keep me/m)
   assert.match(patch, /- id: harbor-evolution/)
+  assert.match(patch, /profile: "web"/)
+  assert.match(patch, new RegExp(`dshHome: ${JSON.stringify(dshHome).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`))
+  assert.match(patch, new RegExp(`runtimeDir: ${JSON.stringify(runtimeDir).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`))
   assert.equal((patch.match(/- id: harbor-evolution/g) ?? []).length, 1)
   const pluginCall = calls.find(call => call.command === 'pnpm' && call.args.includes('plugin'))
   assert.equal(pluginCall.options.env.DSH_HOME, dshHome)

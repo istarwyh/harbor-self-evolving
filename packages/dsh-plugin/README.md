@@ -14,10 +14,10 @@ npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 
 The setup command installs both required runtimes:
 
-- `harbor-dsh-evolution==0.9.6` in a managed Python environment.
-- `dsh-harbor-evolution@0.9.6` in the selected DSH profile.
+- `harbor-dsh-evolution==0.9.7` in a managed Python environment.
+- `dsh-harbor-evolution@0.9.7` in the selected DSH profile.
 
-It then stores the absolute Harbor executable paths and a fallback `projectRoot` in the profile's `harbor-evolution` block and verifies the integration. Agent Tool calls always use the calling session's absolute working directory as their project root; the configured value remains the Web Workbench and non-Agent fallback. Existing unrelated profile entries are preserved, and rerunning setup updates the same block.
+It then stores the DSH profile/home, managed Python runtime, Jobs directory, Host/Docker choice, absolute Harbor executable paths, and a fallback `projectRoot` in the profile's `harbor-evolution` block and verifies the integration. Agent Tool calls always use the calling session's absolute working directory as their project root; the configured value remains the Web Workbench and non-Agent fallback. Existing unrelated profile entries are preserved, and rerunning setup updates the same block.
 
 Successful setup requires `harbor plugins list` to discover both `dsh-evolution` for Candidate Jobs and `dsh-historical-evaluation` for observe-existing Session Jobs.
 
@@ -105,7 +105,7 @@ Before each Job, the Plugin snapshots the current DSH Agent selection—provider
 
 `harbor_model_binding` returns the current default selection as a credential-free `model-binding.json` draft. Once included before Candidate snapshot, it enters the Candidate digest and becomes the required Job model identity. Conflicting Job or Plugin overrides fail before Harbor starts. Even for `openai-codex`, the Candidate receives only the short-lived Broker capability—never the Host OAuth file or an upstream API key.
 
-When Settings opens, the Host performs a bounded npm registry check and caches successful results. An available release is shown with its exact installer command and release link. The browser never installs, rewrites a DSH profile, or restarts DSH; registry failures are non-blocking.
+When Settings opens, the Host performs a bounded npm registry check and caches successful results. An available release is shown with its release link. The exact installer command appears only when setup has recorded the complete installation identity; otherwise Settings fails closed instead of guessing defaults. The browser never executes a registry package, installs, rewrites a DSH profile, or restarts DSH; registry failures are non-blocking.
 
 `harbor_eval_result` defaults to the stable Summary. Use `view=job`, `view=dataset`, `view=progress`, `view=trial` plus a returned `trialId`, or `view=governance` to inspect sanitized instructions, generated output, evidence, and evaluator source without coupling the Agent to artifact file paths.
 
@@ -122,8 +122,12 @@ The selected profile receives one id-targeted override:
   config:
     projectRoot: /workspace/my-agent
     jobsDir: jobs
-    harborBin: /managed/runtime/.venv/bin/harbor
-    harborDshBin: /managed/runtime/.venv/bin/harbor-dsh
+    profile: web
+    dshHome: /home/user/.dsh
+    runtimeDir: /home/user/.local/share/harbor-dsh-evolution
+    harborBin: /home/user/.local/share/harbor-dsh-evolution/.venv/bin/harbor
+    harborDshBin: /home/user/.local/share/harbor-dsh-evolution/.venv/bin/harbor-dsh
+    executionEnvironment: host
     pythonPath: ""
 ```
 

@@ -3,7 +3,7 @@ title: DSH 原生评测工作台
 description: 完整介绍 DSH Plugin 的 19 个工具、Workbench、Host 服务、受审动作与当前限制。
 weight: 10
 aliases: [/zh/product/plugin/, /zh/product/skill/, /zh/product/adapter/, /zh/product/roadmap/]
-verified_against_version: 0.9.6
+verified_against_version: 0.9.7
 source_refs: [packages/dsh-plugin/index.js, packages/dsh-plugin/README.md, packages/dsh-plugin/lib/dashboard.js]
 ---
 
@@ -44,9 +44,9 @@ Ask AI 可以准备 proposal draft，但不能写文件、启动 Job、修改 Ev
 
 ## 当前限制 {#limits}
 
+0.9.7 已接受 Candidate Context v3，并按 protocol 显式识别 Historical Context v2。Candidate Compare/Gate 仍要求可比 baseline、有效 Artifact、promotion-eligible mode 与 policy；支持该流程不代表一定返回 `PROMOTE`。
+
 > [!WARNING]
-> **已知问题（0.9.6）**：当前 Web Dashboard 尚未接受 Candidate Context v3。Adapter 已生成 Candidate Context v3，但 Dashboard 仍按 Candidate Context v2 判断，因此真实 Candidate v3 Job 会被标记为 `unsupported/read-only legacy` 与 `invalid`，并关闭 Compare/Gate。Historical Context v2 可以读取，但目前由通用 `schema_version === 2` 分支覆盖，尚缺 protocol-aware contract test。在修复并发布前，不应将 Candidate v3 的 Web Compare/Gate 描述为完整可用。
+> Same-origin 检查是浏览器 CSRF 防线，不是 caller authentication。Historical Web operation 锁为进程内状态，而部分 durable `@harbor` snapshot 可超过内存 TTL；retention 与恢复能力因 operation 而异。
 
-Same-origin 检查是浏览器 CSRF 防线，不是 caller authentication。Historical Web operation 锁为进程内状态，而部分 durable `@harbor` snapshot 可超过内存 TTL；retention 与恢复能力因 operation 而异。
-
-本地未打 tag 的一键更新仅是**开发预览**，不属于 0.9.6。已发布版本 UI 只做版本检查，展示精确可复制命令与 release 链接，不会静默安装。
+早期未打 tag 的一键更新预览已在发布前撤回。0.9.7 只做版本检查，并且仅在完整安装身份可用时展示精确可复制的 setup 命令；浏览器不会执行 registry 包。

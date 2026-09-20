@@ -3,7 +3,7 @@ title: Candidate evaluation and promotion
 linkTitle: Candidate evaluation
 description: Freeze identities, run a comparable regression, and obtain a deterministic promotion recommendation.
 weight: 20
-verified_against_version: 0.9.6
+verified_against_version: 0.9.7
 source_refs: [docs/integration.md, README.md, docs/candidate-runtime-contract.md]
 ---
 
@@ -33,9 +33,8 @@ The Gate is deterministic for fixed baseline Job, Candidate Job and policy input
 
 It does **not** deploy, mutate the Champion or bypass external CI/CD approval.
 
-> [!WARNING]
-> In 0.9.6 the Adapter emits Candidate Context v3, but the Web Dashboard still recognizes Candidate v2. Real v3 Jobs can appear unsupported/invalid with Compare/Gate disabled in Web. Use the Agent/tool evidence path and treat Web Candidate Compare/Gate as a known issue until a fixed release is published.
+Version 0.9.7 accepts Candidate Context v3 in both Dashboard overview and Job detail. Compare/Gate still remain capability-gated by artifact validity, comparable identities, mode and policy.
 
 ## What a release test does not prove {#limits}
 
-0.9.6 did not run a real provider model, real Candidate/Historical Session data, or a paid Harbor evaluation; automated tests do not establish a business-quality baseline. Your Dataset, Evaluator and production evidence must establish that baseline.
+0.9.7 did not run a real provider model, real Candidate/Historical Session data, or a paid Harbor evaluation; automated tests do not establish a business-quality baseline. Your Dataset, Evaluator and production evidence must establish that baseline.

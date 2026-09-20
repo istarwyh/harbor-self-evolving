@@ -25,4 +25,4 @@ Choose the path that matches your question:
 - [Security](https://istarwyh.github.io/harbor-self-evolving/docs/security/) — read the limits before running untrusted Tasks.
 
 > [!IMPORTANT]
-> Version baseline: **Harbor Self-Evolving 0.9.6 (Beta)**, compatible with **Harbor `>=0.21,<0.22`**. Development-preview behavior from an untagged checkout is labeled separately.
+> Version baseline: **Harbor Self-Evolving 0.9.7 (Beta)**, compatible with **Harbor `>=0.21,<0.22`**. Development-preview behavior from an untagged checkout is labeled separately.

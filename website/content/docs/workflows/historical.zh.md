@@ -2,7 +2,7 @@
 title: 评测最近 Session
 description: 把限量、脱敏的最近 DSH Session 转成非晋级 Historical evaluation Job。
 weight: 10
-verified_against_version: 0.9.6
+verified_against_version: 0.9.7
 source_refs: [docs/integration.md, docs/dsh-web-quickstart.md, packages/dsh-plugin/README.md]
 ---
 

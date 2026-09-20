@@ -26,7 +26,7 @@ for (const code of ['CANDIDATE_RUNTIME_UNBOUND', 'CANDIDATE_RUNTIME_INVALID']) {
     await candidateFixture(projectRoot)
     const callsFile = path.join(projectRoot, 'adapter-calls.jsonl')
     const adapter = path.join(projectRoot, 'adapter-test-double.cjs')
-    await writeFile(adapter, `#!${process.execPath}
+    await writeFile(adapter, `#!/usr/bin/env node
 const { appendFileSync } = require('node:fs');
 const args = process.argv.slice(2);
 appendFileSync(${JSON.stringify(callsFile)}, JSON.stringify(args) + '\\n');
@@ -77,7 +77,7 @@ test('a bound Candidate cannot execute through an old Doctor without the runtime
   await candidateFixture(projectRoot)
   const adapter = path.join(projectRoot, 'old-adapter-test-double.cjs')
   const callsFile = path.join(projectRoot, 'calls.jsonl')
-  await writeFile(adapter, `#!${process.execPath}
+  await writeFile(adapter, `#!/usr/bin/env node
 const { appendFileSync } = require('node:fs');
 const command = process.argv[2];
 appendFileSync(${JSON.stringify(callsFile)}, JSON.stringify(command) + '\\n');

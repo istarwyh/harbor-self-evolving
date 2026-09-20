@@ -3,7 +3,7 @@ title: Native DSH evaluation workbench
 description: The complete DSH Plugin surface—19 tools, Workbench, Host services, reviewed actions and current limits.
 weight: 10
 aliases: [/product/plugin/, /product/skill/, /product/adapter/, /product/roadmap/]
-verified_against_version: 0.9.6
+verified_against_version: 0.9.7
 source_refs: [packages/dsh-plugin/index.js, packages/dsh-plugin/README.md, packages/dsh-plugin/lib/dashboard.js]
 ---
 
@@ -44,9 +44,9 @@ Ask AI can prepare a proposal draft, but it cannot write files, start Jobs, chan
 
 ## Current limits {#limits}
 
+Version 0.9.7 accepts Candidate Context v3 and explicitly recognizes Historical Context v2 by protocol. Candidate Compare/Gate still depends on a comparable baseline, valid artifacts, promotion-eligible mode and policy; support does not imply a `PROMOTE` result.
+
 > [!WARNING]
-> **Known issue (0.9.6):** The Web Dashboard does not yet accept Candidate Context v3. The Adapter produces Candidate Context v3, but the Dashboard still evaluates it as Candidate Context v2; as a result, a real Candidate v3 Job is marked `unsupported/read-only legacy` and `invalid`, and Compare/Gate are disabled. Historical Context v2 is readable, but is currently covered by a generic `schema_version === 2` branch and lacks a protocol-aware contract test. Until a fix is released, do not describe Web Compare/Gate for Candidate v3 as fully supported.
+> Same-origin checks are a browser CSRF defense, not caller authentication. Historical Web operation locks are process-local, while some durable `@harbor` snapshots can outlive memory TTL; retention and recovery therefore vary by operation.
 
-Same-origin checks are a browser CSRF defense, not caller authentication. Historical Web operation locks are process-local, while some durable `@harbor` snapshots can outlive memory TTL; retention and recovery therefore vary by operation.
-
-The local untagged one-click updater is **Development preview**, not 0.9.6. The shipped version UI performs a version check and shows an exact copyable update command and release link; it does not silently install.
+The earlier untagged one-click updater preview was withdrawn before release. Version 0.9.7 performs a version check and offers an exact copyable setup command only when the complete installation identity is available; the browser never executes a registry package.

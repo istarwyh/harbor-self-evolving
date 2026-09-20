@@ -3,7 +3,7 @@ title: 核心概念与可信分数
 linkTitle: 核心概念
 weight: 40
 description: 用中文解释 Dataset、Generator、Evaluator、Optimizer、训练/验证/测试集、元评测、可信分数与晋级语义。
-verified_against_version: 0.9.6
+verified_against_version: 0.9.7
 source_refs: [README.md, docs/architecture.md, docs/evaluator-interface.md]
 ---
 

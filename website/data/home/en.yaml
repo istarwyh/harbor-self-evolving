@@ -1,7 +1,7 @@
 sections: [hero, metrics, capabilities, steps, gallery, principles, faq, command-box, cta]
 
 hero:
-  eyebrow: Harbor Self-Evolving 0.9.6 · Beta
+  eyebrow: Harbor Self-Evolving 0.9.7 · Beta
   title_lines:
     - Make your Agent
     - improve every time.
@@ -59,7 +59,7 @@ capabilities:
       url: product/#adapter
       motto: Generator · Evaluator · Optimizer · Gate
       bullets:
-        - Host execution is the 0.9.6 default; Docker is explicit opt-in.
+        - Host execution is the 0.9.7 default; Docker is explicit opt-in.
         - Candidate Context v3 and Historical Context v2 remain distinct protocols.
         - Jobs record stable identities and typed evidence for later comparison.
       value: Identity and evidence become inspectable artifacts—not claims in prose.
@@ -83,7 +83,7 @@ gallery:
   items:
     - { title: Identity-first architecture, badge: Current contract, image: images/diagrams/system-architecture.svg, alt: System architecture diagram, desc: 'DSH, Harbor Adapter, evaluation stack, immutable artifacts and deterministic Gate.', url: docs/architecture/ }
     - { title: Historical diagnosis, badge: Synthetic · v0.9.3, image: images/screenshots/historical-preview.png, alt: Synthetic Historical Session preview and disclosure card, desc: 'Component/service fixture; no real provider, Session or Harbor Job.', url: docs/workflows/historical/ }
-    - { title: Native Workbench, badge: Synthetic · v0.9.5, image: images/screenshots/workbench-desktop.png, alt: Synthetic Harbor Workbench desktop view, desc: 'Cropped component fixture; it does not prove a real 0.9.6 evaluation.', url: product/dsh-plugin/ }
+    - { title: Native Workbench, badge: Synthetic · v0.9.5, image: images/screenshots/workbench-desktop.png, alt: Synthetic Harbor Workbench desktop view, desc: 'Cropped component fixture; it does not prove a real 0.9.7 evaluation.', url: product/dsh-plugin/ }
 
 principles:
   eyebrow: Design principles

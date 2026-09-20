@@ -2,7 +2,7 @@
 title: Troubleshooting
 weight: 80
 description: Diagnose installation, profile, Dataset, Context, Historical and execution-environment failures without overstating success.
-verified_against_version: 0.9.6
+verified_against_version: 0.9.7
 source_refs: [docs/dsh-web-quickstart.md, docs/troubleshooting.md]
 ---
 
@@ -32,8 +32,8 @@ Web only sees recently completed top-level Sessions available to current DSH. Ag
 
 ## Apple Silicon and Docker {#apple-silicon}
 
-0.9.6 is Host-first, so Docker is not a default prerequisite. If you explicitly use Docker, verify image architecture and runtime availability separately. Do not mix the resulting evidence with Host baselines.
+0.9.7 is Host-first, so Docker is not a default prerequisite. If you explicitly use Docker, verify image architecture and runtime availability separately. Do not mix the resulting evidence with Host baselines.
 
 ## Web Compare/Gate is disabled {#context-v3}
 
-Candidate Context v3 is a known 0.9.6 Web contract issue. The Adapter output may be valid while Dashboard marks it unsupported/invalid. Use Agent/tool evidence and wait for a fixed release; do not rewrite or downgrade the Context artifact.
+Candidate Context v3 is supported by the 0.9.7 Dashboard. If a Job still appears unsupported or invalid, inspect the exact Context schema, protocol, artifact validation, mode and comparable identities; do not rewrite or downgrade the Context artifact.

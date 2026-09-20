@@ -24,27 +24,29 @@ test('Evaluator governance finds the nearest nested active Stack without leaving
   assert.equal(await resolveEvaluatorStackPath({ projectRoot }, governance, '.harbor/custom.yml'), '.harbor/custom.yml')
 })
 
-test('one-click update installs the registry version for the active project and requires restart', async () => {
-  const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-version-update-'))
+test('version check binds the exact installation identity and never executes an update', async () => {
+  const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-version-check-'))
   const calls = []
-  const service = new EvolutionService({ projectRoot }, {
+  const config = {
+    projectRoot,
+    jobsDir: 'custom/jobs',
+    profile: 'research',
+    dshHome: '/tmp/dsh-home',
+    runtimeDir: '/tmp/harbor-runtime',
+    executionEnvironment: 'docker',
+  }
+  const service = new EvolutionService(config, {
     pluginVersion: '0.9.6',
     versionChecker: async input => {
-      calls.push({ check: input })
-      return { status: 'update-available', currentVersion: '0.9.6', latestVersion: '0.9.7' }
-    },
-    versionUpdater: async input => {
-      calls.push({ update: input })
-      return { status: 'installed', installedVersion: input.latestVersion, restartRequired: true }
+      calls.push(input)
+      return { status: 'update-available', currentVersion: '0.9.6', latestVersion: '0.9.7', command: 'review-me' }
     },
   })
 
-  const result = await service.updateVersion()
-  assert.equal(result.installedVersion, '0.9.7')
-  assert.equal(result.restartRequired, true)
-  assert.deepEqual(calls.at(-1), { update: { latestVersion: '0.9.7', projectRoot } })
-  assert.equal(calls[0].check.currentVersion, '0.9.6')
-  assert.equal(calls[0].check.refresh, true)
+  const result = await service.version({ refresh: true })
+  assert.equal(result.command, 'review-me')
+  assert.deepEqual(calls, [{ currentVersion: '0.9.6', ...config, refresh: true }])
+  assert.equal(typeof service.updateVersion, 'undefined')
 })
 
 test('Web Workbench projectRoot can switch to an existing absolute directory without changing Agent tool scoping', async () => {
@@ -122,11 +124,11 @@ test('a pinned workspace keeps same-named Job reads isolated when another Agent 
 test('version status uses the installed Plugin identity and current Web projectRoot', async () => {
   let received
   const service = new EvolutionService(
-    { projectRoot: '/workspace/agent' },
+    { projectRoot: '/workspace/agent', jobsDir: 'artifacts/jobs', profile: 'web', dshHome: '/dsh', runtimeDir: '/runtime', executionEnvironment: 'host' },
     { pluginVersion: '0.7.2', versionChecker: async value => { received = value; return { status: 'up-to-date' } } },
   )
   assert.deepEqual(await service.version({ refresh: 'true' }), { status: 'up-to-date' })
-  assert.deepEqual(received, { currentVersion: '0.7.2', projectRoot: '/workspace/agent', refresh: true })
+  assert.deepEqual(received, { currentVersion: '0.7.2', projectRoot: '/workspace/agent', jobsDir: 'artifacts/jobs', profile: 'web', dshHome: '/dsh', runtimeDir: '/runtime', executionEnvironment: 'host', refresh: true })
 })
 
 test('model binding exposes only immutable Host Broker identity', async () => {

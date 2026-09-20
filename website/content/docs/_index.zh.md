@@ -25,4 +25,4 @@ cascade:
 - [安全](https://istarwyh.github.io/harbor-self-evolving/zh/docs/security/)：运行不可信 Task 前先了解限制。
 
 > [!IMPORTANT]
-> 版本基线：**Harbor Self-Evolving 0.9.6（Beta）**，兼容 **Harbor `>=0.21,<0.22`**。未打 tag checkout 的开发预览行为单独标注。
+> 版本基线：**Harbor Self-Evolving 0.9.7（Beta）**，兼容 **Harbor `>=0.21,<0.22`**。未打 tag checkout 的开发预览行为单独标注。

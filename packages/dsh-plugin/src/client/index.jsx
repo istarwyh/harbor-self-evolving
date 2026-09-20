@@ -53,7 +53,7 @@ const dictionaries = {
     governance: '评测器治理', governanceHint: '读取 Rubric / Evaluator / Judge 身份与源码。语义改动必须创建新身份，并建立新 Baseline。',
     artifacts: 'Artifact Registry', setupDoctor: '安装与架构检查', setupHint: '这里显示 Web 工作台实际使用的项目根目录。每次 Harbor Agent Tool 调用都会自动切到该 Session；工具执行仍保持 Session 隔离。',
     projectRoot: '当前 projectRoot', switchProjectRoot: '切换并重载', projectRootHint: '请输入已存在的绝对目录。本次 DSH 运行立即生效；下一次 Harbor Agent Tool 调用会自动跟随它的 Session。', switchingProjectRoot: '正在切换…', projectRootUpdated: '已切换并重新读取 Harbor Jobs。', projectRootConfigured: '来源：Plugin 启动配置', projectRootAgent: '来源：最近一次 Harbor Agent 调用（自动同步）', projectRootManual: '来源：本次运行手动切换',
-    pluginVersion: '插件版本', checkingUpdate: '正在检查更新…', updateAvailable: '发现新版本', upToDate: '已是最新版', updateUnavailable: '暂时无法检查更新', currentVersion: '当前版本', latestVersion: '最新版本', updateHint: '点击一键更新即可升级 Plugin、Skill 和 Harbor Adapter；完成后需要重启 YourBuddy。', offlineUpdateHint: '这不会影响 Harbor 的任何功能。请检查网络后重试，或在终端运行带 @latest 的安装命令。', updateNow: '一键更新到', updatingNow: '正在更新…', updateInstalled: '更新已安装，请重启 YourBuddy 后生效。', updateFailed: '更新失败', copyUpdateCommand: '复制更新命令', updateCommandCopied: '已复制更新命令', checkAgain: '重新检查', viewRelease: '查看发布说明', checkedAt: '检查时间', staleVersion: '当前展示的是最近一次成功检查的结果。',
+    pluginVersion: '插件版本', checkingUpdate: '正在检查更新…', updateAvailable: '发现新版本', upToDate: '已是最新版', updateUnavailable: '暂时无法检查更新', currentVersion: '当前版本', latestVersion: '最新版本', updateHint: '请检查并复制精确更新命令；命令会保留 profile、DSH_HOME、Jobs、运行环境与托管 Python 目录，完成后需要重启 YourBuddy。', offlineUpdateHint: '这不会影响 Harbor 的任何功能。请检查网络后重试；安装身份不完整时，请在终端显式运行 setup 并传入原有配置。', copyUpdateCommand: '复制更新命令', updateCommandCopied: '已复制更新命令', checkAgain: '重新检查', viewRelease: '查看发布说明', checkedAt: '检查时间', staleVersion: '当前展示的是最近一次成功检查的结果。',
     credentialPolicy: 'Secret 持久化策略', sessionCredential: '仅本次运行', credentialStore: 'DSH 凭据库', plaintextCredential: '明文 settings', supported: '已支持', hostServiceRequired: '等待 Host credential service', forbidden: '禁止', sessionCredentialHint: '默认。通过环境变量或 Job 临时 capability 注入，不进入评测身份与报告。', credentialStoreHint: '只有 DSH 暴露正式凭据服务后才可启用，当前不会用 settings.yaml 冒充。', plaintextCredentialHint: 'Harbor 不把 Authorization、API key 或 OAuth token 写入项目配置。',
     stageNav: '评测阶段', datasetTasks: '评测任务', datasetSource: '任务来源', taskInstruction: '具体任务要求', instructionFile: '指令文件', snapshot: 'Job 固化快照', historicalFallback: '历史 Job 源文件回读',
     generatedOutput: '生成产物', selectTrial: '选择 Trial', noRenderableOutput: '这个 Trial 没有可呈现的页面、文档或结构化产物。请让 Agent 将业务结果写入 Harbor artifacts。', previewSource: '产物来源', pagePreview: '页面预览', documentPreview: '文档预览', structuredOutput: '结构化产物', rawOutput: '原始产物',
@@ -98,7 +98,7 @@ const dictionaries = {
     governance: 'Evaluator governance', governanceHint: 'Read Rubric, Evaluator, Judge identity, and source. Semantic edits create a new identity and require a fresh baseline.',
     artifacts: 'Artifact Registry', setupDoctor: 'Installation and architecture checks', setupHint: 'This is the project root currently used by the Web Workbench. Every Harbor Agent Tool call follows its Session automatically while tool execution remains Session-isolated.',
     projectRoot: 'Current projectRoot', switchProjectRoot: 'Switch and reload', projectRootHint: 'Enter an existing absolute directory. It applies now; the next Harbor Agent Tool call will follow its Session automatically.', switchingProjectRoot: 'Switching…', projectRootUpdated: 'Switched and reloaded Harbor Jobs.', projectRootConfigured: 'Source: Plugin startup configuration', projectRootAgent: 'Source: most recent Harbor Agent call (automatic)', projectRootManual: 'Source: manually switched for this run',
-    pluginVersion: 'Plugin version', checkingUpdate: 'Checking for updates…', updateAvailable: 'Update available', upToDate: 'Up to date', updateUnavailable: 'Update check unavailable', currentVersion: 'Current version', latestVersion: 'Latest version', updateHint: 'Use one-click update to upgrade the Plugin, Skill, and Harbor Adapter. Restart YourBuddy when it finishes.', offlineUpdateHint: 'Harbor remains fully functional. Check the network and retry, or run the installer with @latest in a terminal.', updateNow: 'Update now to', updatingNow: 'Updating…', updateInstalled: 'Update installed. Restart YourBuddy to activate it.', updateFailed: 'Update failed', copyUpdateCommand: 'Copy update command', updateCommandCopied: 'Update command copied', checkAgain: 'Check again', viewRelease: 'View release notes', checkedAt: 'Checked', staleVersion: 'Showing the most recent successful check.',
+    pluginVersion: 'Plugin version', checkingUpdate: 'Checking for updates…', updateAvailable: 'Update available', upToDate: 'Up to date', updateUnavailable: 'Update check unavailable', currentVersion: 'Current version', latestVersion: 'Latest version', updateHint: 'Review and copy the exact update command. It preserves profile, DSH_HOME, Jobs, execution environment, and managed Python directory. Restart YourBuddy when it finishes.', offlineUpdateHint: 'Harbor remains fully functional. Check the network and retry. If installation identity is incomplete, run setup in a terminal with the existing options explicitly.', copyUpdateCommand: 'Copy update command', updateCommandCopied: 'Update command copied', checkAgain: 'Check again', viewRelease: 'View release notes', checkedAt: 'Checked', staleVersion: 'Showing the most recent successful check.',
     credentialPolicy: 'Secret persistence policy', sessionCredential: 'This run only', credentialStore: 'DSH credential store', plaintextCredential: 'Plaintext settings', supported: 'Supported', hostServiceRequired: 'Host credential service required', forbidden: 'Blocked', sessionCredentialHint: 'Default. Inject through environment variables or a short-lived Job capability; never include it in evaluation identity or reports.', credentialStoreHint: 'Enabled only after DSH exposes a formal credential service; settings.yaml is not treated as a credential store.', plaintextCredentialHint: 'Harbor never writes Authorization, API keys, or OAuth tokens into project settings.',
     stageNav: 'Evaluation stages', datasetTasks: 'Evaluation tasks', datasetSource: 'Task source', taskInstruction: 'Task instruction', instructionFile: 'Instruction file', snapshot: 'Job snapshot', historicalFallback: 'Historical source fallback',
     generatedOutput: 'Generated output', selectTrial: 'Select Trial', noRenderableOutput: 'This Trial has no renderable page, document, or structured artifact. Publish the business result through Harbor artifacts.', previewSource: 'Output provenance', pagePreview: 'Page preview', documentPreview: 'Document preview', structuredOutput: 'Structured output', rawOutput: 'Raw output',
@@ -186,10 +186,14 @@ function gateReasonText(value) {
 const HISTORICAL_JOB_KIND = 'historical-generation-evaluation'
 
 function isHistoricalJob(value) {
+  const protocols = new Set([
+    value?.artifacts?.context?.protocol,
+    value?.evaluationContext?.protocol,
+  ])
   return value?.jobKind === HISTORICAL_JOB_KIND
     || value?.job_kind === HISTORICAL_JOB_KIND
-    || value?.artifacts?.context?.protocol === 'historical-generation-evaluation-context/v1'
-    || value?.evaluationContext?.protocol === 'historical-generation-evaluation-context/v1'
+    || protocols.has('historical-generation-evaluation-context/v1')
+    || protocols.has('historical-generation-evaluation-context/v2')
 }
 
 function generatorPopulationText(population, t) {
@@ -2175,7 +2179,7 @@ function HistoricalMetaEvaluationPanel({ detail, artifacts, t }) {
     ?? artifacts.summary?.evaluator_meta_evaluation
     ?? { status: 'not-run', validation_report_ref: null }
   const notRun = metaEvaluation.status === 'not-run'
-  return <section className="hse-section"><h3>{t('meta')}</h3><p className="hse-muted">{t('metaNotRunHint')}</p><div className="hse-grid"><div className="hse-card"><span>{t('currentStatus')}</span><b>{notRun ? t('metaNotRun') : metaEvaluation.status ?? '—'}</b><code>{context.protocol ?? 'historical-generation-evaluation-context/v1'}</code></div><div className="hse-card"><span>Validation report</span><b>{metaEvaluation.validation_report_ref ?? '—'}</b><code>{notRun ? 'Evaluator reliability remains unvalidated' : short(metaEvaluation.digest)}</code></div></div></section>
+  return <section className="hse-section"><h3>{t('meta')}</h3><p className="hse-muted">{t('metaNotRunHint')}</p><div className="hse-grid"><div className="hse-card"><span>{t('currentStatus')}</span><b>{notRun ? t('metaNotRun') : metaEvaluation.status ?? '—'}</b><code>{context.protocol ?? 'historical-generation-evaluation-context/v2'}</code></div><div className="hse-card"><span>Validation report</span><b>{metaEvaluation.validation_report_ref ?? '—'}</b><code>{notRun ? 'Evaluator reliability remains unvalidated' : short(metaEvaluation.digest)}</code></div></div></section>
 }
 
 export function sectionForNavigation(target = {}) {
@@ -2724,7 +2728,6 @@ function DashboardSessionView({ t, bridge, sessionId, useInput, inputActions, re
 function VersionPanel({ t }) {
   const state = useVersionCheck()
   const [copied, setCopied] = useState(false)
-  const [installation, setInstallation] = useState({ status: 'idle' })
   const value = state.value
   const status = state.status === 'loading' ? 'loading' : state.status === 'error' ? 'unavailable' : value?.status ?? 'unavailable'
   const statusLabel = status === 'loading' ? t('checkingUpdate') : status === 'update-available' ? t('updateAvailable') : status === 'up-to-date' ? t('upToDate') : t('updateUnavailable')
@@ -2736,26 +2739,15 @@ function VersionPanel({ t }) {
       window.setTimeout(() => setCopied(false), 1_500)
     } catch { setCopied(false) }
   }
-  const install = async () => {
-    setInstallation({ status: 'running' })
-    try {
-      const result = await mutate('version-update', {})
-      setInstallation({ status: 'installed', result })
-    } catch (error) {
-      setInstallation({ status: 'error', error: normalizeHarborUiError(error) })
-    }
-  }
   return <section className="hse-version" data-status={status} aria-live="polite">
     <header className="hse-version-head"><h3>🐳 {t('pluginVersion')}</h3><span className="hse-version-badge">{statusLabel}</span></header>
     {value ? <div className="hse-version-grid"><div className="hse-version-card"><span>{t('currentVersion')}</span><b>{value.currentVersion}</b></div><div className="hse-version-card"><span>{t('latestVersion')}</span><b>{value.latestVersion ?? '—'}</b></div></div> : null}
-    {status === 'update-available' ? <><p className="hse-version-copy">{t('updateHint')}</p><code className="hse-update-command">{value.command}</code></> : null}
+    {status === 'update-available' ? <p className="hse-version-copy">{value?.command ? t('updateHint') : t('offlineUpdateHint')}</p> : null}
+    {value?.command ? <code className="hse-update-command">{value.command}</code> : null}
     {status === 'unavailable' ? <p className="hse-version-copy">{t('offlineUpdateHint')}</p> : null}
     {value?.stale ? <p className="hse-version-copy">{t('staleVersion')}</p> : null}
-    {installation.status === 'installed' ? <p className="hse-version-copy" role="status">{t('updateInstalled')}</p> : null}
-    {installation.status === 'error' ? <p className="hse-version-copy" role="alert">{t('updateFailed')}: {installation.error.message}</p> : null}
     <div className="hse-version-actions">
-      {value?.command ? <button className="hse-primary" type="button" disabled={['running', 'installed'].includes(installation.status)} onClick={() => void install()}>{installation.status === 'running' ? t('updatingNow') : `${t('updateNow')} v${value.latestVersion}`}</button> : null}
-      {value?.command ? <button type="button" onClick={() => void copy()}>{copied ? t('updateCommandCopied') : t('copyUpdateCommand')}</button> : null}
+      {value?.command ? <button className="hse-primary" type="button" onClick={() => void copy()}>{copied ? t('updateCommandCopied') : t('copyUpdateCommand')}</button> : null}
       {value?.releaseUrl ? <a href={value.releaseUrl} target="_blank" rel="noreferrer">{t('viewRelease')}</a> : null}
       {status !== 'loading' ? <button type="button" onClick={() => void state.load(true)}>{t('checkAgain')}</button> : null}
       {value?.checkedAt ? <small>{t('checkedAt')}: {new Date(value.checkedAt).toLocaleString()}</small> : null}

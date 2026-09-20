@@ -11,7 +11,7 @@ menus:
 cascade:
   type: docs
   footer_style: slim
-verified_against_version: 0.9.6
+verified_against_version: 0.9.7
 source_refs: [README.md, CHANGELOG.md, packages/dsh-plugin/README.md]
 ---
 
@@ -50,7 +50,7 @@ The bundled Skill chooses the lowest-friction safe path: use recent Sessions whe
 
 ## Adapter {#adapter}
 
-The Python package `harbor-dsh-evolution` maps DSH Candidates and Tasks into Harbor's evaluation interfaces. Version 0.9.6 uses **Candidate Context v3** and **Historical Context v2**. Host execution is default; Docker is opt-in.
+The Python package `harbor-dsh-evolution` maps DSH Candidates and Tasks into Harbor's evaluation interfaces. Version 0.9.7 uses **Candidate Context v3** and **Historical Context v2**, and the Web Workbench recognizes both current contracts. Host execution is default; Docker is opt-in.
 
 ## Principles {#principles}
 
@@ -63,20 +63,21 @@ The Python package `harbor-dsh-evolution` maps DSH Candidates and Tasks into Har
 
 ## Status and roadmap {#status}
 
-**Shipped in 0.9.6:** package setup, 19 Agent tools, Workbench, Historical diagnostics, Evaluator governance, version check, Host default and Docker opt-in.
+**Shipped in 0.9.7:** package setup, 19 Agent tools, Workbench, Historical diagnostics, Evaluator governance, Host-first execution, Candidate Context v3/Historical Context v2 Web support, and a review-only version command bound to complete installation identity.
 
-**Development preview:** the local untagged checkout includes one-click update work. It is not a 0.9.6 capability and must not be marketed as released until profile/runtime identity preservation, concurrency, rollback and supply-chain boundaries are complete.
+**Withdrawn preview:** the untagged browser one-click updater was removed before release. The browser does not execute registry packages; users review and run the exact setup command in a terminal.
 
-**Roadmap:** Candidate Context v3 Web contract repair, durable operation recovery, stronger mutation authorization, retention/GC, safer external artifact previews and broader browser/accessibility coverage.
+**Roadmap:** durable operation recovery, stronger mutation authorization, retention/GC, safer external artifact previews and broader browser/accessibility coverage.
 
 > [!WARNING]
-> **Known issue (0.9.6):** the Web Dashboard does not yet accept Candidate Context v3. The Adapter produces Candidate Context v3, but the Dashboard still evaluates it as Candidate Context v2; a real Candidate v3 Job is marked `unsupported/read-only legacy` and `invalid`, and Compare/Gate are disabled. Historical Context v2 is readable through a generic `schema_version === 2` branch and lacks a protocol-aware contract test.
+> Same-origin is a browser CSRF defense, not caller authentication. Host execution is not a sandbox, and Gate remains a deterministic recommendation for fixed inputs—not deployment authority.
 
-## From prototype to 0.9.6 {#history}
+## From prototype to 0.9.7 {#history}
 
 - **0.1–0.8:** establish the Candidate/Dataset/Stack model, evaluation loop and DSH integration.
 - **0.9.0–0.9.4:** native Workbench, Historical Session cold start, reviewed actions, context and evidence navigation.
 - **0.9.5:** consolidated Workbench and stronger release evidence.
 - **0.9.6:** Host-first execution with Docker opt-in, while preserving explicit safety boundaries.
+- **0.9.7:** repair current Context Web contracts, preserve update identity and publish the bilingual product/documentation site.
 
 See [Releases](https://istarwyh.github.io/harbor-self-evolving/releases/) for evidence and limitations attached to each formal version.

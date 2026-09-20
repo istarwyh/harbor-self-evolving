@@ -10,7 +10,7 @@ screenshots:
     version: v0.9.3
     kind: synthetic-component-service-fixture
     crop: none
-    does_not_prove: Real Host, provider, Harbor Job, or 0.9.6 behavior.
+    does_not_prove: Real Host, provider, Harbor Job, or formal-release behavior.
   task-controls.png:
     source: docs/releases/v0.9.3/screenshots/02-task-controls.png
     version: v0.9.3
@@ -88,7 +88,7 @@ screenshots:
     version: v0.9.5
     kind: synthetic-component-fixture
     crop: center 650px; local absolute-path area removed
-    does_not_prove: A real Host, model, evaluation, Candidate v3 Compare/Gate, or 0.9.6 state.
+    does_not_prove: A real Host, model, evaluation, Candidate v3 Compare/Gate result, or formal-release state.
   workbench-tablet.png:
     source: docs/releases/v0.9.5/screenshots/02-synthetic-home-880px.png
     version: v0.9.5

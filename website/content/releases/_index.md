@@ -18,20 +18,21 @@ This page distinguishes a formal tag/public package from local development and s
 
 ## Current release {#current}
 
-### 0.9.6 · Host-first execution
+### 0.9.7 · Current Context Web contracts and bilingual site
 
-- Formal tag: [`v0.9.6`](https://github.com/istarwyh/harbor-self-evolving/releases/tag/v0.9.6)
+- Formal tag: [`v0.9.7`](https://github.com/istarwyh/harbor-self-evolving/releases/tag/v0.9.7)
 - Compatibility: Harbor `>=0.21,<0.22`
-- Main change: Host becomes the default execution environment; Docker remains opt-in; execution environment enters Context identity.
-- Evidence: automated package/source tests and archived release checks.
+- Main change: Candidate Context v3 and Historical Context v2 are recognized by the Web Workbench; setup persists complete installation identity; Settings remains review-only; the bilingual product/documentation site becomes part of the release.
+- Evidence: automated package/source/site tests, public package checks and archived release records.
 - Limit: no real provider model, real Candidate/Historical Session data or paid Harbor evaluation; automated tests do not establish a business-quality baseline.
 
-[Read the 0.9.6 evidence summary](https://istarwyh.github.io/harbor-self-evolving/releases/0.9.6/).
+[Read the 0.9.7 evidence summary](https://istarwyh.github.io/harbor-self-evolving/releases/0.9.7/).
 
 ## Release history {#history}
 
 | Version | Product step | Evidence note |
 |---|---|---|
+| 0.9.6 | Host-first execution and environment identity | Automated package/source checks; no real-provider evaluation |
 | 0.9.5 | Consolidated Workbench and release evidence gallery | Synthetic component fixtures; not real provider evaluation |
 | 0.9.4 | Native page context and conversation handoff | Synthetic controlled-model interaction evidence |
 | 0.9.3 | Reviewed actions and background operations | Component/service fixtures and failure states |
@@ -45,4 +46,4 @@ This page distinguishes a formal tag/public package from local development and s
 
 ## Development preview {#development}
 
-Local checkout commit `8bb59e2` was ahead of the formal release during site planning and included one-click update work. It remains excluded from shipped 0.9.6 claims until a new tag, public packages and release evidence agree.
+The untagged one-click updater from commit `8bb59e2` was withdrawn before 0.9.7. Settings checks versions and copies an exact command only when complete installation identity is available; the browser does not execute registry packages. Durable recovery, stronger mutation authorization and broader browser/accessibility coverage remain roadmap work.

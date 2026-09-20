@@ -3,8 +3,8 @@ title: Security, privacy, and execution boundaries
 linkTitle: Security
 weight: 70
 description: What the Plugin protects, what remains trusted, what can leave the machine, and why Harbor never deploys.
-verified_against_version: 0.9.6
-source_refs: [packages/dsh-plugin/lib, docs/releases/v0.9.6/README.md]
+verified_against_version: 0.9.7
+source_refs: [packages/dsh-plugin/lib, docs/releases/v0.9.7/README.md]
 ---
 
 Harbor Self-Evolving narrows high-impact operations, but it is not a general sandbox or multi-user authorization system.

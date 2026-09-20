@@ -1,12 +1,12 @@
 # Harbor Self-Evolving 宣传与介绍网站方案（OINK）
 
-> 状态：方案设计，待确认后实施
+> 状态：方案已实施并上线；2026-09-20 纳入 0.9.7 发布刷新
 >
-> 日期：2026-09-19
+> 日期：2026-09-19；实施更新：2026-09-20
 >
-> 最新正式发布基线：Harbor Self-Evolving `0.9.6`（Beta），包含 `dsh-harbor-evolution 0.9.6` 与 `harbor-dsh-evolution 0.9.6`；兼容 Harbor `>=0.21,<0.22`
+> 当前目标发布基线：Harbor Self-Evolving `0.9.7`（Beta），包含 `dsh-harbor-evolution 0.9.7` 与 `harbor-dsh-evolution 0.9.7`；兼容 Harbor `>=0.21,<0.22`
 >
-> 调研时本地 HEAD：`8bb59e2`，本地 `main` 领先 `origin/main` 1 个提交；其中一键更新能力尚未推送、未打 tag、未进入 0.9.6 发布证据，不作为已发布能力宣传
+> 调研快照仍按当时事实保留：`8bb59e2` 的一键更新曾是未发布预览。发布审计发现其安装身份、并发/回滚和供应链确认边界不足，因此 0.9.7 撤回浏览器执行入口，只保留完整身份可用时的精确、可审阅终端命令；同时修复 Candidate Context v3 / Historical Context v2 Web 合约。
 >
 > 建站基线：OINK Starter commit `137843b25bacd76ddd1f7ce71330bf2e3155b954` / OINK theme `v1.0.0` / Hugo Extended `0.165.0` / Go `1.27`
 >

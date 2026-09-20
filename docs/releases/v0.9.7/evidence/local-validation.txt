@@ -1,0 +1,40 @@
+Harbor Self-Evolving 0.9.7 local release-candidate verification
+Date: 2026-09-20 UTC+08:00
+Evidence type: synthetic/local-runtime/static-site; no real-provider model calls
+Environment: macOS 15.6.1 arm64; Node 22.19.0; npm 10.9.3; pnpm 11.7.0; Python 3.12.14; Hugo Extended 0.165.0
+
+FINAL RESULTS
+
+1. Node Plugin / Skill / Web client
+   Command: npm run check
+   Result: PASS — 596 tests passed, 0 failed, 0 skipped.
+   Additional: committed client rebuild was byte-stable on a second build.
+
+2. npm package candidate
+   Command: npm pack, isolated npm install, ESM import, CLI help
+   Result: PASS — dsh-harbor-evolution 0.9.7; 53 files; tarball about 464.2 kB; package name/Plugin export and dsh-harbor entrypoint verified.
+   Local candidate SHA-256: ab231a11db0945f663e76ee79dccbb8abb08521f36c106ffdd07b2652c539bcb.
+
+3. Python Adapter
+   Command: python -m pytest (project Python 3.12 environment)
+   Result: PASS — 321 tests passed; 19 known Harbor artifact-overlap warnings; 0 failures.
+   Command: uv build; isolated Python 3.12 install/import/entrypoint/plugin discovery
+   Result: PASS — harbor_dsh_evolution-0.9.7.tar.gz and harbor_dsh_evolution-0.9.7-py3-none-any.whl; import reports 0.9.7; harbor plugins list exposes dsh-evolution and dsh-historical-evaluation; harbor-dsh entrypoint works.
+   Local candidate SHA-256: wheel deb21bff7389bf25c96f996d22ecb517cbdbc274231ebbbc59db7a207d22c849; sdist 86286c58c1ee0e72ca607408c4429b4b7423e95192370c6b1a9e2ec88d2c0d86.
+
+4. Website
+   Command: Hugo warning-strict production build plus scripts/check_public.py
+   Result: PASS — 99 English pages, 97 Chinese pages; 425 public entries; 10962564 bytes; no warning, leak, or base-path/link failure.
+
+5. Focused release-blocker regression
+   Result: PASS — Candidate Context v3 overview/detail validation and Compare/Gate capability; Historical Context v2 protocol fallback including pending context-only Job; exact update identity and shell quoting; incomplete identity fail-closed; no browser version-update route; unmanaged Harbor profile config preservation; temporary executable fixtures with a space-containing Node installation path.
+
+OBSERVED FAILURES AND RESOLUTION
+
+- The first Python run after editing version files reported runtime 0.9.7 versus stale editable distribution metadata 0.9.6. Refreshing the environment from the updated frozen lock installed the 0.9.7 editable distribution; the complete rerun passed 321/321.
+- The first complete Node run passed 592/596. Three fixture failures came from a generated shebang containing the local Node executable path with a space; fixtures now use /usr/bin/env node and their focused/full reruns pass. One durable-operation test returned an invalid-record error once during the concurrent local run; it passed focused and complete reruns without a product change. CI remains the independent Linux check.
+- The first website command could not find Hugo in PATH. The official Hugo Extended 0.165.0 macOS package was downloaded, verified against the release digest, extracted to a temporary tool location, and the warning-strict build then passed.
+
+BOUNDARIES
+
+These checks establish source/package consistency, local contract behavior, test coverage, and static-site integrity. They do not establish registry publication, public package provenance, real-provider availability, real Candidate/Historical business quality, or deployment approval. Host mode remains unsandboxed. The browser does not execute registry packages.

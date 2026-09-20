@@ -3,7 +3,7 @@ title: 19 Harbor Agent tools
 linkTitle: 19 tools
 weight: 10
 description: Every Plugin tool, its input boundary, mutation/approval semantics, output evidence and intended next step.
-verified_against_version: 0.9.6
+verified_against_version: 0.9.7
 source_refs: [packages/dsh-plugin/index.js, README.md]
 ---
 

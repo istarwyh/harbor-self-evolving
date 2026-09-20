@@ -123,21 +123,47 @@ function quoted(value) {
   return JSON.stringify(value)
 }
 
-export function renderHarborProfileEntry(config) {
+const MANAGED_PROFILE_KEYS = new Set([
+  'projectRoot', 'jobsDir', 'profile', 'dshHome', 'runtimeDir',
+  'harborBin', 'harborDshBin', 'executionEnvironment', 'pythonPath',
+])
+
+function unmanagedProfileConfig(blockLines) {
+  const configIndex = blockLines.findIndex(line => /^  config:\s*$/.test(line))
+  if (configIndex < 0) return []
+  const kept = []
+  for (let index = configIndex + 1; index < blockLines.length;) {
+    const match = blockLines[index].match(/^    ([A-Za-z_][A-Za-z0-9_]*):/)
+    if (!match) {
+      index += 1
+      continue
+    }
+    let end = index + 1
+    while (end < blockLines.length && !/^    [A-Za-z_][A-Za-z0-9_]*:/.test(blockLines[end])) end += 1
+    if (!MANAGED_PROFILE_KEYS.has(match[1])) kept.push(...blockLines.slice(index, end))
+    index = end
+  }
+  return kept
+}
+
+export function renderHarborProfileEntry(config, preserved = []) {
   return [
     '- id: harbor-evolution',
     '  config:',
     `    projectRoot: ${quoted(config.projectRoot)}`,
     `    jobsDir: ${quoted(config.jobsDir)}`,
+    `    profile: ${quoted(config.profile)}`,
+    `    dshHome: ${quoted(config.dshHome)}`,
+    `    runtimeDir: ${quoted(config.runtimeDir)}`,
     `    harborBin: ${quoted(config.harborBin)}`,
     `    harborDshBin: ${quoted(config.harborDshBin)}`,
     `    executionEnvironment: ${quoted(config.executionEnvironment ?? 'host')}`,
     '    pythonPath: ""',
+    ...preserved,
   ].join('\n')
 }
 
 export function upsertHarborProfileEntry(source, config) {
-  const entry = renderHarborProfileEntry(config)
   const lines = source.replace(/\r\n/g, '\n').split('\n')
   const starts = []
   for (let index = 0; index < lines.length; index += 1) {
@@ -156,10 +182,12 @@ export function upsertHarborProfileEntry(source, config) {
         break
       }
     }
+    const entry = renderHarborProfileEntry(config, unmanagedProfileConfig(lines.slice(start, end)))
     lines.splice(start, end - start, ...entry.split('\n'))
     return `${lines.join('\n').replace(/\n+$/g, '')}\n`
   }
 
+  const entry = renderHarborProfileEntry(config)
   const emptyArrayIndex = lines.findIndex(line => line.trim() === '[]')
   const payload = lines.filter(line => line.trim() && !line.trim().startsWith('#'))
   if (emptyArrayIndex >= 0 && payload.length === 1) {

@@ -25,13 +25,13 @@ cd /absolute/path/to/your-agent-workspace
 npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 ```
 
-安装器会让 npm Plugin 与 Python Adapter 使用同一个正式版本；需要完全固定版本时，把 `latest` 改为 `0.9.6`。
+安装器会让 npm Plugin 与 Python Adapter 使用同一个正式版本；需要完全固定版本时，把 `latest` 改为 `0.9.7`。
 
 默认安装到 DSH 的 `web` profile。`setup` 会一次完成：
 
 1. 建立独立的 Harbor Python 环境并安装匹配版本的 Adapter。
 2. 把 Plugin + Skill 安装进选定的 DSH profile。
-3. 持久化 `projectRoot`、Job 目录和两个 Harbor 可执行文件路径。
+3. 持久化 DSH profile / DSH_HOME、`projectRoot`、Job 目录、managed Python runtime、Host/Docker 选择和两个 Harbor 可执行文件路径。
 4. 验证 Harbor、`dsh-evolution` / `dsh-historical-evaluation` entry point 和 `harbor-dsh` CLI。
 
 它只更新 profile 中的 `harbor-evolution` 配置块，不会覆盖其他用户配置；重复执行会更新同一个安装，不会产生重复条目。
@@ -65,7 +65,7 @@ Skill 会先检查文件，再围绕四个用户可理解的概念补齐必要�
 - 评测器页：直接查看 `script` 或 `llm-as-judge` 的统一接口、三元 Criterion、Rubric 与实现源码；只能受控修改 Descriptor 授权的文件，并强制创建新的 Evaluator / Stack 身份。
 - `harbor-dsh-evaluator/v1`：统一 `script` 与 `llm-as-judge` 的输入、三元 Criteria 输出、实现身份和可编辑文件；详情见 [`docs/evaluator-interface.md`](docs/evaluator-interface.md)。
 - 工具调用中的 Harbor 专属卡片：直接理解初始化、Doctor、Context 预览、评测与 Gate。
-- “设置 → Harbor 自进化”：检查项目目录、Evaluation Stack、Jobs 和两个 Harbor CLI 是否就绪；显示当前/最新插件版本及精确更新命令，但不会静默安装。
+- “设置 → Harbor 自进化”：检查项目目录、Evaluation Stack、Jobs 和两个 Harbor CLI 是否就绪；显示当前/最新插件版本；只有完整安装身份可用时才显示保留 profile、DSH_HOME、Jobs、managed runtime 与 Host/Docker 选择的精确更新命令，浏览器不会执行 registry 包或静默安装。
 
 GUI 的业务资源写操作限于三个明确入口：已授权 Evaluator 文件保存为新版本；Historical Session 的 `预览 → 用户确认 → 后台运行 → 打开 Job`；Action Draft 经预检、人工确认后保存本地草稿与操作审计（选定 Compare 仍为只读）。页面引用绑定还会保存私有的身份与修订元数据，不写入证据正文。支持的宿主在用户从 Harbor 页面发送普通消息时，将冻结页面引用和问题一起提交到同一个 Chat Session；离开 Harbor 或存在显式引用时，不补入隐式页面引用。准备失败保留草稿，不悄悄发送无上下文的问题。单纯刷新、读取和切换工作空间不会发送消息或启动 Agent、Job、Gate、晋级、部署、发布或生产修改。Candidate 评测与 Promotion Gate 等高成本或可晋级动作仍由官方 Skill 在澄清需求后显式提出，并在每次 Agent 调用写入或评测工具前经过 DSH 可审计的一次性用户批准；审批通道不可用时拒绝执行。
 
@@ -174,7 +174,7 @@ Candidate 只得到 Job Token 文件（容器内 `0600`）；不会得到 GPT Au
 
 如果希望 Candidate 永久固定创建时的模型，可先调用 `harbor_model_binding`，把返回的 `candidate_model_binding` 写成 Candidate 根目录的 `model-binding.json`，再执行 snapshot。文件只包含 provider/model/reasoning 身份，不包含登录信息；Job 会校验显式参数、Plugin 默认值和该文件一致，并继续通过短期 `dsh-host-broker` Capability 调用 Host，绝不会上传 Codex `auth.json` 或 API key。
 
-DSH 的“设置 → Harbor 自进化”会在打开时由 Host 检查 npm 正式版本。发现新版本后显示当前/最新版本、发布说明和可复制的精确升级命令；浏览器不会自动安装或重启 DSH。断网只会使版本检查暂时不可用，不影响 Harbor 功能或安装健康度。
+DSH 的“设置 → Harbor 自进化”会在打开时由 Host 检查 npm 正式版本。发现新版本后显示当前/最新版本与发布说明；只有 setup 已记录完整安装身份时才显示可复制的精确升级命令，身份不完整则 fail closed。浏览器不会执行 registry 包、自动安装或重启 DSH。断网只会使版本检查暂时不可用，不影响 Harbor 功能或安装健康度。
 
 ## 示例与源码开发
 

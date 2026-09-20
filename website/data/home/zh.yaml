@@ -1,7 +1,7 @@
 sections: [hero, metrics, capabilities, steps, gallery, principles, faq, command-box, cta]
 
 hero:
-  eyebrow: Harbor Self-Evolving 0.9.6 · Beta
+  eyebrow: Harbor Self-Evolving 0.9.7 · Beta
   title_lines:
     - 让 Agent
     - 每一次都进步。
@@ -58,7 +58,7 @@ capabilities:
       url: product/#adapter
       motto: Generator · Evaluator · Optimizer · Gate
       bullets:
-        - 0.9.6 默认 Host 执行；Docker 为显式 opt-in。
+        - 0.9.7 默认 Host 执行；Docker 为显式 opt-in。
         - Candidate Context v3 与 Historical Context v2 是不同协议。
         - Job 记录稳定身份与 typed evidence，供后续比较。
       value: 身份与证据成为可检查 Artifact，而不是宣传文案。
@@ -82,7 +82,7 @@ gallery:
   items:
     - { title: 身份优先的架构, badge: 当前契约, image: images/diagrams/system-architecture.svg, alt: 系统架构图, desc: 'DSH、Harbor Adapter、评测栈、不可变 Artifact 与确定性 Gate。', url: docs/architecture/ }
     - { title: Historical 诊断, badge: Synthetic · v0.9.3, image: images/screenshots/historical-preview.png, alt: 合成的 Historical Session 预览与披露卡, desc: '组件/服务 fixture；未使用真实 provider、Session 或 Harbor Job。', url: docs/workflows/historical/ }
-    - { title: 原生 Workbench, badge: Synthetic · v0.9.5, image: images/screenshots/workbench-desktop.png, alt: 合成的 Harbor Workbench 桌面视图, desc: '经过裁切的组件 fixture；不能证明真实 0.9.6 评测。', url: product/dsh-plugin/ }
+    - { title: 原生 Workbench, badge: Synthetic · v0.9.5, image: images/screenshots/workbench-desktop.png, alt: 合成的 Harbor Workbench 桌面视图, desc: '经过裁切的组件 fixture；不能证明真实 0.9.7 评测。', url: product/dsh-plugin/ }
 
 principles:
   eyebrow: 设计原则

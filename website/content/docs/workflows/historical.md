@@ -2,7 +2,7 @@
 title: Evaluate recent Sessions
 description: Turn bounded, redacted recent DSH Sessions into a non-promotion Historical evaluation Job.
 weight: 10
-verified_against_version: 0.9.6
+verified_against_version: 0.9.7
 source_refs: [docs/integration.md, docs/dsh-web-quickstart.md, packages/dsh-plugin/README.md]
 ---
 

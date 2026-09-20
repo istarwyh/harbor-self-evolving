@@ -3,7 +3,7 @@ title: Candidate 评测与晋级
 linkTitle: Candidate 评测
 description: 冻结身份，运行可比回归，并得到确定性晋级建议。
 weight: 20
-verified_against_version: 0.9.6
+verified_against_version: 0.9.7
 source_refs: [docs/integration.md, README.md, docs/candidate-runtime-contract.md]
 ---
 
@@ -33,9 +33,8 @@ Candidate evaluation 比 Historical 诊断回答的问题更窄：**在可比评
 
 它**不会**部署、修改 Champion 或绕过外部 CI/CD 批准。
 
-> [!WARNING]
-> 0.9.6 Adapter 产出 Candidate Context v3，但 Web Dashboard 仍只识别 Candidate v2。真实 v3 Job 会在 Web 中显示 unsupported/invalid，并关闭 Compare/Gate。固定版本发布前，请使用 Agent/tool 证据路径，并把 Web Candidate Compare/Gate 当作已知问题。
+0.9.7 已在 Dashboard overview 与 Job detail 中接受 Candidate Context v3。Compare/Gate 仍由 Artifact 有效性、身份可比性、mode 与 policy 控制。
 
 ## 发布测试不能证明什么 {#limits}
 
-0.9.6 未运行真实供应商模型、真实 Candidate/Historical Session 数据或付费 Harbor 评测；自动化测试结论不构成业务质量基线。这个基线必须由你的 Dataset、Evaluator 与生产证据建立。
+0.9.7 未运行真实供应商模型、真实 Candidate/Historical Session 数据或付费 Harbor 评测；自动化测试结论不构成业务质量基线。这个基线必须由你的 Dataset、Evaluator 与生产证据建立。

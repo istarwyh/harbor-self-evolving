@@ -3,8 +3,8 @@ title: 安全、隐私与执行边界
 linkTitle: 安全
 weight: 70
 description: Plugin 保护什么、哪些仍需信任、哪些数据可能离机，以及 Harbor 为何永不部署。
-verified_against_version: 0.9.6
-source_refs: [packages/dsh-plugin/lib, docs/releases/v0.9.6/README.md]
+verified_against_version: 0.9.7
+source_refs: [packages/dsh-plugin/lib, docs/releases/v0.9.7/README.md]
 ---
 
 Harbor Self-Evolving 会收窄高影响操作，但它不是通用沙箱或多用户授权系统。

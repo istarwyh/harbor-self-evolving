@@ -3,7 +3,7 @@ title: Evaluator governance and meta-evaluation
 linkTitle: Evaluator governance
 weight: 30
 description: Inspect, version and independently test the Evaluator instead of treating the scoring rule as an oracle.
-verified_against_version: 0.9.6
+verified_against_version: 0.9.7
 source_refs: [docs/evaluator-interface.md, schemas]
 ---
 

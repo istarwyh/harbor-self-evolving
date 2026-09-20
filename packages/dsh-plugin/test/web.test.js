@@ -24,7 +24,6 @@ import {
   TRIALS_ROUTE,
   TRIAL_ROUTE,
   VERSION_ROUTE,
-  VERSION_UPDATE_ROUTE,
 } from '../lib/web.js'
 
 function invoke(handler, request) {
@@ -110,7 +109,6 @@ test('Session context route accepts only bounded same-origin JSON and reports sa
     evaluator: async () => ({}),
     meta: async () => ({}),
     version: async () => ({}),
-    updateVersion: async () => ({ status: 'installed', restartRequired: true }),
     setProjectRoot: async () => ({}),
     bindUiContext: async (args) => {
       if (businessError) throw businessError
@@ -181,11 +179,7 @@ test('Session context route accepts only bounded same-origin JSON and reports sa
   assert.deepEqual(resolvedArgs, resolveInput)
   assert.equal(JSON.parse(resolveResponse.body).value.freshness, 'FRESH')
 
-  const updateRoute = routes.find(item => item.path === VERSION_UPDATE_ROUTE)
-  assert.ok(updateRoute)
-  const updateResponse = await invoke(updateRoute.handler, mutationRequest('{}'))
-  assert.equal(updateResponse.status, 200)
-  assert.deepEqual(JSON.parse(updateResponse.body).value, { status: 'installed', restartRequired: true })
+  assert.equal(routes.some(item => item.path.endsWith('/version-update')), false)
 })
 
 test('mutation failures preserve stable business codes while redacting local paths', async () => {
@@ -214,10 +208,10 @@ test('Workbench routes are optional and scoped through Cordis', () => {
   }
   installDashboardWeb(
     ctx,
-    { dashboard: async () => ({}), job: async () => ({}), trials: async () => ({}), trial: async () => ({}), dataset: async () => ({}), progress: async () => ({}), comparison: async () => ({}), governance: async () => ({}), evaluator: async () => ({}), meta: async () => ({}), bindUiContext: async () => ({}), resolveBrowserUiContext: async () => ({}), version: async () => ({}), updateVersion: async () => ({}), setProjectRoot: async () => ({}) },
+    { dashboard: async () => ({}), job: async () => ({}), trials: async () => ({}), trial: async () => ({}), dataset: async () => ({}), progress: async () => ({}), comparison: async () => ({}), governance: async () => ({}), evaluator: async () => ({}), meta: async () => ({}), bindUiContext: async () => ({}), resolveBrowserUiContext: async () => ({}), version: async () => ({}), setProjectRoot: async () => ({}) },
     { preview: async () => ({}), run: async () => ({}), operation: async () => ({}) },
   )
   assert.deepEqual(requested, ['webServer'])
-  assert.deepEqual(routes.map(route => route.path), [DASHBOARD_ROUTE, JOB_ROUTE, TRIALS_ROUTE, TRIAL_ROUTE, DATASET_ROUTE, PROGRESS_ROUTE, COMPARE_ROUTE, GOVERNANCE_ROUTE, EVALUATOR_ROUTE, META_ROUTE, HISTORICAL_PREVIEW_ROUTE, HISTORICAL_RUN_ROUTE, HISTORICAL_OPERATION_ROUTE, SESSION_CONTEXT_ROUTE, '/_dsh/harbor-evolution/trial-selection', '/_dsh/harbor-evolution/selection-detail', '/_dsh/harbor-evolution/action-draft', '/_dsh/harbor-evolution/action-preview', '/_dsh/harbor-evolution/action-confirm', '/_dsh/harbor-evolution/action-operation', '/_dsh/harbor-evolution/action-operations', '/_dsh/harbor-evolution/action-inspect', '/_dsh/harbor-evolution/action-recover', '/_dsh/harbor-evolution/action-cancel', SESSION_CONTEXT_RESOLVE_ROUTE, VERSION_ROUTE, VERSION_UPDATE_ROUTE, PROJECT_ROOT_ROUTE])
+  assert.deepEqual(routes.map(route => route.path), [DASHBOARD_ROUTE, JOB_ROUTE, TRIALS_ROUTE, TRIAL_ROUTE, DATASET_ROUTE, PROGRESS_ROUTE, COMPARE_ROUTE, GOVERNANCE_ROUTE, EVALUATOR_ROUTE, META_ROUTE, HISTORICAL_PREVIEW_ROUTE, HISTORICAL_RUN_ROUTE, HISTORICAL_OPERATION_ROUTE, SESSION_CONTEXT_ROUTE, '/_dsh/harbor-evolution/trial-selection', '/_dsh/harbor-evolution/selection-detail', '/_dsh/harbor-evolution/action-draft', '/_dsh/harbor-evolution/action-preview', '/_dsh/harbor-evolution/action-confirm', '/_dsh/harbor-evolution/action-operation', '/_dsh/harbor-evolution/action-operations', '/_dsh/harbor-evolution/action-inspect', '/_dsh/harbor-evolution/action-recover', '/_dsh/harbor-evolution/action-cancel', SESSION_CONTEXT_RESOLVE_ROUTE, VERSION_ROUTE, PROJECT_ROOT_ROUTE])
   assert.ok(routes.every(route => route.kind === 'exact' && typeof route.handler === 'function'))
 })
