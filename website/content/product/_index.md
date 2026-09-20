@@ -21,6 +21,20 @@ Harbor Self-Evolving adds **continuous evaluation and controlled self-evolution*
 - **`evolve-agent-with-harbor` Skill** — the official orchestration policy maintained by this project.
 - **Python Adapter** — Harbor Generator, Evaluator and Optimizer wiring plus deterministic Gate integration.
 
+## From Dataset to meta-evaluation {#evaluation-roles}
+
+The Plugin does more than call a Judge. It separates the evaluation loop into governable roles:
+
+| Role | How the Plugin supports it |
+|---|---|
+| **Dataset** | Validate Tasks, instructions, paths and source digest; distinguish training/fix data, validation data and final holdout. |
+| **Generator** | Run the Agent through the Adapter under frozen Candidate, model binding, Context and Host/Docker identities, preserving output and Artifacts. |
+| **Evaluator** | Unify `script` and `llm-as-judge`, recording Evidence, validity, abstention and coverage for each criterion. |
+| **Optimizer** | Let the Skill and Agent propose one reviewed change from Trial evidence without owning scoring, Gate or deployment authority. |
+| **Meta-Evaluation** | Compare the Evaluator with independent Ground Truth for fidelity, calibration and ranking reliability, so the Agent is not optimized against an untested measuring instrument. |
+
+Training, validation and test sets are information boundaries rather than file formats. A case that changes the Candidate is training information; repeatedly selecting with a set turns it into validation information; only a holdout whose answers remain hidden from the Optimizer can estimate final generalization. See [Concepts and trustworthy scores](https://istarwyh.github.io/harbor-self-evolving/docs/concepts/) and [Evaluator governance](https://istarwyh.github.io/harbor-self-evolving/docs/workflows/evaluator/).
+
 ## Two evaluation paths {#paths}
 
 | Path | Starts from | Designed to answer | Promotion evidence? |

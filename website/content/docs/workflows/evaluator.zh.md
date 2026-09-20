@@ -29,6 +29,22 @@ Ground Truth 可以来自 human、programmatic、consensus、model 或 external�
 - **SCE**：score calibration error；
 - **RCR**：ranking consistency/reliability。
 
-Tuning 与 holdout 边界必须可见；人工 raw review 不能被改写成 Candidate Evaluator 的输出。
+## Evaluator 自己也需要训练、验证与测试边界 {#evaluator-splits}
 
-Historical evaluation 是不同场景：真实 Session 未必触发每条 criterion，因此 applicability、coverage 与 abstention 很重要。
+评估器的 rubric、Judge prompt、解析器和阈值都可能被“训练”：
+
+- **tuning set**：用于发现漏判、误判并修改 rubric、prompt 或脚本；
+- **validation set**：用于比较多个 Evaluator 版本、选择阈值与实现；
+- **meta-evaluation holdout**：在版本冻结后才揭示的独立样本，用于估计 Evaluator 对未知 case 的可靠性。
+
+如果同一批人工标签既指导修改 Evaluator，又被用于最终宣称“评估器准确”，结果会有信息泄漏。人工 raw review 必须保持独立 provenance，不能被改写成 Candidate Evaluator 的输出。
+
+## 在插件中的治理顺序 {#governance-loop}
+
+1. `harbor_evaluator_inspect` 读取接口、Criteria 与允许修改的源码边界；
+2. `harbor_ground_truth_init` 创建 non-overwriting、带 provenance 的独立 Ground Truth 草稿；
+3. `harbor_evaluator_meta_evaluate` 比较重复 observations 与 Ground Truth，写出 ESF、SCE、RCR；
+4. 只有证据支持时，`harbor_evaluator_update` 才以 expected digest 更新一个授权文件，并强制新的 Evaluator / Stack 版本；
+5. 更新后重新运行 tuning 与 holdout 元评测，再决定是否让新 Evaluator 参与 Candidate 评测。
+
+元评测不会自动修改 Evaluator，也不会运行 Candidate Gate。Historical evaluation 还是不同场景：真实 Session 未必触发每条 criterion，因此 applicability、coverage 与 abstention 很重要。

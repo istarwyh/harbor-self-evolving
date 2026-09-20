@@ -29,6 +29,22 @@ Repeated Evaluator observations are compared with independent Ground Truth to pr
 - **SCE** — score calibration error;
 - **RCR** — ranking consistency/reliability.
 
-Training/tuning and holdout boundaries must remain visible. Raw human review must not be rewritten as if it came from the Candidate Evaluator.
+## The Evaluator needs train, validation and test boundaries too {#evaluator-splits}
 
-Historical evaluation is a distinct scenario: applicability, coverage and abstention matter because real Sessions may not exercise every criterion.
+Rubrics, Judge prompts, parsers and thresholds can all be “trained”:
+
+- **tuning set** — find false positives/negatives and modify rubric, prompt or script;
+- **validation set** — compare Evaluator versions and select thresholds or implementations;
+- **meta-evaluation holdout** — reveal independent cases only after identities are frozen to estimate reliability on unseen cases.
+
+If the same human labels guide Evaluator changes and then serve as final proof of accuracy, information has leaked. Raw human review needs independent provenance and must not be rewritten as if it came from the Candidate Evaluator.
+
+## Governance order in the Plugin {#governance-loop}
+
+1. `harbor_evaluator_inspect` reads the interface, Criteria and editable source boundary.
+2. `harbor_ground_truth_init` creates a non-overwriting independent Ground Truth draft with provenance.
+3. `harbor_evaluator_meta_evaluate` compares repeated observations with Ground Truth and writes ESF, SCE and RCR.
+4. Only when evidence supports a change, `harbor_evaluator_update` replaces one authorized file under an expected digest and requires new Evaluator/Stack versions.
+5. Rerun tuning and holdout meta-evaluation before using the new Evaluator for Candidate evaluation.
+
+Meta-evaluation does not automatically update the Evaluator or run Candidate Gate. Historical evaluation is a distinct scenario: applicability, coverage and abstention matter because real Sessions may not exercise every criterion.
