@@ -4,6 +4,7 @@
 
 | 版本 | 主要变化 | 图集 |
 | --- | --- | --- |
+| 0.9.8 | Host 路径幂等转换，修复 Historical Session Observation Adapter 全量失败 | [测试与发布验证记录](v0.9.8/README.md) |
 | 0.9.7 | Candidate Context v3 Web 修复、审阅式安全更新、安装身份持久化与双语产品站 | [测试与发布验证记录](v0.9.7/README.md) |
 | 0.9.6 | 默认 Host 执行、Docker 显式可选、执行环境身份与文档归档整理 | [测试与发布验证记录](v0.9.6/README.md) |
 | 0.9.5 | 紧凑首页 Hero、统一健康入口、强制页面上下文、历史会话路径保留与凭据脱敏 | [过程图与验证记录](v0.9.5/README.md) |

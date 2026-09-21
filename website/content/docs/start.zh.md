@@ -3,7 +3,7 @@ title: 安装与开始
 description: 把 registry 正式版安装到选定 DSH profile，重启，验证 Plugin，并选择评测路径。
 weight: 10
 aliases: [/zh/docs/start/install/, /zh/docs/start/recent-sessions/, /zh/docs/start/candidate/]
-verified_against_version: 0.9.7
+verified_against_version: 0.9.8
 source_refs: [AGENTS.md, README.md, docs/dsh-web-quickstart.md]
 ---
 
@@ -13,7 +13,7 @@ source_refs: [AGENTS.md, README.md, docs/dsh-web-quickstart.md]
 - 用于 DSH Plugin setup 的 Node.js/npm。
 - 安装 Adapter 所需的 Python 环境支持。
 - Harbor `>=0.21,<0.22`。
-- 只有显式选择容器执行时才需要 Docker；0.9.7 默认 Host。
+- 只有显式选择容器执行时才需要 Docker；0.9.8 默认 Host。
 
 ## 安装 {#install}
 
@@ -23,7 +23,7 @@ source_refs: [AGENTS.md, README.md, docs/dsh-web-quickstart.md]
 npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 ```
 
-需要固定版本时，把 `latest` 换成 `0.9.7`。Setup 会写入选定 DSH profile 依赖、配置 Harbor 项目集成、安装兼容 Python Adapter，并暴露内置 `evolve-agent-with-harbor` Skill。随后执行 setup 打印的精确重启命令。
+需要固定版本时，把 `latest` 换成 `0.9.8`。Setup 会写入选定 DSH profile 依赖、配置 Harbor 项目集成、安装兼容 Python Adapter，并暴露内置 `evolve-agent-with-harbor` Skill。随后执行 setup 打印的精确重启命令。
 
 > [!WARNING]
 > 普通安装不要使用 `dsh plugin add ./packages/dsh-plugin`。这会产生机器本地 `link:` 依赖，并漏掉 Adapter setup。
@@ -32,7 +32,7 @@ npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 
 重启后验证三个面：
 
-1. 选定 profile 依赖精确 registry 版本 `"dsh-harbor-evolution": "0.9.7"`，而不是 `link:...`；
+1. 选定 profile 依赖精确 registry 版本 `"dsh-harbor-evolution": "0.9.8"`，而不是 `link:...`；
 2. `harbor plugins list` 同时包含 `dsh-evolution` 与 `dsh-historical-evaluation`；
 3. 内置 `evolve-agent-with-harbor` Skill 存在。
 
@@ -52,4 +52,4 @@ npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 ./hse dsh-install-source web
 ```
 
-源码 build 可能包含未发布行为，不能当作正式 0.9.7 包。早期未打 tag 的一键更新预览已在 0.9.7 前撤回；浏览器只检查版本并复制完整、可审阅的终端命令。
+源码 build 可能包含未发布行为，不能当作正式 0.9.8 包。早期未打 tag 的一键更新预览已在 0.9.7 前撤回；浏览器只检查版本并复制完整、可审阅的终端命令。

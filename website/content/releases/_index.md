@@ -18,20 +18,21 @@ This page distinguishes a formal tag/public package from local development and s
 
 ## Current release {#current}
 
-### 0.9.7 · Current Context Web contracts and bilingual site
+### 0.9.8 · Host path translation fix
 
-- Formal tag: [`v0.9.7`](https://github.com/istarwyh/harbor-self-evolving/releases/tag/v0.9.7)
+- Formal tag: [`v0.9.8`](https://github.com/istarwyh/harbor-self-evolving/releases/tag/v0.9.8)
 - Compatibility: Harbor `>=0.21,<0.22`
-- Main change: Candidate Context v3 and Historical Context v2 are recognized by the Web Workbench; setup persists complete installation identity; Settings remains review-only; the bilingual product/documentation site becomes part of the release.
-- Evidence: automated package/source/site tests, public package checks and archived release records.
-- Limit: no real provider model, real Candidate/Historical Session data or paid Harbor evaluation; automated tests do not establish a business-quality baseline.
+- Main change: Host command translation preserves already-resolved Trial paths, so Historical Session Observation and Candidate commands do not receive a duplicate host-root prefix.
+- Evidence: focused HostEnvironment/SessionObservationAgent integration tests plus complete package tests and builds.
+- Limit: the source regression uses a synthetic Observation without a model call; formal-package Historical Job verification remains explicit.
 
-[Read the 0.9.7 evidence summary](https://istarwyh.github.io/harbor-self-evolving/releases/0.9.7/).
+[Read the 0.9.8 evidence summary](https://istarwyh.github.io/harbor-self-evolving/releases/0.9.8/).
 
 ## Release history {#history}
 
 | Version | Product step | Evidence note |
 |---|---|---|
+| 0.9.7 | Context Web contract fixes and bilingual site | Automated package/source/site and public artifact checks; no real-provider evaluation |
 | 0.9.6 | Host-first execution and environment identity | Automated package/source checks; no real-provider evaluation |
 | 0.9.5 | Consolidated Workbench and release evidence gallery | Synthetic component fixtures; not real provider evaluation |
 | 0.9.4 | Native page context and conversation handoff | Synthetic controlled-model interaction evidence |

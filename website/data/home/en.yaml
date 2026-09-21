@@ -1,7 +1,7 @@
 sections: [hero, metrics, capabilities, steps, gallery, principles, faq, command-box, cta]
 
 hero:
-  eyebrow: Harbor Self-Evolving 0.9.7 · Beta
+  eyebrow: Harbor Self-Evolving 0.9.8 · Beta
   title_lines:
     - Make your Agent
     - improve every time.

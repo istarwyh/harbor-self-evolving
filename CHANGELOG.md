@@ -4,6 +4,11 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+## 0.9.8 - 2026-09-21
+
+- Preserve already-resolved Host paths while translating Harbor container paths. Historical Session Observation and Candidate commands no longer receive a second trial-root prefix before execution.
+- Add a real HostEnvironment regression that uploads, verifies, and records a frozen Session Observation through `SessionObservationAgent`; the focused suite passes 5 tests and the complete suite passes 321 Python and 596 Node tests.
+
 ## 0.9.7 - 2026-09-20
 
 - Repair the Web Workbench contract for current artifacts: Candidate Evaluation Context v3 is valid and enables Compare/Gate when the Job mode permits it; Historical Evaluation Context v2 is recognized explicitly by protocol, while documented Candidate v2 and Historical v1 artifacts remain readable.
