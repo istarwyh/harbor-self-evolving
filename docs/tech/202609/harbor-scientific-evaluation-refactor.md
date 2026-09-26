@@ -4,7 +4,7 @@
 >
 > 日期：2026-09-25
 >
-> 发布目标：`dsh-harbor-evolution 0.10.0` / `harbor-dsh-evolution 0.10.0` / Harbor `0.21.x`
+> 发布目标：`dsh-harbor-evolution 0.10.1` / `harbor-dsh-evolution 0.10.1` / Harbor `0.21.x`
 >
 > 核心决策：Harbor 的主产品从“审计与晋级工作台”重构为“可信的评测与优化闭环”。评测集、生成器、评测器（标准与指标）、优化器和评测器元评测成为用户主路径；保证可复现和防止误判的最小实验完整性继续保留在后台；Promotion Gate、Policy、完整 Artifact Registry 和细粒度审计界面降为可选治理能力。
 

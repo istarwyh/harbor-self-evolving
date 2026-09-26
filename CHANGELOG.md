@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+## 0.10.1 - 2026-09-26
+
+- Repair clean Linux CI collection for the new Candidate materialization and Evaluator fork regression modules by using the repository's established test-helper import boundary.
+- Make the dashboard response-budget regression tolerant of shared GitHub runner scheduling while preserving an 800 ms local upper bound. Runtime package behavior is unchanged from 0.10.0.
+- Supersede the incomplete 0.10.0 publication: npm 0.10.0 published successfully, but PyPI and tag CI stopped before Python package construction because of the two release-test issues above. Tags are immutable; 0.10.1 is the first coordinated npm/PyPI release of the scientific evaluation refactor.
+
 ## 0.10.0 - 2026-09-26
 
 - Make `harbor-dsh-evaluator/v2` the only executable business-quality interface for formal Candidate Experiments. Materialize a private Dataset whose strict adapter invokes the exact configured Evaluator bundle; Dataset verifiers, v1 execution compatibility and legacy fallback cannot become score authority.

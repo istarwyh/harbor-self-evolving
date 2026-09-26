@@ -2,11 +2,11 @@
 
 - 归档日期（含时区）：2026-09-26 UTC+08:00 CST
 - 目标发布版本 / tag：`0.10.0` / `v0.10.0`
-- 被验证的产品版本 / 提交：0.10.0 发布工作树；正式 tag commit 与公开运行链接在发布完成后补录
+- 被验证的产品版本 / 提交：`v0.10.0`；tag commit `97a385062ba194d5496ba2d98c45a3701d08c01d`
 - 验收环境：macOS 15.6.1 arm64；Node.js 22.19.0；npm 10.9.3；Python 3.12；Harbor 0.21.x
 - 数据与模型：合成/固定测试数据；Deep Research 确定性 Evaluator fixture；无付费或真实供应商模型调用
-- 包发布状态：待核对 npm、PyPI 与 GitHub Release
-- 资料归档状态：本地自动化证据和边界已归档；公开 package artifact、运行链接和 verification ZIP 待发布后补录
+- 包发布状态：**发布不完整**；npm 0.10.0 已发布，PyPI 在构建前因 clean Linux 测试收集错误停止，未创建正式 GitHub Release；由 0.10.1 取代
+- 资料归档状态：失败状态和本地自动化边界已归档；0.10.0 不制作“完整发布”资料包
 
 ## 这次改了什么
 
@@ -33,14 +33,14 @@
 
 ## 02 · 正式发布状态
 
-- 验证日期（含时区）：待发布完成后补录
-- 版本/提交与环境：`v0.10.0`；tag commit 待补录
-- 来源与证据类型：public-release
-- 操作过程：推送正式 tag → GitHub Actions 通过 OIDC 分别构建并发布 npm/PyPI → 创建 GitHub Release 并附 package artifacts 与 verification ZIP → 核对公开版本
+- 验证日期（含时区）：2026-09-26 UTC+08:00 CST
+- 版本/提交与环境：`v0.10.0`；tag commit `97a385062ba194d5496ba2d98c45a3701d08c01d`
+- 来源与证据类型：public-release / failed-release evidence
+- 操作过程：推送正式 tag → npm OIDC 发布成功 → PyPI workflow 在 Node validation 阶段停止；tag CI 同时暴露 clean Linux Python collection error
 - 预期结果：npm、PyPI 与 GitHub Release 的版本和 source tag 均为 0.10.0
-- 实际结果：待核对
-- 截图与补充证据：待补 GitHub Actions、registry 与 Release 链接
-- 验证边界：npm 与 PyPI 不是原子事务；必须分别报告结果
+- 实际结果：npm 成功；PyPI 未构建/未发布；不创建宣称完整交付的 GitHub Release。因为 npm 不可覆盖且公开 tag 不移动，修复以 0.10.1 发布
+- 截图与补充证据：[npm run 36214908745](https://github.com/istarwyh/harbor-self-evolving/actions/runs/36214908745) 成功；[PyPI run 36214908723](https://github.com/istarwyh/harbor-self-evolving/actions/runs/36214908723) 失败；[tag CI 36214908708](https://github.com/istarwyh/harbor-self-evolving/actions/runs/36214908708) 失败
+- 验证边界：npm 与 PyPI 不是原子事务；0.10.0 只在 npm 存在，不能称为协调完成的版本
 - 脱敏说明：公开 workflow 与 registry 元数据不应包含凭据
 
 ## 测试与发布核对
@@ -48,9 +48,9 @@
 | 项目 | 版本/提交、命令或来源链接 | 实际结果与边界 |
 | --- | --- | --- |
 | 完整本地自动化 | `npm run check`；`.venv/bin/python -m pytest tests -q` | 632 个 Node tests 与 378 个 Python tests 通过；不代表真实 Provider 或完整人工 GUI 验收 |
-| npm package candidate | `npm pack --dry-run --json` | 81 files、34 schemas；正式 tgz 待 tag workflow |
-| PyPI wheel/sdist | `publish-pypi.yml` | 本地开发环境未构建；待 tag workflow |
-| GitHub Release 与附件 | `v0.10.0` | 待创建并核对 package artifacts、图集入口与 verification ZIP |
+| npm package | [`dsh-harbor-evolution@0.10.0`](https://www.npmjs.com/package/dsh-harbor-evolution/v/0.10.0)；run 36214908745 | OIDC 发布成功；该版本只存在于 npm，由 0.10.1 取代 |
+| PyPI wheel/sdist | run 36214908723 | Node response-budget test 在 shared runner 用时 372 ms、超过原 300 ms 阈值，workflow 在构建 Python 制品前停止 |
+| GitHub tag CI / Release | tag CI 36214908708；`v0.10.0` | clean Linux 还发现两个测试模块使用 `tests.helpers` 导致 collection error；未创建完整 GitHub Release |
 
 ## 未完成项与验证边界
 
@@ -58,12 +58,12 @@
 - 未运行真实业务 Candidate、付费模型或 real-provider Job；本版本不声称业务质量已由真实供应商评测证明。
 - Host 是 unrestricted、非 sandbox；Docker 才是隔离边界。Job seal 是内容完整性收据，不是抵御本地恶意所有者的外部签名。
 - Historical Job 仍是诊断证据，不能进入 Promotion Gate；Evaluator 可靠性仍依赖独立 Ground Truth 和重复元评测。
-- 公开 package 与 Release 状态必须在实际发布后补录；任一 registry 失败时不得声称完整发布成功。
+- 0.10.0 的 PyPI/tag CI 失败已保留；该版本不得声称完整发布成功，使用修复后的 0.10.1。
 
 ## 发布入口与资料包
 
-- 版本发布页：https://github.com/istarwyh/harbor-self-evolving/releases/tag/v0.10.0
+- 不完整 tag：https://github.com/istarwyh/harbor-self-evolving/tree/v0.10.0
 - 完整验收记录：本目录、`docs/acceptance-status.md` 与 `docs/tech/202609/harbor-scientific-evaluation-refactor.md`
-- 验证资料包：待上传 `harbor-0.10.0-verification.zip` 后补录下载链接
+- 后继正式版本：`v0.10.1`
 
-发布后将使用不移动 tag 的后续文档提交补录 tag commit、Workflow/registry 链接、制品摘要与 verification ZIP 状态。
+0.10.0 的公开 tag 不移动、npm package 不覆盖；发布修复只进入 0.10.1。

@@ -11,7 +11,7 @@ from harbor_dsh_evolution.evaluator import (
     snapshot_evaluator_bundle,
     update_evaluator_source,
 )
-from tests.helpers import make_stack
+from helpers import make_stack
 
 
 def test_old_job_bundle_can_fork_a_new_evaluator_after_live_stack_advances(tmp_path: Path):

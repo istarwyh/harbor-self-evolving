@@ -18,20 +18,21 @@ This page distinguishes a formal tag/public package from local development and s
 
 ## Current release {#current}
 
-### 0.10.0 · Trustworthy scientific evaluation loop
+### 0.10.1 · Trustworthy scientific evaluation loop
 
-- Formal tag: [`v0.10.0`](https://github.com/istarwyh/harbor-self-evolving/releases/tag/v0.10.0)
+- Formal tag: [`v0.10.1`](https://github.com/istarwyh/harbor-self-evolving/releases/tag/v0.10.1)
 - Compatibility: Harbor `>=0.21,<0.22`
 - Main change: formal Candidate Experiments execute only an exact Evaluator v2 bundle and derive trusted reports, comparison and Gate decisions from sealed, identity-verified evidence.
 - Evidence: 632 Node tests, 378 Python tests, 34-schema package parity and deterministic Deep Research fixtures.
 - Limit: automated source evidence does not establish authenticated GUI or real-provider business-quality acceptance.
 
-[Read the 0.10.0 evidence summary](https://istarwyh.github.io/harbor-self-evolving/releases/0.10.0/).
+[Read the 0.10.1 evidence summary](https://istarwyh.github.io/harbor-self-evolving/releases/0.10.1/).
 
 ## Release history {#history}
 
 | Version | Product step | Evidence note |
 |---|---|---|
+| 0.10.0 | Publication incomplete | npm published; PyPI/tag CI failed before Python artifact build; superseded by 0.10.1 |
 | 0.9.8 | Host path translation fix | Synthetic Host integration and complete package checks; no model call |
 | 0.9.7 | Context Web contract fixes and bilingual site | Automated package/source/site and public artifact checks; no real-provider evaluation |
 | 0.9.6 | Host-first execution and environment identity | Automated package/source checks; no real-provider evaluation |

@@ -18,20 +18,21 @@ cascade:
 
 ## 当前发布 {#current}
 
-### 0.10.0 · 可信科学评测闭环
+### 0.10.1 · 可信科学评测闭环
 
-- 正式 tag：[`v0.10.0`](https://github.com/istarwyh/harbor-self-evolving/releases/tag/v0.10.0)
+- 正式 tag：[`v0.10.1`](https://github.com/istarwyh/harbor-self-evolving/releases/tag/v0.10.1)
 - 兼容：Harbor `>=0.21,<0.22`
 - 主要变化：正式 Candidate Experiment 只执行 exact Evaluator v2 bundle，并从 sealed、身份已验证的证据生成可信报告、比较和 Gate 决策。
 - 证据：632 个 Node tests、378 个 Python tests、34 个 Schema package parity 与确定性 Deep Research fixture。
 - 限制：源码自动化证据不等于授权 GUI 或真实 Provider 业务质量验收。
 
-[阅读 0.10.0 证据摘要](https://istarwyh.github.io/harbor-self-evolving/zh/releases/0.10.0/)。
+[阅读 0.10.1 证据摘要](https://istarwyh.github.io/harbor-self-evolving/zh/releases/0.10.1/)。
 
 ## 发布历史 {#history}
 
 | 版本 | 产品阶段 | 证据说明 |
 |---|---|---|
+| 0.10.0 | 发布不完整 | npm 已发布；PyPI/tag CI 在 Python artifact 构建前失败；由 0.10.1 取代 |
 | 0.9.8 | Host 路径转换修复 | 合成 Host 集成与完整 package 检查；无模型调用 |
 | 0.9.7 | Context Web 合约修复与双语站点 | 自动化 package/source/site 与公开制品检查；无真实 provider evaluation |
 | 0.9.6 | Host-first 执行与环境身份 | 自动化 package/source 检查；无真实 provider evaluation |

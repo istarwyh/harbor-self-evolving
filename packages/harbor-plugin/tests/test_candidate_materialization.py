@@ -8,7 +8,7 @@ from pathlib import Path
 
 from harbor_dsh_evolution.candidate_materialization import materialize_candidate_dataset
 from harbor_dsh_evolution.dataset import validate_dataset
-from tests.helpers import make_dataset, make_stack
+from helpers import make_dataset, make_stack
 
 
 def _run_verifier(tests_dir: Path, logs_dir: Path) -> tuple[dict, dict]:
