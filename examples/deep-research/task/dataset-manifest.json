@@ -2,8 +2,8 @@
   "schema_version": 1,
   "dataset_id": "deep-research-regression",
   "version": "4.0.0",
-  "source_digest": "sha256:fded4aa6c6f0d3e8afdb6524d97620fdb8dde4c5e132e2cc855db40f052af28a",
-  "created_at": "2026-08-22T15:49:46.682941+00:00",
+  "source_digest": "sha256:b22baf704ad851926b33540373af1da57ef46a79a330b11fdc4f0dc5cdc53117",
+  "created_at": "2026-09-25T11:28:00.162941+00:00",
   "task_count": 13,
   "tasks": [
     {

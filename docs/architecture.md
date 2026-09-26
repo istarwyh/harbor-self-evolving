@@ -12,7 +12,7 @@
 两个 checkpoint 共同回答“评测了谁、用什么尺子、为什么晋级”：
 
 1. Candidate checkpoint：产品身份、版本、文件清单、运行时和 digest。
-2. Evaluation checkpoint：Dataset Manifest、Evaluation Stack Manifest、Context v2、Doctor、Contract、Trials、Population、Summary 和 Gate 报告。
+2. Evaluation checkpoint：Dataset Manifest、Evaluation Stack Manifest、Candidate Context v3（Historical Context v3）、Doctor、Contract、Trials、Population、Summary 和 Gate 报告。
 
 ## Evaluation Stack
 
@@ -29,9 +29,9 @@
 
 Judge 的 provider/model/version/parameters 也是 Stack 身份。Doctor 会阻止把 HTTP、Rubric、Judge 和 Promotion 决策塞进一个 God Runner。
 
-Evaluator 通过 [`harbor-dsh-evaluator/v1`](evaluator-interface.md) 描述 `script` 或 `llm-as-judge` 实现。Descriptor 固定输入/输出协议、可编辑文件和 Criterion 离散值；实现 bundle 的摘要进入 Evaluation Stack comparability identity。Workbench 只允许修改 Descriptor 精确授权的项目内文件，并强制创建新的 Evaluator 与 Stack 版本。
+正式 Candidate Experiment 只接受 [`harbor-dsh-evaluator/v2`](evaluator-interface.md) 的 `script` 或 `llm-as-judge` 实现；v1 仅用于读取旧产物，不进入当前 Candidate 执行路径。Descriptor 固定输入/输出协议、可编辑文件和 Criterion 离散值；实现 bundle 的摘要进入 Evaluation Stack comparability identity。Workbench 只允许修改 Descriptor 精确授权的项目内文件，并强制创建新的 Evaluator 与 Stack 版本。
 
-## Context v2 的两种 digest
+## Candidate Context v3 的两种 digest
 
 ```text
 Candidate manifest ──────────────┐
@@ -47,15 +47,17 @@ Candidate model binding ─────────┤
 semantic Runner + integration ───┘
 ```
 
-Candidate 不进入可比较 digest：v1/v2 必须是不同 Candidate digest，但必须共享同一把评测尺子。Diagnoser、Optimizer、Reporter 和 `semantic: false` Runner 会进入完整审计，却不改变 reward 可比较性。
+Candidate 不进入可比较 digest：两个待比较版本必须是不同 Candidate digest，但必须共享同一把评测尺子。Diagnoser、Optimizer、Reporter 和 `semantic: false` Runner 会进入完整审计，却不改变 reward 可比较性。
 
 以下变化必须建立 fresh baseline：Dataset id/version/source、Integration、Renderer、Evaluator、Rubric、Judge、语义 Runner、Candidate provider/model/reasoning effort、Harbor 或 Adapter integration identity。Policy 是独立版本化的决策合同，可以在已有指标足够时重新应用，不会改写 Context。
 
-Host DSH 的安装版本与 Candidate 运行时分别管理。Candidate 通过 `candidate-runtime.json` 声明自己的 ACP 入口、配置、Agent ID 和精确 Node 版本，完整 npm lockfile 随 Candidate digest 固定。Adapter 不选择 demo 包、不执行 `npx …@latest`，只安装已验证的锁文件并启动该入口。旧未绑定 Candidate 保留历史证据；迁移需要新 Candidate 和 fresh baseline，不能静默替换历史运行时。详见 [Candidate runtime contract](candidate-runtime-contract.md)。
+Host DSH 的安装版本与 Candidate 运行时分别管理。Candidate 通过 `candidate-runtime.json` 声明自己的 ACP 入口、配置、Agent ID 和精确 Node 版本，完整 npm lockfile 随 Candidate digest 固定。Adapter 不选择 demo 包、不执行 `npx …@latest`，只安装已验证的锁文件并启动该入口。没有严格 runtime binding 的旧 Candidate 不进入当前执行路径；如需重跑，必须建立新 Candidate 和 fresh baseline。详见 [Candidate runtime contract](candidate-runtime-contract.md)。
 
 ### Host Model Broker
 
-每个 Plugin Job 都在 Host 侧冻结当前 DSH Agent 模型，然后创建仅绑定本机的短期 Broker。Candidate 通过容器内临时 `.harbor-runtime` 的 `dsh-host` Adapter 发起请求；Broker 以固定模型身份转发给 Host `llm.stream()`，并忽略 Candidate 伪造的 provider、model 与 signal。容器只拥有随机 Job Token 文件（`0600`），不拥有 GPT Auth/Codex OAuth 或任何上游 API Key。Job 结束、失败或超时时 Broker 会 abort 尚未完成的推理并释放 Server。
+每个 Plugin Job 都在 Host 侧冻结当前 DSH Agent 模型，然后创建仅绑定本机的短期 Broker。Candidate 通过临时 `.harbor-runtime` 的 `dsh-host` Adapter 发起请求；Broker 以固定模型身份转发给 Host `llm.stream()`，并忽略 Candidate 伪造的 provider、model 与 signal。运行环境只拥有随机 Job Token 文件（`0600`），不拥有 GPT Auth/Codex OAuth 或任何上游 API Key。Job 结束、失败或超时时 Broker 会 abort 尚未完成的推理并释放 Server。
+
+Host 是默认执行模式，但它不是安全沙箱：Candidate/Task 进程仍拥有宿主用户可见的权限边界。需要隔离不可信代码、文件系统或网络时必须显式选择 Docker；Docker 才是隔离边界。短期 Broker token 只限制模型通道，不能把 Host 进程变成容器。
 
 ## 已有生成结果的 Historical 路径
 
@@ -64,7 +66,7 @@ Host DSH 的安装版本与 Candidate 运行时分别管理。Candidate 通过 `
 ```text
 exact-cwd DSH Sessions
 → safe Preview + explicit confirmation
-→ redacted historical-generation-batch/v1
+→ redacted historical-generation-batch/v2（Session Observation v2）
 → matching Harbor 1.4 Dataset + immutable Historical Stack
 → SessionObservationAgent（1 Session = 1 Trial）
 → Evaluator v2 applicability / Criterion coverage
@@ -75,25 +77,33 @@ exact-cwd DSH Sessions
 
 Historical Job 固定为 `observe-existing`、diagnostic、Gate N/A。它不包含 Candidate，也不在 Job 内证明 Evaluator 可靠；严格的 Evaluator Meta-Evaluation 仍需要独立 Ground Truth。required Criterion 因证据不足正常弃权时，Trial 是 `completed-unscored`，不是质量 0 分或评测错误。
 
+## 外部真实业务观察
+
+`business-observation/v1` 是项目级、不可覆盖的外部聚合指标，不是 Job Artifact。Python Adapter 是 Schema、敏感字段、时间窗、Metric/Segment 语义、canonical digest、项目边界和重复 observation id 的唯一校验权威；Node 服务只通过 CLI 导入或读取。存储位于工作区 `.harbor/business-observations/`，不会写入历史 Job 目录或 Artifact Registry。
+
+Workbench 用 Job 的精确 Candidate digest 查询匹配观察，并把 Offline Evaluation 与真实业务指标并列展示。Generator/Deployment/project-only 观察只能作为版本不明确的背景。趋势按完整 subject 身份分开，页面始终显示“相关而非因果”，且投影不参与 verdict、Summary、reward、Optimizer、Compare 或 Gate。详见 [External business observations](business-observations.md)。
+
 ## 严格数据流
 
 ```text
 Clarify → Init → Dataset Validate → Architecture Doctor
                                     ↓
-Candidate Snapshot → Context Preview → Harbor Job
+Candidate Snapshot → strict Dataset/Evaluator materialization → Context v3 Preview → Harbor Job
                                     ↓
-Trial Lifecycle → Contract + Assessment v2 + Artifact Registry
+统一 adapter 调用已固定 input_builder + Evaluator，并写入 runtime attestation
                                     ↓
-Reporter → Diagnoser → Optimizer → Artifact validation → Summary v3
+Trial Lifecycle → Contract + Assessment v2/v3 + Artifact Registry v2
+                                    ↓
+Reporter → Diagnoser → Optimizer → Artifact validation → Summary v3/v4
                                     ↓
 evidence-linked controlled change → next Candidate Job
                                     ↓
-Context v2 comparability + Policy v2 → PROMOTE / REJECT
+Candidate Context v3 comparability + Policy v2 → PROMOTE / REJECT
                                     ↓
 external CI/CD promotes the same evaluated artifact
 ```
 
-`promotion-eligible` Job 必须具有 Candidate Manifest、Dataset Manifest、Stack Manifest、Context v2、Policy v2 和零 Doctor error。Context v1 不提供兼容降级。
+`promotion-eligible` Job 必须具有 Candidate Manifest、严格物化的 Dataset、Stack Manifest、Candidate Context v3、Policy v2、verified Effective Evaluator 和零 Doctor error。旧 Candidate Context 或自定义 Task verifier 不提供兼容降级。
 
 ## Trial Lifecycle 与分数可信度
 
@@ -111,9 +121,9 @@ queued → preparing-environment → preparing-agent → running-agent
 Trial Assessment v2 分离：
 
 ```text
-raw_rewards: Verifier 原始输出，仅用于审计
-score.value: 可进入质量聚合的主指标值
-score.valid: 是否满足输入、Agent、Integration、Renderer、Judge、Schema 硬约束
+raw_rewards: Harbor 原生 verifier 输出，仅用于排错，不是业务质量权威
+score.value: 由实际执行且通过 attestation 的 Stack Evaluator 产生，可进入质量聚合的主指标值
+score.valid: 是否满足输入、Agent/Observation、Integration、Renderer、Judge、Evaluator identity、Schema 硬约束
 ```
 
 基础设施或评测器失败时，即使 raw reward 是数字，`score.value` 仍为 `null`，UI 显示 `—`。Population 和 Gate 只使用有效分数。
@@ -128,17 +138,10 @@ Workbench 的 Compare 只是只读预览。Historical Session 启动器是一个
 
 ## reward 与诊断证据
 
-DeepResearch 示例把过程失败直接写进 reward：
+正式 Candidate Experiment 不再信任 Dataset 自带的任意 `tests/test.sh` 判分。Job 启动前会为每个 Task 生成统一 verifier：它从完整 Evaluator bundle 调用已声明的 `input_builder` 组装业务输入，再调用同一 bundle 中的 `evaluate`。执行前后都计算 `portable_digest`；configured、materialized、executed 任一不一致，`score.value` 为 `null`，状态为 `evaluation-error`。
 
-```text
-reward = 0.4 × task_completion
-       + 0.2 × tool_call_success
-       + 0.2 × search_validity
-       + 0.2 × citation_correctness
-```
-
-工具调用失败、空搜索和错误引用不是 prose-only 备注，而是独立指标和 Trial evidence。DeepResearch v1/v2 使用同一个真实 Responses API 生成器；搜索状态来自生成器实际执行，本地 Source Catalog 的命中结果进入 v2 prompt，模型只能引用已检索 source。总 reward 用于排序，分项指标用于根因和非回归。
+Task 的原始运行产物、工具调用、搜索状态和引用仍是 Evaluator 可读取的 evidence；它们应成为独立 Criterion，而不是藏在 prose-only 备注或未受信任的 native reward 中。分项指标用于根因和非回归，aggregate 只来自已验证的 Evaluator Result。
 
 ## 元评测
 
-优化评测器时旋转角色：Candidate 是 Evaluator/Rubric/Judge 版本；Dataset 是带独立 GT 的固定产物；指标至少包含 ESF、SCE 与 RCR，也可加入时延和成本。GT 可以是人工、程序、多方共识、独立模型或外部标准，但必须有 provenance、独立于待测 Evaluator，且不能由待测评测器生成。元评测仍使用相同 Manifest、Context v2、Doctor、Job 和 Gate 机制。
+优化评测器时旋转角色：Candidate 是 Evaluator/Rubric/Judge 版本；Dataset 是带独立 GT 的固定产物；指标至少包含 ESF、SCE 与 RCR，也可加入时延和成本。GT 可以是人工、程序、多方共识、独立模型或外部标准，但必须有 provenance、独立于待测 Evaluator，且不能由待测评测器生成。当前实现只根据独立 GT 与重复 observations 生成 Meta-evaluation Report；它尚未创建专用 Harbor Meta Job，也不运行 Meta Promotion Gate。

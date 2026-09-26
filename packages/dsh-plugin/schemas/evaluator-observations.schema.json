@@ -1,18 +1,34 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/istarwyh/harbor-self-evolving/schemas/evaluator-observations.schema.json",
   "title": "Evaluator Observations v1",
   "type": "object",
-  "required": ["schema_version", "protocol", "evaluator", "repeat_policy", "observations"],
+  "additionalProperties": false,
+  "required": ["schema_version", "protocol", "ground_truth_digest", "evaluator", "rubric", "judge", "template", "repeat_policy", "observations"],
   "properties": {
     "schema_version": { "const": 1 },
     "protocol": { "const": "evaluator-observations/v1" },
+    "ground_truth_digest": { "$ref": "#/$defs/digest" },
     "evaluator": {
       "type": "object",
-      "required": ["id", "version"],
+      "additionalProperties": false,
+      "required": ["id", "version", "portable_digest"],
       "properties": {
         "id": { "type": "string", "minLength": 1 },
         "version": { "type": "string", "minLength": 1 },
-        "digest": { "type": "string" }
+        "portable_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "rubric": { "$ref": "#/$defs/versioned_identity" },
+    "template": { "$ref": "#/$defs/versioned_identity" },
+    "judge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "model", "version"],
+      "properties": {
+        "provider": { "type": "string", "minLength": 1 },
+        "model": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 }
       }
     },
     "repeat_policy": {
@@ -45,6 +61,19 @@
             }
           }
         }
+      }
+    }
+  },
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "versioned_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "digest"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 },
+        "digest": { "$ref": "#/$defs/digest" }
       }
     }
   }

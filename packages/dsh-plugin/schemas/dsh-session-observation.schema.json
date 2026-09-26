@@ -1,18 +1,19 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/istarwyh/harbor-self-evolving/schemas/dsh-session-observation.schema.json",
-  "title": "DSH Session Observation v1",
+  "title": "DSH Session Observation v1/v2",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema_version", "protocol", "record_kind", "execution_mode", "trial_id", "source", "generator", "task", "visible_transcript", "execution", "feedback", "completeness", "redaction", "digest"],
   "properties": {
-    "schema_version": { "const": 1 },
-    "protocol": { "const": "dsh-session-observation/v1" },
+    "schema_version": { "enum": [1, 2] },
+    "protocol": { "enum": ["dsh-session-observation/v1", "dsh-session-observation/v2"] },
     "record_kind": { "const": "dsh-session" },
     "execution_mode": { "const": "observe-existing" },
     "trial_id": { "type": "string", "minLength": 1 },
     "source": {
       "type": "object",
+      "additionalProperties": false,
       "required": ["ref", "captured_through_seq", "source_digest", "created_at", "last_activity_at", "last_turn_reason", "session_format_version"],
       "properties": {
         "ref": { "$ref": "#/$defs/digest" },
@@ -24,9 +25,31 @@
         "session_format_version": { "type": "integer", "minimum": 0 }
       }
     },
-    "generator": { "type": "object", "required": ["agent_preset", "model_segments"] },
+    "generator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agent_preset", "model_segments"],
+      "properties": {
+        "agent_preset": { "type": ["string", "null"] },
+        "model_segments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "from_seq": { "type": "integer", "minimum": 0 },
+              "through_seq": { "type": "integer", "minimum": 0 },
+              "provider": { "type": ["string", "null"] },
+              "model": { "type": ["string", "null"] },
+              "reasoning_effort": { "type": ["string", "null"] }
+            }
+          }
+        }
+      }
+    },
     "task": {
       "type": "object",
+      "additionalProperties": false,
       "required": ["title", "initial_user_goal", "turn_count"],
       "properties": {
         "title": { "type": "string", "minLength": 1 },
@@ -59,11 +82,162 @@
         }
       }
     },
-    "execution": { "type": "object", "required": ["tools", "turns", "usage"] },
-    "feedback": { "type": "object", "required": ["items"] },
-    "completeness": { "type": "object", "required": ["transcript_complete", "tool_payloads_complete", "attachments_complete", "truncations"] },
-    "redaction": { "type": "object", "required": ["replacements", "truncations", "omitted_blocks"] },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tools", "turns", "usage"],
+      "properties": {
+        "tools": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["event_seq", "name", "outcome", "error_code", "result_summary", "truncated"],
+            "properties": {
+              "event_seq": { "type": "integer", "minimum": 0 },
+              "name": { "type": "string", "minLength": 1 },
+              "outcome": { "enum": ["success", "error", "unknown"] },
+              "error_code": { "type": ["string", "null"] },
+              "result_summary": { "type": ["string", "null"] },
+              "truncated": { "type": "boolean" }
+            }
+          }
+        },
+        "evidence_summaries": {
+          "type": "array",
+          "maxItems": 200,
+          "items": { "$ref": "#/$defs/evidenceSummary" }
+        },
+        "turns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["turn", "reason", "started_at", "ended_at"],
+            "properties": {
+              "turn": { "type": "integer", "minimum": 0 },
+              "reason": {},
+              "started_at": { "type": ["string", "null"], "format": "date-time" },
+              "ended_at": { "type": ["string", "null"], "format": "date-time" }
+            }
+          }
+        },
+        "usage": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "input_tokens": { "type": "integer", "minimum": 0 },
+            "output_tokens": { "type": "integer", "minimum": 0 },
+            "reported": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "evidence_coverage": { "$ref": "#/$defs/evidenceCoverage" },
+    "feedback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["items"],
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["message_ref", "rating", "updated_at"],
+            "properties": {
+              "message_ref": { "$ref": "#/$defs/digest" },
+              "rating": { "type": ["number", "string", "null"] },
+              "note": { "type": ["string", "null"] },
+              "updated_at": { "type": ["string", "null"], "format": "date-time" }
+            }
+          }
+        }
+      }
+    },
+    "completeness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["transcript_complete", "tool_payloads_complete", "attachments_complete", "truncations"],
+      "properties": {
+        "transcript_complete": { "type": "boolean" },
+        "tool_payloads_complete": { "type": "boolean" },
+        "attachments_complete": { "type": "boolean" },
+        "truncations": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "redaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["replacements", "truncations", "omitted_blocks"],
+      "properties": {
+        "replacements": { "type": "integer", "minimum": 0 },
+        "truncations": { "type": "integer", "minimum": 0 },
+        "omitted_blocks": { "type": "integer", "minimum": 0 }
+      }
+    },
     "digest": { "$ref": "#/$defs/digest" }
   },
-  "$defs": { "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" } }
+  "allOf": [
+    {
+      "if": { "properties": { "schema_version": { "const": 1 } }, "required": ["schema_version"] },
+      "then": { "properties": { "protocol": { "const": "dsh-session-observation/v1" } } },
+      "else": {
+        "required": ["evidence_coverage"],
+        "properties": {
+          "protocol": { "const": "dsh-session-observation/v2" },
+          "execution": { "required": ["evidence_summaries"] }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "evidenceCoverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["transcript", "tool_outcomes", "artifacts", "feedback"],
+      "properties": {
+        "transcript": { "enum": ["complete", "partial", "omitted"] },
+        "tool_outcomes": { "enum": ["complete", "partial", "omitted"] },
+        "artifacts": { "enum": ["complete", "partial", "omitted"] },
+        "feedback": { "enum": ["available", "omitted"] }
+      }
+    },
+    "evidenceFact": {
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["kind", "passed", "failed"], "properties": { "kind": { "const": "test-count" }, "passed": { "type": "integer", "minimum": 0 }, "failed": { "type": "integer", "minimum": 0 } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind", "files_changed", "insertions", "deletions"], "properties": { "kind": { "const": "git-change-count" }, "files_changed": { "type": "integer", "minimum": 0 }, "insertions": { "type": "integer", "minimum": 0 }, "deletions": { "type": "integer", "minimum": 0 } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind", "count"], "properties": { "kind": { "const": "file-change" }, "count": { "type": "integer", "minimum": 0 } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind", "status"], "properties": { "kind": { "const": "http-status" }, "status": { "type": "integer", "minimum": 100, "maximum": 599 } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind", "status"], "properties": { "kind": { "const": "build-status" }, "status": { "type": "string", "minLength": 1 } } }
+      ]
+    },
+    "evidenceSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["call_ref", "tool", "category", "outcome", "facts", "artifact_refs", "result_digest", "redaction"],
+      "properties": {
+        "call_ref": { "$ref": "#/$defs/digest" },
+        "tool": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "category": { "enum": ["test", "git", "build", "file-write", "http", "unknown"] },
+        "outcome": { "enum": ["succeeded", "failed", "unknown"] },
+        "exit_code": { "type": "integer" },
+        "duration_ms": { "type": "integer", "minimum": 0 },
+        "facts": { "type": "array", "maxItems": 4, "items": { "$ref": "#/$defs/evidenceFact" } },
+        "artifact_refs": { "type": "array", "maxItems": 5, "items": { "$ref": "#/$defs/digest" } },
+        "result_digest": { "$ref": "#/$defs/digest" },
+        "redaction": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["replacements", "truncated"],
+          "properties": {
+            "replacements": { "type": "integer", "minimum": 0 },
+            "truncated": { "type": "boolean" }
+          }
+        }
+      }
+    }
+  }
 }

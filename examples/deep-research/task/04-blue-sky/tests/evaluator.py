@@ -1,8 +1,10 @@
-"""Deterministic harbor-dsh-evaluator/v1 implementation for the concept dataset."""
+"""Deterministic harbor-dsh-evaluator/v2 implementation for the concept dataset."""
 
+import json
 import re
+from pathlib import Path
 
-PROTOCOL = "evaluation-result/v1"
+PROTOCOL = "evaluation-result/v2"
 ENGAGING_MARKERS = ("例如", "比如", "想象", "就像", "有趣", "反直觉", "可以把", "换句话说")
 
 
@@ -86,9 +88,23 @@ def _recommendation(criterion, score, task):
     return "先执行有效检索，移除未知来源，再引用实际命中的 source id。"
 
 
+def build_input(context):
+    """Assemble the exact business payload consumed by this Evaluator."""
+    task_root = Path(context["task_root"])
+    return {
+        "schema_version": 2,
+        "protocol": "evaluation-input/v2",
+        "task": json.loads((task_root / "task-spec.json").read_text()),
+        "candidate_output": json.loads((task_root / "research-result.json").read_text())
+        if (task_root / "research-result.json").is_file()
+        else {},
+        "evidence": json.loads((task_root / "source-catalog.json").read_text()),
+    }
+
+
 def evaluate(payload):
-    if payload.get("schema_version") != 1 or payload.get("protocol") != "evaluation-input/v1":
-        raise ValueError("Evaluator input must use evaluation-input/v1")
+    if payload.get("schema_version") != 2 or payload.get("protocol") != "evaluation-input/v2":
+        raise ValueError("Evaluator input must use evaluation-input/v2")
     task = payload.get("task") or {}
     result = payload.get("candidate_output") or {}
     catalog = payload.get("evidence") or {}
@@ -96,27 +112,42 @@ def evaluate(payload):
     quality, quality_reason = _response_quality(answer, task)
     interesting, interesting_reason = _interestingness(answer)
     citation, citation_reason = _citation_compliance(result, task, catalog)
+    criteria = [
+        {
+            "id": "response_quality",
+            "status": "scored",
+            "score": quality,
+            "reason": quality_reason,
+            "recommendation": _recommendation("response_quality", quality, task),
+            "evidence_refs": ["task-spec.json", "research-result.json"],
+        },
+        {
+            "id": "interestingness",
+            "status": "scored",
+            "score": interesting,
+            "reason": interesting_reason,
+            "recommendation": _recommendation("interestingness", interesting, task),
+            "evidence_refs": ["research-result.json"],
+        },
+        {
+            "id": "citation_compliance",
+            "status": "scored",
+            "score": citation,
+            "reason": citation_reason,
+            "recommendation": _recommendation("citation_compliance", citation, task),
+            "evidence_refs": ["research-result.json", "source-catalog.json"],
+        },
+    ]
+    scores = [float(item["score"]) for item in criteria]
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "protocol": PROTOCOL,
-        "criteria": [
-            {
-                "id": "response_quality",
-                "score": quality,
-                "reason": quality_reason,
-                "recommendation": _recommendation("response_quality", quality, task),
-            },
-            {
-                "id": "interestingness",
-                "score": interesting,
-                "reason": interesting_reason,
-                "recommendation": _recommendation("interestingness", interesting, task),
-            },
-            {
-                "id": "citation_compliance",
-                "score": citation,
-                "reason": citation_reason,
-                "recommendation": _recommendation("citation_compliance", citation, task),
-            },
-        ],
+        "criteria": criteria,
+        "aggregate": {
+            "metric_id": "reward",
+            "value": round(sum(scores) / len(scores), 6),
+            "scored_criteria": len(scores),
+            "total_criteria": len(scores),
+            "coverage": 1.0,
+        },
     }

@@ -34,6 +34,8 @@ test('Cordis plugin registers the bundled evolution Skill and strict architectur
     'harbor_quick_diagnostic_init',
     'harbor_session_diagnostic_preview',
     'harbor_session_diagnostic_run',
+    'harbor_business_observation_import',
+    'harbor_business_observation_list',
     'harbor_dataset_validate',
     'harbor_context_preview',
     'harbor_eval_run',
@@ -110,6 +112,7 @@ test('Agent-requested Harbor mutations require one-shot approval after downstrea
     'harbor_quick_diagnostic_init',
     'harbor_context_preview',
     'harbor_session_diagnostic_run',
+    'harbor_business_observation_import',
     'harbor_eval_run',
     'harbor_evaluator_update',
     'harbor_ground_truth_init',
@@ -165,6 +168,7 @@ test('published package exposes the DSH bundle patch', async () => {
   assert.equal(packageJson.dsh.bundle.patch, './cordis.patch.yml')
   assert.equal(packageJson.exports['./cordis.patch.yml'], './cordis.patch.yml')
   assert.equal(packageJson.exports['./schemas/evaluation-result.schema.json'], './schemas/evaluation-result.schema.json')
+  assert.equal(packageJson.exports['./schemas/business-observation.schema.json'], './schemas/business-observation.schema.json')
   assert.equal(packageJson.exports['./schemas/evaluation-result-v2.schema.json'], './schemas/evaluation-result-v2.schema.json')
   assert.equal(packageJson.exports['./schemas/historical-generation-batch.schema.json'], './schemas/historical-generation-batch.schema.json')
   assert.equal(packageJson.exports['./schemas/dsh-session-observation.schema.json'], './schemas/dsh-session-observation.schema.json')

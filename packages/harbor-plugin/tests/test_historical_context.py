@@ -25,7 +25,7 @@ def test_historical_context_describes_existing_records_without_candidate(tmp_pat
         dataset_path=Path(materialized["dataset_path"]),
         stack_path=Path(materialized["stack_path"]),
     )
-    assert context["protocol"] == "historical-generation-evaluation-context/v2"
+    assert context["protocol"] == "historical-generation-evaluation-context/v3"
     assert context["execution_environment"]["kind"] == "host"
     assert context["job_kind"] == "historical-generation-evaluation"
     assert context["execution_mode"] == "observe-existing"
@@ -38,6 +38,13 @@ def test_historical_context_describes_existing_records_without_candidate(tmp_pat
         "digest": batch["digest"],
         "record_count": 2,
         "generator_population": batch["generator_population"],
+        "observation_protocol": "dsh-session-observation/v2",
+        "evidence_coverage": {
+            "transcript": ["complete"],
+            "tool_outcomes": ["complete"],
+            "artifacts": ["omitted"],
+            "feedback": ["omitted"],
+        },
     }
     assert context["generation_source"]["mode"] == "existing-records"
     assert context["generation_source"]["adapter_id"] == "dsh-session-query"
@@ -123,7 +130,7 @@ def test_historical_cli_materialize_validate_and_context(
     )
     assert main() == 0
     context = json.loads(capsys.readouterr().out)
-    assert context["protocol"] == "historical-generation-evaluation-context/v2"
+    assert context["protocol"] == "historical-generation-evaluation-context/v3"
 
 
 def test_historical_context_rejects_dataset_record_reordering(tmp_path: Path):

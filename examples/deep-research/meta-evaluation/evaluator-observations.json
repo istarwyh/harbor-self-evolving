@@ -1,9 +1,26 @@
 {
   "schema_version": 1,
   "protocol": "evaluator-observations/v1",
+  "ground_truth_digest": "sha256:2a9efd3ceee94eac4daaf8b87c99f666441933e2064c4bac271913840ada1a23",
   "evaluator": {
     "id": "deep-research-verifier",
+    "version": "4.0.0",
+    "portable_digest": "sha256:9817fcbd437ba2be58949d3d87ecbd0ff13109d0664a5f4676fdfb16200c2518"
+  },
+  "rubric": {
+    "id": "deep-research-rubric",
+    "version": "4.0.0",
+    "digest": "sha256:06c6b80289dc76ea78ca9d933598cb1722e75da7cf15e28c48aa707a181c2fb0"
+  },
+  "judge": {
+    "provider": "deterministic",
+    "model": "ternary-script-evaluator",
     "version": "4.0.0"
+  },
+  "template": {
+    "id": "deep-research-evaluation-template",
+    "version": "4.0.0",
+    "digest": "sha256:5d146dce063ab8f8eaa3666ba72bc6a1d2e2dafb9c5718256aaad016c52caed2"
   },
   "repeat_policy": {
     "repeats": 3,

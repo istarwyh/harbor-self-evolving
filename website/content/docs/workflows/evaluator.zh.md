@@ -11,7 +11,7 @@ Candidate 质量与 Evaluator 质量是两个独立治理问题。
 
 ## 接口与检查 {#interface}
 
-Evaluator 实现 `harbor-dsh-evaluator/v1`。Descriptor 标识 implementation kind（`script` 或 `llm-as-judge`）、ternary Criteria，以及 bounded editable source allowlist。Inspection 会省略 secret-shaped 与 local-path-shaped 值。
+正式 Candidate Evaluator 实现 `harbor-dsh-evaluator/v2`。Descriptor 标识 implementation kind（`script` 或 `llm-as-judge`）、ternary Criteria，以及 bounded editable source allowlist。Inspection 会省略 secret-shaped 与 local-path-shaped 值。
 
 ## 受控更新 {#update}
 

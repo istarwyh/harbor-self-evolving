@@ -5,7 +5,7 @@ import test from 'node:test'
 import React from 'react'
 import { HISTORICAL_MESSAGES } from '../src/client/historical-launcher-state.js'
 
-test('built Web client registers the Workbench, invisible input synchronization, Doctor, and nineteen native Tool views', async () => {
+test('built Web client registers the Workbench, invisible input synchronization, Doctor, and twenty-one native Tool views', async () => {
   const bundle = await readFile(new URL('../lib/client.js', import.meta.url), 'utf8')
   const source = await readFile(new URL('../src/client/index.jsx', import.meta.url), 'utf8')
   const editor = await readFile(new URL('../src/client/evaluator-editor.jsx', import.meta.url), 'utf8')
@@ -45,7 +45,7 @@ test('built Web client registers the Workbench, invisible input synchronization,
   }
   plugin.apply(ctx)
   assert.deepEqual(registrations.slice(0, 3).map(entry => entry.options.name), ['conversation.view', 'conversation.input.dock', 'settings.section'])
-  assert.equal(registrations.slice(3).length, 19)
+  assert.equal(registrations.slice(3).length, 21)
   assert.ok(registrations.slice(3).every(entry => entry.options.name === 'tool.call.toolview'))
   assert.equal(registrations[0].options.id, 'harbor-evolution')
   assert.equal(registrations[1].options.id, 'harbor-evolution-input-sync')
@@ -58,6 +58,8 @@ test('built Web client registers the Workbench, invisible input synchronization,
     'harbor_quick_diagnostic_init',
     'harbor_session_diagnostic_preview',
     'harbor_session_diagnostic_run',
+    'harbor_business_observation_import',
+    'harbor_business_observation_list',
     'harbor_dataset_validate',
     'harbor_context_preview',
     'harbor_eval_run',
@@ -121,7 +123,8 @@ test('built Web client registers the Workbench, invisible input synchronization,
   assert.doesNotMatch(source, /automaticContextLabel|automaticContextUnsupported|automaticContextSupported/, 'automatic page context must not expose an opt-out or unsupported-state control')
   assert.match(source, /@container\(max-width:1050px\)[\s\S]*@container\(max-width:900px\)[\s\S]*@container\(max-width:520px\)/, 'the consolidated layout must retain all required responsive breakpoints')
   assert.match(source, /No evaluation results yet\. Evaluate recent sessions or create an evaluation through the Harbor Agent\./, 'the empty state must keep one concise next action')
-  assert.equal(HISTORICAL_MESSAGES.zh.historicalLaunch, '评测最近会话', 'the default Historical action must be direct and user-facing')
+  assert.equal(HISTORICAL_MESSAGES.zh.historicalLaunch, '体验诊断：评测最近会话', 'the default Historical action must state that it is an experience diagnostic')
+  assert.match(HISTORICAL_MESSAGES.zh.historicalLaunchBody, /不是正式业务质量证明/, 'the Historical launcher must not imply a formal business-quality conclusion')
   assert.match(source, /update\('historical-preview',[\s\S]*limit: 3[\s\S]*update\('historical-run'/, 'Historical quickstart must preview a small automatic sample before explicit confirmation')
   assert.match(source, /request\('historical-operation',[\s\S]*onCompleted\(operation\)/, 'background Historical runs must resume, poll, and open the completed Job')
   assert.match(HISTORICAL_MESSAGES.zh.historicalBoundaryDetail, /只诊断已有对话.*不重跑原任务.*不自动修改、部署或晋级/, 'confirmation must disclose the diagnostic-only boundary')

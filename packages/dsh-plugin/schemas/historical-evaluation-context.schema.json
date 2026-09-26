@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/istarwyh/harbor-self-evolving/schemas/historical-evaluation-context.schema.json",
-  "title": "Historical Generation Evaluation Context v2",
+  "title": "Historical Generation Evaluation Context v3",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema_version", "protocol", "job_kind", "mode", "promotion_eligible", "execution_mode", "evaluation_level", "evaluation_target", "generation_source", "dataset", "evaluation_stack", "execution_adapter", "execution_environment", "runtime", "downstream_analysis", "digest", "full_digest"],
   "properties": {
-    "schema_version": { "const": 2 },
-    "protocol": { "const": "historical-generation-evaluation-context/v2" },
+    "schema_version": { "const": 3 },
+    "protocol": { "const": "historical-generation-evaluation-context/v3" },
     "job_kind": { "const": "historical-generation-evaluation" },
     "mode": { "const": "diagnostic" },
     "promotion_eligible": { "const": false },
@@ -15,26 +15,29 @@
     "evaluation_level": { "const": "trial" },
     "evaluation_target": {
       "type": "object",
-      "required": ["kind", "source_kind", "batch_id", "digest", "record_count", "generator_population"],
+      "required": ["kind", "source_kind", "batch_id", "digest", "record_count", "observation_protocol", "evidence_coverage", "generator_population"],
       "properties": {
         "kind": { "const": "generation-record-batch" },
         "source_kind": { "const": "dsh-session" },
         "batch_id": { "type": "string", "minLength": 1 },
         "digest": { "$ref": "#/$defs/digest" },
         "record_count": { "type": "integer", "minimum": 1, "maximum": 10 },
+        "observation_protocol": { "const": "dsh-session-observation/v2" },
+        "evidence_coverage": { "type": "object" },
         "generator_population": { "type": "object" }
       }
     },
     "generation_source": {
       "type": "object",
-      "required": ["mode", "kind", "adapter_id", "selection", "redaction_policy"],
+      "required": ["mode", "kind", "adapter_id", "selection", "redaction_policy", "observation_protocol"],
       "properties": {
         "mode": { "const": "existing-records" },
         "kind": { "const": "dsh-session" },
         "adapter_id": { "const": "dsh-session-query" },
         "adapter": { "const": "dsh-session-query" },
         "selection": { "type": "object" },
-        "redaction_policy": { "type": "object" }
+        "redaction_policy": { "type": "object" },
+        "observation_protocol": { "const": "dsh-session-observation/v2" }
       }
     },
     "dataset": { "type": "object" },

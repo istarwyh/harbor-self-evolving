@@ -27,7 +27,7 @@ CRITERIA = (
 )
 
 
-def evaluator_result(*, scored: bool):
+def evaluator_result(*, scored: bool, effective_evaluator: dict | None = None):
     items = [
         {
             "id": identity,
@@ -43,7 +43,7 @@ def evaluator_result(*, scored: bool):
         }
         for identity in CRITERIA
     ]
-    return {
+    result = {
         "schema_version": 2,
         "protocol": "evaluation-result/v2",
         "criteria": items,
@@ -55,6 +55,9 @@ def evaluator_result(*, scored: bool):
             "coverage": 1 if scored else 0,
         },
     }
+    if effective_evaluator is not None:
+        result["effective_evaluator"] = effective_evaluator
+    return result
 
 
 def _payload(
@@ -71,8 +74,32 @@ def _payload(
     (trial / "artifacts" / "logs" / "artifacts" / "session-observation.json").write_text(
         json.dumps(observation)
     )
+    task_root = Path(task["path"])
+    materialization_path = task_root / "tests" / "evaluator-materialization.json"
+    if not materialization_path.is_absolute() or not materialization_path.is_file():
+        matches = list(
+            job_dir.parent.rglob(
+                f"{task_root.as_posix()}/tests/evaluator-materialization.json"
+            )
+        )
+        assert len(matches) == 1
+        materialization_path = matches[0]
+    materialization = json.loads(materialization_path.read_text())
+    runtime_identity = materialization["materialized"]
+    effective_evaluator = {
+        "schema_version": 1,
+        "protocol": "effective-evaluator/v1",
+        "configured": materialization["configured"],
+        "materialized": runtime_identity,
+        "executed": runtime_identity,
+        "identity_match": True,
+    }
     (trial / "verifier" / "evaluation-result.json").write_text(
-        json.dumps(evaluator_result(scored=scored))
+        json.dumps(
+            evaluator_result(
+                scored=scored, effective_evaluator=effective_evaluator
+            )
+        )
     )
     return {
         "id": execution_id,
@@ -170,6 +197,52 @@ def test_historical_artifacts_preserve_abstention_as_completed_unscored(tmp_path
     assert summary["n_unscored_trials"] == 1
     assert summary["evaluator_meta_evaluation"]["status"] == "not-run"
     assert "candidate" not in summary
+
+
+def test_evaluator_identity_mismatch_invalidates_historical_score(tmp_path: Path):
+    batch_path, _, observations = make_historical_batch(tmp_path)
+    materialized = materialize_historical_dataset(
+        project_root=tmp_path,
+        batch_path=batch_path,
+        output_path=tmp_path / "dataset",
+        **HISTORICAL_JUDGE_BINDING,
+    )
+    dataset = materialized["dataset_manifest"]
+    stack = snapshot_stack(
+        Path(materialized["stack_path"]),
+        project_root=tmp_path,
+        job_kind="historical-generation-evaluation",
+    )
+    job_dir = tmp_path / "job"
+    job_dir.mkdir()
+    payload = _payload(
+        job_dir,
+        dataset["tasks"][0],
+        next(iter(observations.values())),
+        execution_id="execution",
+        scored=True,
+    )
+    result_path = job_dir / "execution" / "verifier" / "evaluation-result.json"
+    result = json.loads(result_path.read_text())
+    result["effective_evaluator"]["identity_match"] = False
+    result["effective_evaluator"]["executed"]["portable_digest"] = (
+        "sha256:" + "b" * 64
+    )
+    result_path.write_text(json.dumps(result))
+
+    write_historical_job_artifacts(
+        job_dir,
+        [payload],
+        dataset_manifest=dataset,
+        stack_manifest=stack,
+    )
+    assessment = load_historical_assessments(job_dir)[0]
+
+    assert assessment["status"] == "evaluation-error"
+    assert assessment["score"]["value"] is None
+    assert assessment["score"]["valid"] is False
+    assert "evaluator-identity-mismatch" in assessment["score"]["invalid_reasons"]
+    assert assessment["requirements"]["evaluator_identity_match"] is False
 
 
 def test_infrastructure_error_surfaces_docker_credential_cause(tmp_path: Path):

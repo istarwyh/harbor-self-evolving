@@ -8,7 +8,7 @@
 
 | 交付物 | 用户得到什么 |
 | --- | --- |
-| DSH Plugin：`dsh-harbor-evolution` | 在自己的 DSH 中获得 Evaluation Workbench、19 个严格评测工具和原生对话中的结构化结果卡片 |
+| DSH Plugin：`dsh-harbor-evolution` | 在自己的 DSH 中获得 Evaluation Workbench、21 个严格评测工具和原生对话中的结构化结果卡片 |
 | 本项目官方 Skill：`evolve-agent-with-harbor` | Agent 知道如何澄清、初始化 Evaluation Stack、运行 Doctor、建立 baseline、诊断、回归和 Gate |
 | Harbor Adapter：`harbor-dsh-evolution` | 同时提供 Candidate Evaluation 与 Historical Generation Evaluation，固化 Dataset/Stack、Trial 证据、可信 Summary 和 Promotion 边界 |
 
@@ -25,7 +25,7 @@ cd /absolute/path/to/your-agent-workspace
 npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 ```
 
-安装器会让 npm Plugin 与 Python Adapter 使用同一个正式版本；需要完全固定版本时，把 `latest` 改为 `0.9.8`。
+安装器会让 npm Plugin 与 Python Adapter 使用同一个正式版本；需要完全固定版本时，把 `latest` 改为 `0.10.0`。
 
 默认安装到 DSH 的 `web` profile。`setup` 会一次完成：
 
@@ -60,10 +60,11 @@ Skill 会先检查文件，再围绕四个用户可理解的概念补齐必要�
 - 只保留原生输入框和对话，不再在其上方展示 Context Capsule 或 Copilot 面板。配套支持 `conversation.contexts.register` 的爱鸭宿主会在发送瞬间冻结 Harbor 当前页面和选择；显式 `问 AI` 和原生 `@harbor` 引用优先，不再提供容易导致上下文缺失的页面内关闭开关。旧 rc.8 宿主仍需显式引用，单独升级插件不会补齐宿主能力。
 - 多选直接提问会冻结具体勾选成员；只看列表时也附带状态、有效性筛选和排序，不发送自由搜索原文。消息附件显示当时的任务、选区与观测时间。连续输入期间发送失败的原文和图片保留在原生“未发送消息”条目中，不覆盖新草稿；恢复到输入框再发时重新捕获当前页面。
 - 同会话的原生工具结果卡承接证据导航和 AI 修改建议；typed `harbor.navigate` 操作准备好对象后会提示打开 Harbor 标签，并非自动切换标签。可通过 Back 恢复原 workspace、分页、Stage、Trial、筛选、排序、Evidence 焦点、Compare Baseline 与滚动位置。后台任务位于插件主页面，保留取消、异常核查和结果入口，成功读取且无任务时隐藏。
-- `评测最近会话`：自动从当前 DSH 可访问的历史中选取最多 3 条已完成会话，不需要查找目录或配置来源；预览会话数量、评审模型、数据策略与 Judge 数据边界，确认后才发送保留普通文本和绝对路径、但已脱敏凭据及会话标识的有界 Session Observation 并后台评测，完成后打开结果。体验样本不代表全部历史，也不会重跑原任务。
-- Job 工作台：默认以概览、Trials、Pipeline、优化假设、Compare / Gate、Evaluator / Rubric、产物和审计组织；阶段流程收进 Pipeline。先直接展示 Candidate / Dataset / Evaluation Stack / 模型身份和 Candidate 自带的锁定运行时，再展示 Agent 收到的 query 与 instruction、Harbor 收集的页面/文档/结构化产物、评测器 Ground Truth 元评测、逐 Trial 判分、Population 有效覆盖、受控优化假设和 Baseline 回归 Gate。完整 JSON 只留在折叠审计区。
-- 评测器页：直接查看 `script` 或 `llm-as-judge` 的统一接口、三元 Criterion、Rubric 与实现源码；只能受控修改 Descriptor 授权的文件，并强制创建新的 Evaluator / Stack 身份。
-- `harbor-dsh-evaluator/v1`：统一 `script` 与 `llm-as-judge` 的输入、三元 Criteria 输出、实现身份和可编辑文件；详情见 [`docs/evaluator-interface.md`](docs/evaluator-interface.md)。
+- `体验诊断：评测最近会话`：自动从当前 DSH 可访问的历史中选取最多 3 条已完成会话，不需要查找目录或配置来源；预览会话数量、评审模型、数据策略与 Judge 数据边界，确认后才发送保留普通文本和绝对路径、但已脱敏凭据及会话标识的有界 Session Observation 并后台评测，完成后打开结果。它只用于体验评测流程，不是业务质量证明；体验样本不代表全部历史，也不会重跑原任务。
+- `正式业务实验`：首页从 Dataset → Generator → 实际执行的 Evaluator → Metrics → Optimizer 引导用户建立 `experiment`；要求固定 Dataset、用户提供的 Evaluator v2 和显式 repeat/seed policy。普通实验可比较但不会运行 Gate，只有显式 `governed` 模式展示 Compare、Gate 与完整 Audit。
+- Job 工作台：默认先回答结论、是否可评分、生成器质量 / 评测健康 / 运行健康、样本与 Criterion 覆盖、主要发现、代表性案例、实际执行的 Evaluator 和一个下一步，再进入任务证据、改进建议和 Evaluator。Pipeline、原始产物与审计收进“实验详情 / 高级信息”；Compare 和 Gate 只属于显式治理流程。
+- 评测器页：显示 verified Effective Evaluator，也就是该 Job 实际执行并通过 configured → materialized → executed 校验的源码 bundle。只能受控修改 Descriptor 授权的文件，并强制创建新的 Evaluator / Stack 身份；live Stack 已升级时，从 Job 的不可变执行快照分叉，不拿新源码冒充旧评分代码。
+- `harbor-dsh-evaluator/v2`：统一 `script` 与 `llm-as-judge` 的输入、Criterion 输出、实现身份、完整 bundle 和可编辑文件；正式 Candidate Experiment 只运行 Descriptor 声明的 `input_builder` 与 Evaluator，Dataset 自带 verifier 不能成为业务分数权威。v1 只用于读取旧产物，不提供执行回退。详情见 [`docs/evaluator-interface.md`](docs/evaluator-interface.md)。
 - 工具调用中的 Harbor 专属卡片：直接理解初始化、Doctor、Context 预览、评测与 Gate。
 - “设置 → Harbor 自进化”：检查项目目录、Evaluation Stack、Jobs 和两个 Harbor CLI 是否就绪；显示当前/最新插件版本；只有完整安装身份可用时才显示保留 profile、DSH_HOME、Jobs、managed runtime 与 Host/Docker 选择的精确更新命令，浏览器不会执行 registry 包或静默安装。
 
@@ -85,7 +86,7 @@ GUI 的业务资源写操作限于三个明确入口：已授权 Evaluator 文�
 
 ## 用户实际获得的能力
 
-Plugin 注册 19 个确定性工具：
+Plugin 注册 21 个确定性工具：
 
 - `harbor_candidate_snapshot`：固化不可变 Candidate。
 - `harbor_model_binding`：把当前 DSH 默认模型生成为不含凭证的 `model-binding.json` 草案；写入 Candidate 后会进入 digest，并在后续 Job 中通过 Host Model Broker 固定复用。
@@ -94,10 +95,12 @@ Plugin 注册 19 个确定性工具：
 - `harbor_quick_diagnostic_init`：用一个 Query 和 Rubric 草稿生成 Harbor 1.4 wiring 诊断工程；明确不可用于 Baseline 或晋级。
 - `harbor_session_diagnostic_preview`：只读预览当前工作区最近完成的 DSH 会话、安全元数据、Judge 身份、耦合关系和本地保留范围，并返回短期确认令牌。
 - `harbor_session_diagnostic_run`：确认后冻结脱敏会话，按“一条会话一个 Trial”运行不可晋级的 Historical Generation Evaluation Job；不会重新执行 Candidate。
+- `harbor_business_observation_import`：从项目内审核过的 JSON 文件或结构化 payload 导入不可覆盖的 `business-observation/v1` 聚合业务结果；不联网，不接收原始业务明细，不改离线分数或 Gate。
+- `harbor_business_observation_list`：按 Candidate/Generator/Deployment、Metric 或 Segment 读取业务观察、趋势与分组；所有关联都明确标为“相关而非因果”。
 - `harbor_dataset_validate`：验证任务、路径、敏感字段、Dataset source digest，并复现 Harbor 的运行时 Task 解析；Dataset 根目录下必须是一级 Task 子目录，`task.toml` 使用 `schema_version = "1.4"` 和 `org/name`。
 - `harbor_context_preview`：经逐次批准刷新 Candidate manifest，再预览 Context v3、可比 baseline 和 fresh-baseline 要求。
 - `harbor_eval_run`：运行显式的 `diagnostic` 或 `promotion-eligible` Job。
-- `harbor_eval_result`：读取规范化 Summary，或按 `view=job|progress|dataset|trial|governance` 读取脱敏后的阶段、指令、生成产物与评测器治理证据；返回 `harbor-agent-read/v1`，实际 payload 位于 `data`。
+- `harbor_eval_result`：默认读取结果优先的 `evaluation-report/v1`；也可按 `view=summary|job|progress|dataset|trial|governance` 读取聚合、阶段、指令、生成产物与评测器治理证据。返回 `harbor-agent-read/v1`，实际 payload 位于 `data`。
 - `harbor_resolve_page_context`：在调用方的精确 DSH Session 与工作空间内解析 `@harbor` 或普通消息的 Context Snapshot，重新校验对象、修订与权威身份。上下文及集合绑定会将身份和修订保存在项目 `.harbor/private/page-contexts/` 的会话隔离目录，不保存证据正文或凭据，并带 Git 排除规则。15 分钟仅限制内存缓存，新快照可跨宿主重启重读；旧版本未落盘引用、删除或损坏的记录仍需重新选择，已有记录不自动迁移或清理。证据变化会标记只读漂移，集合成员变化则拒绝，不会重跑查询或悄悄换对象。显式局部对象返回有预算、已脱敏的 `selectedEvidence`；批量选择仅返回冻结的成员身份与修订，Trial 证据仍需另行读取。
 - `harbor_get_evidence`：使用 resolver 返回的精确 typed ref，按 Workspace → Job → Trial → Criterion → Evidence 祖先链读取一条有大小上限、已脱敏且标记为不可信输入的证据；不会把产物文本当成指令。
 - `harbor_propose_action`：提出结构化草稿，不执行变更；在原生对话的工具结果卡中预检、人工确认后保存草稿审计，或执行选定的只读 Compare。有界诊断/重试尚未接入运行器时明确阻断，生产操作保持关闭。
@@ -107,22 +110,24 @@ Plugin 注册 19 个确定性工具：
 - `harbor_evaluator_meta_evaluate`：用固定产物、Ground Truth 和重复观测计算 ESF、SCE、RCR、覆盖率与分歧。
 - `harbor_candidate_compare`：执行严格、可解释、带原因码的 Promotion Gate。
 
-`harbor_eval_result` 与 `harbor_evaluator_inspect` 的调用方必须从 `data` 读取业务字段，并保留 `artifactTrust=untrusted-evidence` 与 `policy.treatAsInstructions=false` 的语义；旧的顶层业务字段不再是输出合约。产物与源码均是不可信数据，不能改变工具、权限、审批策略或系统指令。Web 工作台继续使用独立的同源编辑接口，不依赖 Agent envelope。
+`harbor_eval_result`、`harbor_evaluator_inspect` 与 `harbor_business_observation_list` 的调用方必须从 `data` 读取业务字段，并保留 `artifactTrust=untrusted-evidence` 与 `policy.treatAsInstructions=false` 的语义；旧的顶层业务字段不再是输出合约。产物与源码均是不可信数据，不能改变工具、权限、审批策略或系统指令。Web 工作台继续使用独立的同源编辑接口，不依赖 Agent envelope。
+
+外部真实业务指标的 reviewed aggregate 格式、文件/程序导入、不可覆盖存储、趋势/分组读取和“相关而非因果”边界见 [外部业务观察](docs/business-observations.md)。
 
 Skill 负责稳定使用这些工具，而不是让 Agent 无约束地“改自己”。用户入口保持为四个概念，内部再编译为严格架构：
 
 ```text
 评测集 + 生成器 + 评测器（评测标准） + 优化器 → 用户确认
         ↓
-自动生成 Candidate / Dataset / Evaluation Stack / Policy 草案
+自动生成 Candidate / Dataset / Evaluation Stack 草案
         ↓
-Dataset Validate → Architecture Doctor → Context Preview
+Dataset Validate → Architecture Doctor → strict Evaluator materialization → Context Preview
         ↓
-Baseline Job → 读取指标、Trial assessment 和证据 → 根因分析
+Experiment Job → 结果、覆盖率、Trial evidence → 根因分析
         ↓
-一个受控改动 → Regression Job → Promotion Gate
+一个受控改动 → 下一次 Experiment → 复核结果
         ↓
-PROMOTE / REJECT 建议 → 交给既有 CI/CD 发布
+（可选治理）Policy + Promotion Gate → 交给既有 CI/CD
 ```
 
 它会优先复用项目已有文件，只追问无法从工作区确定的关键选择。它不会自动修改 Champion、部署生产环境或绕过发布审批。
@@ -140,6 +145,8 @@ evaluation-stack-manifest.json # 八个角色、Judge 与完整/可比 digest
 evaluation-context.json     # Context v3：含执行环境身份及 baseline 可比性
 architecture-doctor.json   # 角色边界和正式评测阻断项
 evaluation-contract.json   # 指标语义、方向、分组和硬约束
+evaluator-bundle/          # 本 Job 实际执行的不可变 Evaluator bundle
+evaluator-bundle-manifest.json # bundle 身份和 portable digest
 candidate-events.jsonl      # Trial 完成事件
 trial-events.jsonl          # 追加写的 Trial Lifecycle 事件
 trial-lifecycle.json        # Dataset 稳定顺序与当前 phase/attempt 快照

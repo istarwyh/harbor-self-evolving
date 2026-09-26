@@ -26,5 +26,9 @@
     "exception_free",
     "artifact_schema_valid",
     "doctor_error_free"
-  ]
+  ],
+  "execution_environment": {
+    "strategy": "docker-required",
+    "require_image_identity": true
+  }
 }

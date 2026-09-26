@@ -1,4 +1,5 @@
 import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -6,7 +7,9 @@ import yaml
 
 from harbor_dsh_evolution.evaluator import (
     inspect_evaluator,
+    inspect_evaluator_bundle,
     load_evaluator_descriptor,
+    snapshot_evaluator_bundle,
     update_evaluator_source,
     validate_evaluation_result,
 )
@@ -64,13 +67,44 @@ def v2_criterion(
     }
 
 
+def test_portable_evaluator_digest_is_stable_across_bundle_relocation(tmp_path: Path):
+    stack_path = make_stack(tmp_path)
+    stack = yaml.safe_load(stack_path.read_text())
+    original_path = tmp_path / stack["components"]["evaluator"]["entry"]
+    relocated_dir = tmp_path / "relocated" / "evaluator"
+    shutil.copytree(original_path.parent, relocated_dir)
+
+    original = load_evaluator_descriptor(original_path, project_root=tmp_path)
+    relocated = load_evaluator_descriptor(
+        relocated_dir / "evaluator.json", project_root=tmp_path
+    )
+
+    assert original["portable_digest"] == relocated["portable_digest"]
+    assert original["digest"] != relocated["digest"]
+    assert original["bundle_complete"] is True
+
+
+def test_complete_evaluator_bundle_rejects_undeclared_helper(tmp_path: Path):
+    stack_path = make_stack(tmp_path)
+    stack = yaml.safe_load(stack_path.read_text())
+    descriptor_path = tmp_path / stack["components"]["evaluator"]["entry"]
+    descriptor = json.loads(descriptor_path.read_text())
+    descriptor["bundle_files"] = [{"path": "evaluator.py", "role": "implementation"}]
+    descriptor_path.write_text(json.dumps(descriptor))
+    (descriptor_path.parent / "helper.py").write_text("VALUE = 1\n")
+
+    with pytest.raises(ValueError, match="declare every file"):
+        load_evaluator_descriptor(descriptor_path, project_root=tmp_path)
+
+
 def test_evaluator_bundle_supports_script_and_ternary_result(tmp_path: Path):
     stack_path = make_stack(tmp_path)
     inspected = inspect_evaluator(project_root=tmp_path, stack_path=stack_path)
     evaluator = inspected["evaluator"]
-    assert evaluator["interface"] == "harbor-dsh-evaluator/v1"
+    assert evaluator["interface"] == "harbor-dsh-evaluator/v2"
     assert evaluator["kind"] == "script"
-    assert evaluator["editable_files"][0]["text"].startswith("def evaluate")
+    assert evaluator["editable_files"][0]["text"].startswith("def build_input")
+    assert evaluator["input_builder"]["callable"] == "build_input"
     validated = validate_evaluation_result(
         {
             "schema_version": 1,
@@ -161,7 +195,7 @@ def test_v2_result_recomputes_coverage_and_accepts_optional_abstention(tmp_path:
             "protocol": "evaluation-result/v2",
             "criteria": [
                 v2_criterion("citation_accuracy", status="scored", score=1),
-                v2_criterion("factual_correctness", status="not-applicable", score=None),
+                v2_criterion("factual_correctness", status="insufficient-evidence", score=None),
             ],
             "aggregate": {
                 "metric_id": "reward",
@@ -185,8 +219,8 @@ def test_v2_result_recomputes_coverage_and_accepts_optional_abstention(tmp_path:
     }
     assert validated["criterion_status_counts"] == {
         "scored": 1,
-        "not-applicable": 1,
-        "insufficient-evidence": 0,
+        "not-applicable": 0,
+        "insufficient-evidence": 1,
         "evaluation-error": 0,
     }
     assert validated["required_criteria_scored"] is True
@@ -236,7 +270,7 @@ def test_v2_result_withholds_reward_below_coverage_threshold(tmp_path: Path):
             "protocol": "evaluation-result/v2",
             "criteria": [
                 v2_criterion("required", status="scored", score=1),
-                v2_criterion("optional-a", status="not-applicable", score=None),
+                v2_criterion("optional-a", status="insufficient-evidence", score=None),
                 v2_criterion("optional-b", status="insufficient-evidence", score=None),
             ],
             "aggregate": {
@@ -326,7 +360,7 @@ def test_v2_result_rejects_tampered_aggregate(
                 "protocol": "evaluation-result/v2",
                 "criteria": [
                     v2_criterion("citation_accuracy", status="scored", score=1),
-                    v2_criterion("factual_correctness", status="not-applicable", score=None),
+                    v2_criterion("factual_correctness", status="insufficient-evidence", score=None),
                 ],
                 "aggregate": reported_aggregate,
             },
@@ -357,6 +391,44 @@ def test_v2_result_requires_explanations_evidence_and_explicit_score(tmp_path: P
             },
             criteria=evaluator["criteria"],
             aggregate=evaluator["aggregate"],
+        )
+
+
+def test_v2_conditional_not_applicable_is_excluded_from_required_coverage(tmp_path: Path):
+    status_policy = {"not_applicable": "exclude", "insufficient_evidence": "abstain", "evaluation_error": "invalidate"}
+    criteria = [
+        {"id": "always", "label": "Always", "values": [0, 0.5, 1], "required": True},
+        {"id": "tool-use", "label": "Tool use", "values": [0, 0.5, 1], "required": True,
+         "applicability": {"when": "task uses tools"}, "status_policy": status_policy},
+    ]
+    _, evaluator = make_v2_evaluator(tmp_path, criteria=criteria, minimum_coverage=1)
+    validated = validate_evaluation_result(
+        {
+            "schema_version": 2, "protocol": "evaluation-result/v2",
+            "criteria": [
+                v2_criterion("always", status="scored", score=1),
+                v2_criterion("tool-use", status="not-applicable", score=None),
+            ],
+            "aggregate": {"metric_id": "reward", "value": 1, "scored_criteria": 1, "total_criteria": 2, "coverage": 0.5},
+        },
+        criteria=evaluator["criteria"], aggregate=evaluator["aggregate"],
+    )
+    assert validated["eligible_coverage"] == 1
+    assert validated["required_criteria_scored"] is True
+    assert validated["score_valid"] is True
+
+
+def test_v2_unconditional_not_applicable_is_rejected(tmp_path: Path):
+    criteria = [{"id": "quality", "label": "Quality", "values": [0, 0.5, 1]}]
+    _, evaluator = make_v2_evaluator(tmp_path, criteria=criteria, minimum_coverage=0)
+    with pytest.raises(ValueError, match="unconditional"):
+        validate_evaluation_result(
+            {
+                "schema_version": 2, "protocol": "evaluation-result/v2",
+                "criteria": [v2_criterion("quality", status="not-applicable", score=None)],
+                "aggregate": {"metric_id": "reward", "value": None, "scored_criteria": 0, "total_criteria": 1, "coverage": 0},
+            },
+            criteria=evaluator["criteria"], aggregate=evaluator["aggregate"],
         )
 
 
@@ -416,3 +488,38 @@ def test_controlled_update_requires_digest_and_creates_new_identities(tmp_path: 
     assert stack["components"]["evaluator"]["version"] == "2.0.0"
     assert stack["components"]["evaluator"]["entry"] == "stack/evaluator/2.0.0/evaluator.json"
     assert (tmp_path / "stack/evaluator/2.0.0/evaluator.py").read_text() == "def evaluate(payload):\n    return {'updated': True}\n"
+
+
+def test_evaluator_descriptor_rejects_secret_fields_and_secret_shaped_values(tmp_path: Path):
+    stack_path = make_stack(tmp_path)
+    stack = yaml.safe_load(stack_path.read_text())
+    descriptor_path = tmp_path / stack["components"]["evaluator"]["entry"]
+    descriptor = json.loads(descriptor_path.read_text())
+    descriptor["api_key"] = "not-a-real-key"
+    descriptor_path.write_text(json.dumps(descriptor))
+    with pytest.raises(ValueError, match="must not contain credentials"):
+        load_evaluator_descriptor(descriptor_path, project_root=tmp_path)
+
+    descriptor.pop("api_key")
+    descriptor["criteria"][0]["label"] = "Authorization: Bearer secret-shaped-value"
+    descriptor_path.write_text(json.dumps(descriptor))
+    with pytest.raises(ValueError, match="must not contain credentials"):
+        load_evaluator_descriptor(descriptor_path, project_root=tmp_path)
+
+
+@pytest.mark.parametrize(
+    ("source", "message"),
+    [
+        ("import requests\n\ndef evaluate(payload):\n    return payload\n", "dependency closure"),
+        ("import importlib\n\ndef evaluate(payload):\n    return importlib.import_module('json')\n", "dynamic imports"),
+    ],
+)
+def test_evaluator_bundle_rejects_nonportable_or_dynamic_python_imports(
+    tmp_path: Path, source: str, message: str
+):
+    stack_path = make_stack(tmp_path)
+    stack = yaml.safe_load(stack_path.read_text())
+    descriptor_path = tmp_path / stack["components"]["evaluator"]["entry"]
+    (descriptor_path.parent / "evaluator.py").write_text(source)
+    with pytest.raises(ValueError, match=message):
+        load_evaluator_descriptor(descriptor_path, project_root=tmp_path)

@@ -56,4 +56,5 @@ evaluation_contract:
     - { id: integration_valid }
     - { id: renderer_valid }
     - { id: judge_completed }
+    - { id: evaluator_identity_match }
     - { id: artifact_schema_valid }

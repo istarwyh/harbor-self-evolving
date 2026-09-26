@@ -1,23 +1,52 @@
 import assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
 import { mkdtemp, mkdir, readFile, rename, symlink, unlink, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { performance } from 'node:perf_hooks'
 import test from 'node:test'
 
-import { discoverWorkspaceConfigs, readComparison, readDashboardSnapshot, readDatasetPreview, readEvaluatorGovernance, readJobDetail, readJobProgress, readMetaEvaluation, readTrialDetail, readTrialsPage } from '../lib/dashboard.js'
+import { canonicalDigest } from '../lib/bridge-contract.js'
+import { discoverWorkspaceConfigs, readComparison, readDashboardSnapshot, readDatasetPreview, readEvaluationReport, readEvaluatorGovernance, readJobDetail, readJobProgress, readMetaEvaluation, readTrialDetail, readTrialsPage } from '../lib/dashboard.js'
 
 function config(projectRoot) {
   return { projectRoot, jobsDir: 'jobs', harborBin: '/bin/sh', harborDshBin: '/bin/sh', runtimePolicy: 'follow-latest', agentImportPath: 'example:Agent', pluginImportPath: 'dsh-evolution' }
 }
 
+async function sealJob(job) {
+  await unlink(path.join(job, 'job-bundle-manifest.json')).catch(() => {})
+  const fixed = [
+    'candidate-manifest.json', 'dataset-manifest.json', 'evaluation-stack-manifest.json',
+    'evaluation-contract.json', 'evaluation-context.json', 'evaluation-spec.json', 'evaluation-summary.json',
+  ]
+  const assessmentNames = await import('node:fs/promises').then(fs => fs.readdir(path.join(job, 'trial-assessments'))).catch(() => [])
+  const names = [...fixed.filter(name => true), ...assessmentNames.filter(name => name.endsWith('.json')).map(name => `trial-assessments/${name}`)]
+  const artifacts = []
+  for (const name of names) {
+    let bytes
+    try { bytes = await readFile(path.join(job, name)) } catch { continue }
+    artifacts.push({ path: name, digest: `sha256:${createHash('sha256').update(bytes).digest('hex')}`, size: bytes.length, reward_affecting: true })
+  }
+  const manifest = { schema_version: 1, protocol: 'job-bundle/v1', job: path.basename(job), created_at: '2026-09-25T00:00:00Z', artifacts }
+  manifest.digest = canonicalDigest(manifest, 'harbor-dsh-job-bundle-v1')
+  await writeFile(path.join(job, 'job-bundle-manifest.json'), JSON.stringify(manifest))
+}
+
 async function makeJob(projectRoot, name = 'candidate-v2', nTrials = 4) {
   const job = path.join(projectRoot, 'jobs', name)
   await mkdir(path.join(job, 'trial-assessments'), { recursive: true })
-  const trials = Array.from({ length: nTrials }, (_, index) => ({ id: `trial-${index}`, name: `query ${index}`, rewards: { reward: index / Math.max(1, nTrials) }, exception: index === 1 ? { type: 'Timeout', classification: 'infrastructure' } : null }))
-  await writeFile(path.join(job, 'evaluation-summary.json'), JSON.stringify({ schema_version: 2, job: name, mode: 'promotion-eligible', candidate: { candidate_id: 'research-agent', version: '2.0.0', digest: 'sha256:candidate-v2' }, evaluation_context: { schema_version: 3, digest: 'sha256:context-stable' }, n_trials: nTrials, n_exceptions: 1, metrics: { reward: 0.82, citation_accuracy: 0.91 }, trials, artifact_validation: { valid: true } }))
+  const identity = { id: 'strict-evaluator', version: '2.0.0', portable_digest: `sha256:${'a'.repeat(64)}` }
+  const trials = Array.from({ length: nTrials }, (_, index) => {
+    const reward = index / Math.max(1, nTrials)
+    return { id: `trial-${index}`, name: `query ${index}`, datasetTrial: `query ${index}`, status: 'completed', score: { value: reward, valid: true, invalid_reasons: [] }, rewards: { reward }, exception: null }
+  })
+  await writeFile(path.join(job, 'evaluation-summary.json'), JSON.stringify({ schema_version: 3, job: name, mode: 'promotion-eligible', candidate: { candidate_id: 'research-agent', version: '2.0.0', digest: 'sha256:candidate-v2' }, evaluation_context: { schema_version: 3, digest: 'sha256:context-stable' }, n_trials: nTrials, n_discovered_trials: nTrials, n_valid_scores: nTrials, n_invalid_scores: 0, n_infrastructure_exceptions: 0, n_evaluation_exceptions: 0, coverage: { total_trials: nTrials, scored_trials: nTrials, unscored_trials: 0, trial_rate: 1, criterion_scored: 0, criterion_total: 0, criterion_rate: 0 }, metrics: { reward: 0.82, citation_accuracy: 0.91 }, trials, artifact_validation: { valid: true }, effective_evaluator: { configured: identity, materialized: { ...identity, bundle_complete: true }, executed: { ...identity, bundle_complete: true }, identity_match: true, execution: { status: 'succeeded', error_type: null } } }))
   await writeFile(path.join(job, 'evaluation-context.json'), JSON.stringify({ schema_version: 3, digest: 'sha256:context-stable', full_digest: 'sha256:full', candidate: {}, dataset: {}, evaluation_stack: {}, execution_environment: { kind: 'host', runtime_fingerprint: 'sha256:host' }, runtime: {} }))
   await writeFile(path.join(job, 'evaluation-contract.json'), JSON.stringify({ schema_version: 1, contract_id: 'search', version: '1', primary_metric: 'reward', metrics: [{ id: 'reward', direction: 'maximize' }] }))
+  await writeFile(path.join(job, 'evaluation-spec.json'), JSON.stringify({ schema_version: 1, protocol: 'evaluation-spec/v1', measurement_digest: 'sha256:measurement-stable', repeat_policy: { repeats: 1, seed_policy: 'harbor-managed', seed: null } }))
+  await writeFile(path.join(job, 'candidate-manifest.json'), JSON.stringify({ schema_version: 1, candidate_id: 'research-agent', version: '2.0.0', digest: 'sha256:candidate-v2' }))
+  await writeFile(path.join(job, 'evaluation-stack-manifest.json'), JSON.stringify({ schema_version: 1 }))
+  await writeFile(path.join(job, 'dataset-manifest.json'), JSON.stringify({ schema_version: 1 }))
   await writeFile(path.join(job, 'trial-assessments', 'trial-0.json'), JSON.stringify({
     schema_version: 1,
     trial_id: 'trial-0',
@@ -28,6 +57,7 @@ async function makeJob(projectRoot, name = 'candidate-v2', nTrials = 4) {
     },
     process: [],
   }))
+  await sealJob(job)
   return job
 }
 
@@ -68,6 +98,13 @@ async function makeHistoricalJob(projectRoot, name = 'session-diagnostic') {
   ]
   const historicalCoverage = { scored_trials: 2, unscored_trials: 1, total_trials: 3, trial_rate: 2 / 3, criterion_scored: 5, criterion_total: 8, criterion_rate: 0.625 }
   await writeFile(path.join(job, 'evaluation-context.json'), JSON.stringify(context))
+  await writeFile(path.join(job, 'evaluation-contract.json'), JSON.stringify({
+    schema_version: 1,
+    contract_id: 'historical-quality',
+    version: '1',
+    primary_metric: 'reward',
+    metrics: [{ id: 'reward', direction: 'maximize' }],
+  }))
   await writeFile(path.join(job, 'evaluation-summary.json'), JSON.stringify({
     schema_version: 4,
     job: name,
@@ -141,10 +178,13 @@ test('dashboard is a lightweight Context v3 overview', async () => {
   assert.equal(snapshot.config.projectRootSource, 'agent-session')
   assert.equal(snapshot.overview.totalJobs, 4)
   assert.equal(snapshot.overview.totalTrials, 4)
-  assert.equal(snapshot.overview.totalExceptions, 1)
-  assert.deepEqual(snapshot.overview.latestMetric, { name: 'reward', value: 0.82 })
+  assert.equal(snapshot.overview.totalExceptions, 0)
+  assert.deepEqual(snapshot.overview.latestMetric, {
+    id: 'reward', name: 'reward', label: 'reward', value: 0.82,
+    unit: null, direction: 'maximize', validCoverage: 1, source: 'evaluation-contract',
+  })
   const candidate = snapshot.jobs.find(job => job.name === 'candidate-v2')
-  assert.equal(candidate.status, 'partial')
+  assert.equal(candidate.status, 'completed')
   assert.equal(candidate.capabilities.candidateContextV3, true)
   assert.equal(candidate.capabilities.contextSupported, true)
   assert.equal(candidate.capabilities.compare, true)
@@ -154,6 +194,85 @@ test('dashboard is a lightweight Context v3 overview', async () => {
   assert.match(snapshot.jobs.find(job => job.name === 'broken').readError, /invalid JSON/)
   assert.equal(snapshot.jobs.find(job => job.name === 'legacy').capabilities.readOnlyLegacy, true)
   assert.equal('path' in snapshot.jobs[0], false)
+})
+
+test('dashboard never substitutes an arbitrary numeric metric for a missing contract primary', async () => {
+  const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-primary-metric-'))
+  const job = await makeJob(projectRoot, 'missing-primary', 1)
+  const summaryPath = path.join(job, 'evaluation-summary.json')
+  const summary = JSON.parse(await readFile(summaryPath, 'utf8'))
+  summary.metrics = { secondary: 0.99 }
+  await writeFile(summaryPath, JSON.stringify(summary))
+
+  const snapshot = await readDashboardSnapshot(config(projectRoot))
+
+  assert.equal(snapshot.jobs[0].primaryMetric, undefined)
+  assert.equal(snapshot.overview.latestMetric, undefined)
+})
+
+test('dashboard suppresses raw metrics from unsealed or self-elected Job bundles', async () => {
+  const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-untrusted-scores-'))
+  const unsealed = await makeJob(projectRoot, 'unsealed', 1)
+  await unlink(path.join(unsealed, 'job-bundle-manifest.json'))
+  const incomplete = await makeJob(projectRoot, 'incomplete', 1)
+  const sealPath = path.join(incomplete, 'job-bundle-manifest.json')
+  const seal = JSON.parse(await readFile(sealPath, 'utf8'))
+  seal.artifacts = seal.artifacts.filter(item => item.path !== 'evaluation-contract.json')
+  delete seal.digest
+  seal.digest = canonicalDigest(seal, 'harbor-dsh-job-bundle-v1')
+  await writeFile(sealPath, JSON.stringify(seal))
+
+  const snapshot = await readDashboardSnapshot(config(projectRoot))
+  for (const name of ['unsealed', 'incomplete']) {
+    const job = snapshot.jobs.find(item => item.name === name)
+    assert.equal(job.scoreTrusted, false)
+    assert.equal(job.primaryMetric, undefined)
+    assert.deepEqual(job.metrics, {})
+  }
+})
+
+test('adding a reward-affecting artifact after sealing invalidates score trust', async () => {
+  const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-post-seal-artifact-'))
+  const job = await makeJob(projectRoot, 'changed-set', 1)
+  await writeFile(path.join(job, 'architecture-doctor.json'), JSON.stringify({ schema_version: 1, promotion_ready: true, findings: [] }))
+
+  const snapshot = await readDashboardSnapshot(config(projectRoot))
+  assert.equal(snapshot.jobs[0].scoreTrusted, false)
+  assert.deepEqual(snapshot.jobs[0].metrics, {})
+})
+
+test('comparison suppresses all score deltas when either Job is unsealed', async () => {
+  const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-unsealed-compare-'))
+  await makeJob(projectRoot, 'baseline', 1)
+  const candidate = await makeJob(projectRoot, 'candidate', 1)
+  await unlink(path.join(candidate, 'job-bundle-manifest.json'))
+
+  const comparison = await readComparison(config(projectRoot), { baseline: 'baseline', candidate: 'candidate' })
+  assert.equal(comparison.comparable, false)
+  assert.deepEqual(comparison.metrics, {})
+  assert.deepEqual(comparison.pairedTrials, [])
+})
+
+test('trials with no explicit score remain unknown and never become scored', async () => {
+  const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-unknown-score-'))
+  const job = await makeJob(projectRoot, 'unknown-score', 3)
+  const summaryPath = path.join(job, 'evaluation-summary.json')
+  const summary = JSON.parse(await readFile(summaryPath, 'utf8'))
+  delete summary.trials[0].score
+  delete summary.trials[0].rewards
+  summary.trials[1].status = 'evaluation-error'
+  summary.trials[1].score = { value: null, valid: false, invalid_reasons: ['evaluation-error'] }
+  summary.trials[1].rewards = {}
+  await writeFile(summaryPath, JSON.stringify(summary))
+  await sealJob(job)
+
+  const trials = await readTrialsPage(config(projectRoot), { job: 'unknown-score' })
+
+  assert.equal(trials.items[0].scoringStatus, 'unknown')
+  assert.equal(trials.items[0].score.valid, false)
+  assert.equal(trials.items[0].score.value, null)
+  assert.deepEqual(trials.items[0].score.invalid_reasons, ['score-unavailable'])
+  assert.equal(trials.items[1].scoringStatus, 'invalid')
 })
 
 test('pending Historical Context v2 is recognized from protocol without a summary', async () => {
@@ -219,6 +338,66 @@ test('dashboard normalizes Historical Generation Jobs without inventing a Candid
   assert.equal(incomplete.jobs[0].status, 'failed')
   const incompleteDetail = await readJobDetail(config(projectRoot), { job: 'session-diagnostic' })
   assert.equal(incompleteDetail.validation.completion.status, 'invalid')
+})
+
+test('Historical Evaluation Report is explicitly an experience diagnostic', async () => {
+  const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-historical-report-'))
+  await makeHistoricalJob(projectRoot)
+
+  const report = await readEvaluationReport(config(projectRoot), { job: 'session-diagnostic' })
+
+  assert.equal(report.protocol, 'evaluation-report/v1')
+  assert.equal(report.run.experience_diagnostic, true)
+  assert.equal(report.run.promotion_eligible, false)
+  assert.equal(report.verdict.code, 'actionable-with-limitations')
+  assert.equal(report.quality.overall_score, null)
+  assert.equal(report.generator_quality.status, 'untrusted')
+  assert.equal(report.evaluator_reliability.status, 'unvalidated')
+})
+
+test('Historical public Trial ids resolve record-named assessments from either public or execution aliases', async () => {
+  const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-historical-trial-id-'))
+  const job = await makeHistoricalJob(projectRoot)
+  const summaryPath = path.join(job, 'evaluation-summary.json')
+  const summary = JSON.parse(await readFile(summaryPath, 'utf8'))
+  summary.trials[0] = {
+    ...summary.trials[0],
+    id: 'exec-a',
+    name: '01-session-1__suffix',
+    datasetTrial: '01-session-1',
+    generationRecord: { record_id: 'session-1' },
+  }
+  await writeFile(summaryPath, JSON.stringify(summary))
+  await writeFile(path.join(job, 'trial-lifecycle.json'), JSON.stringify({
+    schema_version: 1,
+    job: 'session-diagnostic',
+    dataset_total: 3,
+    trials: [
+      { dataset_order: 0, dataset_trial: '01-session-1', execution_id: 'exec-a', trial_name: '01-session-1__suffix', phase: 'completed', terminal: true, attempt: 1 },
+      { dataset_order: 1, dataset_trial: 'session/2', execution_id: 'session-2', trial_name: 'session-2', phase: 'completed', terminal: true, attempt: 1 },
+      { dataset_order: 2, dataset_trial: 'session/3', execution_id: 'session-3', trial_name: 'session-3', phase: 'completed-unscored', terminal: true, attempt: 1 },
+    ],
+  }))
+  await mkdir(path.join(job, 'trial-assessments'), { recursive: true })
+  await writeFile(path.join(job, 'trial-assessments', 'session-1.json'), JSON.stringify({
+    schema_version: 3,
+    trial_id: 'exec-a',
+    status: 'completed',
+    score: { value: 1, valid: true, invalid_reasons: [] },
+    output: { text: 'record-backed assessment' },
+    evidence_provenance: [],
+  }))
+
+  const page = await readTrialsPage(config(projectRoot), { job: 'session-diagnostic' })
+  assert.equal(page.items[0].id, 'session-1')
+  assert.equal(page.items[0].executionId, 'exec-a')
+  assert.equal(page.items[0].assessmentId, 'session-1')
+
+  const byPublicId = await readTrialDetail(config(projectRoot), { job: 'session-diagnostic', trial: 'session-1' })
+  const byExecutionId = await readTrialDetail(config(projectRoot), { job: 'session-diagnostic', trial: 'exec-a' })
+  assert.equal(byPublicId.assessment.output.text, 'record-backed assessment')
+  assert.equal(byExecutionId.assessment.output.text, 'record-backed assessment')
+  assert.equal(byPublicId.capability, 'assessment-available')
 })
 
 test('job and trial APIs redact evidence, reject traversal, and report invalid symlinks', async () => {
@@ -459,7 +638,7 @@ test('Trial view falls back to the ACP final response when old assessments conta
   assert.equal(detail.preview.provenance[0].label, 'ACP Final Response')
 })
 
-test('Trial view prefers a collected business artifact over an ACP summary', async () => {
+test('Trial view prefers a collected business artifact and keeps the immutable Assessment authoritative', async () => {
   const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-artifact-'))
   const job = path.join(projectRoot, 'jobs', 'artifact-job')
   const now = new Date().toISOString()
@@ -467,8 +646,8 @@ test('Trial view prefers a collected business artifact over an ACP summary', asy
   await mkdir(path.join(job, 'trial-a', 'artifacts', 'app'), { recursive: true })
   await mkdir(path.join(job, 'trial-a', 'verifier'), { recursive: true })
   await writeFile(path.join(job, 'trial-lifecycle.json'), JSON.stringify({ schema_version: 1, job: 'artifact-job', updated_at: now, dataset_total: 1, attempt_count: 1, counts: { completed: 1 }, trials: [{ dataset_order: 0, dataset_trial: 'task/a', execution_id: 'exec-a', trial_name: 'trial-a', phase: 'completed', terminal: true, attempt: 1, updated_at: now, score: { value: 1, valid: true, invalid_reasons: [] } }] }))
-  await writeFile(path.join(job, 'trial-assessments', 'exec-a.json'), JSON.stringify({ schema_version: 2, trial_id: 'exec-a', status: 'completed', score: { value: 0.5, valid: true, invalid_reasons: [] }, criteria: [{ id: 'quality', label: 'Quality', score: 0.5 }], recommendations: [], output: { kind: 'document', format: 'text', source: 'acp-final-response', content: 'Short ACP summary.' }, evidence_provenance: [{ kind: 'acp-final-response', label: 'ACP Final Response' }] }))
-  await writeFile(path.join(job, 'trial-a', 'verifier', 'evaluation-result.json'), JSON.stringify({ schema_version: 1, protocol: 'evaluation-result/v1', criteria: [{ id: 'quality', score: 0.5, reason: 'One required concept is missing.', recommendation: 'Add the missing concept and rerun.' }] }))
+  await writeFile(path.join(job, 'trial-assessments', 'exec-a.json'), JSON.stringify({ schema_version: 2, trial_id: 'exec-a', status: 'completed', score: { value: 0.5, valid: true, invalid_reasons: [] }, criteria: [{ id: 'quality', label: 'Quality', score: 0.5, reason: 'One required concept is missing.', recommendation: 'Add the missing concept and rerun.' }], recommendations: [], output: { kind: 'document', format: 'text', source: 'acp-final-response', content: 'Short ACP summary.' }, evidence_provenance: [{ kind: 'acp-final-response', label: 'ACP Final Response' }] }))
+  await writeFile(path.join(job, 'trial-a', 'verifier', 'evaluation-result.json'), JSON.stringify({ schema_version: 1, protocol: 'evaluation-result/v1', criteria: [{ id: 'quality', score: 1, reason: 'Tampered after the Job.', recommendation: 'Ignore the immutable Assessment.' }] }))
   await writeFile(path.join(job, 'trial-a', 'artifacts', 'manifest.json'), JSON.stringify([{ destination: 'artifacts/app/research.json', status: 'ok' }]))
   await writeFile(path.join(job, 'trial-a', 'artifacts', 'app', 'research.json'), JSON.stringify({ answer: 'Full generated research document.', citations: [{ source_id: 'doc-1' }] }))
   const detail = await readTrialDetail(config(projectRoot), { job: 'artifact-job', trial: 'exec-a' })
@@ -476,6 +655,7 @@ test('Trial view prefers a collected business artifact over an ACP summary', asy
   assert.equal(detail.preview.provenance[0].label, 'Agent Artifact')
   assert.equal(detail.assessment.criteria[0].reason, 'One required concept is missing.')
   assert.equal(detail.assessment.criteria[0].recommendation, 'Add the missing concept and rerun.')
+  assert.doesNotMatch(JSON.stringify(detail.assessment), /Tampered after the Job/)
 })
 
 test('read-only compare reports comparability and never claims an automatic Gate', async () => {
@@ -487,11 +667,74 @@ test('read-only compare reports comparability and never claims an automatic Gate
   candidate.metrics.reward = 0.92
   candidate.trials[0].rewards.reward = 0.5
   await writeFile(candidatePath, JSON.stringify(candidate))
+  await sealJob(path.join(projectRoot, 'jobs', 'candidate'))
   const comparison = await readComparison(config(projectRoot), { baseline: 'baseline', candidate: 'candidate' })
   assert.equal(comparison.comparable, true)
   assert.ok(Math.abs(comparison.metrics.reward.delta - 0.1) < 1e-9)
   assert.equal(comparison.gateEligibility, 'requires-explicit-gate')
+  assert.equal(comparison.measurementIdentity.match, true)
+  assert.deepEqual(comparison.repeatPolicy.baseline, { repeats: 1, seed_policy: 'harbor-managed', seed: null })
+  assert.equal(comparison.uncertainty.method, 'paired-task-normal-approximation')
+  assert.ok(Array.isArray(comparison.pairedTrials))
+  assert.ok(Array.isArray(comparison.tiedTrials))
   assert.match(comparison.note, /never runs Gate/)
+})
+
+test('read-only comparison rejects different Evaluation Spec measurement identities', async () => {
+  const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-spec-mismatch-'))
+  await makeJob(projectRoot, 'baseline', 2)
+  await makeJob(projectRoot, 'candidate', 2)
+  const specPath = path.join(projectRoot, 'jobs', 'candidate', 'evaluation-spec.json')
+  const spec = JSON.parse(await readFile(specPath, 'utf8'))
+  spec.measurement_digest = 'sha256:changed-measurement'
+  await writeFile(specPath, JSON.stringify(spec))
+  await sealJob(path.join(projectRoot, 'jobs', 'candidate'))
+  const comparison = await readComparison(config(projectRoot), { baseline: 'baseline', candidate: 'candidate' })
+  assert.equal(comparison.comparable, false)
+  assert.equal(comparison.measurementIdentity.match, false)
+  assert.equal(comparison.gateEligibility, 'not-comparable')
+  assert.match(comparison.comparabilityReasons.join(' '), /measurement identity differs/)
+})
+
+test('repeated Experiments report per-task mean, variance, and consistency', async () => {
+  const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-repeats-'))
+  await makeJob(projectRoot, 'baseline', 2)
+  await makeJob(projectRoot, 'candidate', 2)
+  const scores = {
+    baseline: { 'task-a': [0.4, 0.5, 0.6], 'task-b': [0.7, 0.7, 0.7] },
+    candidate: { 'task-a': [0.6, 0.7, 0.8], 'task-b': [0.7, 0.8, 0.9] },
+  }
+  for (const job of ['baseline', 'candidate']) {
+    const summaryPath = path.join(projectRoot, 'jobs', job, 'evaluation-summary.json')
+    const summary = JSON.parse(await readFile(summaryPath, 'utf8'))
+    summary.trials = Object.entries(scores[job]).flatMap(([datasetTrial, values]) => values.map((score, index) => ({
+      id: `${datasetTrial}-attempt-${index + 1}`, datasetTrial, attempt: index + 1, status: 'completed',
+      score: { value: score, valid: true, invalid_reasons: [] }, rewards: { reward: score },
+    })))
+    summary.n_trials = summary.trials.length
+    summary.n_discovered_trials = summary.trials.length
+    summary.n_valid_scores = summary.trials.length
+    summary.coverage = { ...summary.coverage, total_trials: summary.trials.length, scored_trials: summary.trials.length, trial_rate: 1 }
+    await writeFile(summaryPath, JSON.stringify(summary))
+    const specPath = path.join(projectRoot, 'jobs', job, 'evaluation-spec.json')
+    const spec = JSON.parse(await readFile(specPath, 'utf8'))
+    spec.repeat_policy = { repeats: 3, seed_policy: 'fixed', seed: 42 }
+    spec.measurement_digest = 'sha256:repeated-measurement'
+    await writeFile(specPath, JSON.stringify(spec))
+    await sealJob(path.join(projectRoot, 'jobs', job))
+  }
+
+  const comparison = await readComparison(config(projectRoot), { baseline: 'baseline', candidate: 'candidate' })
+  assert.equal(comparison.comparable, true)
+  assert.equal(comparison.repeatability.status, 'complete')
+  assert.equal(comparison.repeatability.expected_repeats, 3)
+  const taskA = comparison.repeatability.tasks.find(item => item.trial === 'task-a')
+  assert.equal(taskA.baseline.n, 3)
+  assert.ok(Math.abs(taskA.baseline.mean - 0.5) < 1e-9)
+  assert.ok(Math.abs(taskA.baseline.variance - 0.01) < 1e-9)
+  assert.ok(Math.abs(taskA.candidate.mean - 0.7) < 1e-9)
+  assert.ok(taskA.baseline.standardDeviation > 0)
+  assert.equal(comparison.pairedTrials.find(item => item.trial === 'task-a').baselineAttempts, 3)
 })
 
 test('read-only comparison never treats invalid or infrastructure-error scores as quality deltas', async () => {
@@ -510,6 +753,9 @@ test('read-only comparison never treats invalid or infrastructure-error scores a
   baseline.trials[2].score = { value: 0.8, valid: true, invalid_reasons: [] }
   candidate.trials[2].score = { value: 0.1, valid: true, invalid_reasons: [] }
 
+  candidate.n_valid_scores = 1
+  candidate.n_invalid_scores = 2
+  candidate.coverage = { ...candidate.coverage, scored_trials: 1, trial_rate: 1 / 3 }
   await writeFile(baselinePath, JSON.stringify(baseline))
   await writeFile(candidatePath, JSON.stringify(candidate))
   const now = new Date().toISOString()
@@ -540,31 +786,16 @@ test('read-only comparison never treats invalid or infrastructure-error scores a
     { phase: 'infrastructure-error', score: { value: null, valid: false, invalid_reasons: ['infrastructure-error'] } },
     { phase: 'evaluation-error', score: { value: 0.1, valid: false, invalid_reasons: ['evaluation-error'] } },
   ])))
+  await sealJob(path.join(projectRoot, 'jobs', 'baseline'))
+  await sealJob(path.join(projectRoot, 'jobs', 'candidate'))
 
   const comparison = await readComparison(config(projectRoot), { baseline: 'baseline', candidate: 'candidate' })
-  assert.deepEqual(comparison.improvedTrials.map(item => item.trial), ['query 0'])
+  assert.equal(comparison.comparable, false)
+  assert.deepEqual(comparison.metrics, {})
+  assert.deepEqual(comparison.pairedTrials, [])
+  assert.deepEqual(comparison.improvedTrials, [])
   assert.deepEqual(comparison.regressedTrials, [])
-  assert.equal(comparison.improvedTrials.some(item => item.trial === 'query 1'), false)
-  assert.equal(comparison.regressedTrials.some(item => item.trial === 'query 2'), false)
-  assert.deepEqual(comparison.invalidTrials, [{
-    trial: 'query 1',
-    status: 'infrastructure-error',
-    invalidReasons: ['infrastructure-error'],
-    baselineValid: true,
-    candidateValid: false,
-  }, {
-    trial: 'query 2',
-    status: 'evaluation-error',
-    invalidReasons: ['evaluation-error'],
-    baselineValid: true,
-    candidateValid: false,
-  }])
-  assert.deepEqual(comparison.newInfrastructureExceptions, [{
-    trial: 'query 1',
-    baselineStatus: 'completed',
-    candidateStatus: 'infrastructure-error',
-    exception: { type: 'Timeout', classification: 'infrastructure' },
-  }])
+  assert.match(comparison.comparabilityReasons.join(' '), /complete required Trial coverage/)
 })
 
 test('read-only comparison rejects Historical Generation Jobs with a stable promotion reason', async () => {
@@ -604,6 +835,69 @@ test('Evaluator governance is read-only, source-contained, and redacts credentia
   assert.match(governance.upgradeWorkflow.skillPrompt, /new immutable evaluator identity/)
 })
 
+test('Evaluator governance exposes the verified executed identity rather than relabeling configured source', async () => {
+  const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-effective-evaluator-'))
+  const job = path.join(projectRoot, 'jobs', 'attested')
+  const evaluatorDirectory = path.join(projectRoot, 'stack', 'evaluator')
+  await mkdir(evaluatorDirectory, { recursive: true })
+  await mkdir(job, { recursive: true })
+  await writeFile(path.join(evaluatorDirectory, 'evaluator.py'), 'def evaluate(payload):\n    return payload\n')
+  await writeFile(path.join(evaluatorDirectory, 'evaluator.json'), '{}\n')
+  const portable = `sha256:${'a'.repeat(64)}`
+  const identity = { id: 'business-evaluator', version: '2.0.0', portable_digest: portable }
+  await writeFile(path.join(job, 'evaluation-stack-manifest.json'), JSON.stringify({
+    schema_version: 1,
+    stack_id: 'business-stack',
+    version: '2.0.0',
+    digest: 'sha256:stack',
+    components: {
+      evaluator: {
+        id: identity.id,
+        version: identity.version,
+        entry: 'stack/evaluator/evaluator.json',
+        digest: 'sha256:legacy-path-dependent',
+        reward_affecting: true,
+        interface: {
+          schema_version: 2,
+          interface: 'harbor-dsh-evaluator/v2',
+          evaluator_id: identity.id,
+          version: identity.version,
+          portable_digest: portable,
+          editable_files: [{ path: 'stack/evaluator/evaluator.py', relative_path: 'evaluator.py', role: 'implementation' }],
+          criteria: [],
+        },
+      },
+    },
+    judge: { provider: 'local', model: 'judge', version: '1' },
+  }))
+  await writeFile(path.join(job, 'evaluation-summary.json'), JSON.stringify({
+    schema_version: 4,
+    job: 'attested',
+    job_kind: 'historical-generation-evaluation',
+    n_trials: 1,
+    n_valid_scores: 1,
+    metrics: { reward: 1 },
+    artifact_validation: { valid: true },
+    effective_evaluator: {
+      schema_version: 1,
+      protocol: 'effective-evaluator/v1',
+      configured: identity,
+      materialized: { ...identity, bundle_complete: true },
+      executed: { ...identity, bundle_complete: true },
+      identity_match: true,
+      execution: { status: 'succeeded', error_type: null },
+    },
+  }))
+  await writeFile(path.join(job, 'evaluation-contract.json'), JSON.stringify({ schema_version: 1, contract_id: 'quality', version: '2', primary_metric: 'reward', metrics: [{ id: 'reward' }] }))
+  await writeFile(path.join(job, 'evaluation-context.json'), JSON.stringify({ schema_version: 2, protocol: 'historical-generation-evaluation-context/v2', digest: 'sha256:context' }))
+
+  const governance = await readEvaluatorGovernance(config(projectRoot), { job: 'attested' })
+
+  assert.equal(governance.effectiveEvaluator.status, 'verified')
+  assert.deepEqual(governance.effectiveEvaluator.executed, { ...identity, bundle_complete: true })
+  assert.equal(governance.components.evaluator.digest, 'sha256:legacy-path-dependent')
+})
+
 test('Evaluator meta-evaluation is a separate Ground Truth flow with provenance and metrics', async () => {
   const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-meta-'))
   await mkdir(path.join(projectRoot, 'examples', 'research', '.harbor'), { recursive: true })
@@ -625,11 +919,44 @@ test('Evaluator meta-evaluation is a separate Ground Truth flow with provenance 
     disagreements: [],
   }))
   const meta = await readMetaEvaluation(config(projectRoot), { evaluationRoot: 'examples/research' })
-  assert.equal(meta.status, 'evaluated')
+  assert.equal(meta.status, 'stale-report')
   assert.equal(meta.groundTruth.source.kind, 'model')
   assert.equal(meta.groundTruth.badcaseCount, 1)
   assert.equal(meta.report.metrics.esf, 0.9)
-  assert.match(meta.workflow.nextAction, /fresh Agent baseline/)
+  assert.match(meta.workflow.nextAction, /rerun harbor_evaluator_meta_evaluate/)
+})
+
+test('Meta Workbench verifies report integrity and exact current evaluator identity', async () => {
+  const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-dashboard-meta-current-'))
+  const root = path.join(projectRoot, 'evaluation')
+  await mkdir(path.join(root, '.harbor'), { recursive: true })
+  const groundTruth = {
+    schema_version: 1, protocol: 'ground-truth/v1', ground_truth_id: 'gt', version: '1',
+    source: { kind: 'human', description: 'Reviewed labels', provenance: 'review 1', independent_of_candidate: true },
+    criteria: [{ id: 'quality', label: 'Quality' }],
+    cases: [{ id: 'case', artifact_ref: 'fixture.json', criteria: [{ id: 'quality', score: 1, weight: 1, reason: 'Correct' }] }],
+  }
+  await writeFile(path.join(root, '.harbor', 'ground-truth.json'), JSON.stringify(groundTruth))
+  const identity = {
+    evaluator: { id: 'evaluator', version: '2', portable_digest: `sha256:${'a'.repeat(64)}` },
+    rubric: { id: 'rubric', version: '2', digest: `sha256:${'b'.repeat(64)}` },
+    judge: { provider: 'test', model: 'judge', version: '1' },
+    template: { id: 'template', version: '1', digest: `sha256:${'c'.repeat(64)}` },
+  }
+  const report = {
+    schema_version: 1, protocol: 'meta-evaluation-report/v1',
+    ground_truth: { digest: canonicalDigest(groundTruth, 'harbor-dsh-ground-truth-v1') },
+    evaluation_identity: { ...identity, digest: `sha256:${'d'.repeat(64)}` },
+    coverage: { rate: 1 }, metrics: { esf: 1, sce: 0, rcr: 1 }, disagreements: [],
+  }
+  report.digest = canonicalDigest(report, 'harbor-dsh-meta-evaluation-report-v1')
+  await writeFile(path.join(root, '.harbor', 'meta-evaluation-report.json'), JSON.stringify(report))
+
+  const current = await readMetaEvaluation(config(projectRoot), { evaluationRoot: 'evaluation', currentEvaluationIdentity: identity })
+  assert.equal(current.status, 'evaluated')
+  const stale = await readMetaEvaluation(config(projectRoot), { evaluationRoot: 'evaluation', currentEvaluationIdentity: { ...identity, judge: { ...identity.judge, version: '2' } } })
+  assert.equal(stale.status, 'stale-report')
+  assert.match(stale.report.staleReasons.join(' '), /judge identity differs/)
 })
 
 test('dashboard discovers namespaced workspaces and pages every Job without a silent cap', async () => {

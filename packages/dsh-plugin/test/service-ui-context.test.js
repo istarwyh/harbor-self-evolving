@@ -606,7 +606,7 @@ test('Compare and Gate bindings are verified against authoritative artifacts and
   )
 })
 
-test('service comparison exposes lifecycle-classified invalid and new infrastructure Trials', async () => {
+test('service comparison never trusts lifecycle-only classifications from unsealed Jobs', async () => {
   const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-ui-compare-classification-'))
   await writeComparisonJob(projectRoot, 'baseline-job', 0.4)
   await writeComparisonJob(projectRoot, 'candidate-job', 0.6)
@@ -645,16 +645,9 @@ test('service comparison exposes lifecycle-classified invalid and new infrastruc
 
   assert.deepEqual(comparison.improvedTrials, [])
   assert.deepEqual(comparison.regressedTrials, [])
-  assert.deepEqual(comparison.invalidTrials, [{
-    trial: 'task/a',
-    status: 'infrastructure-error',
-    invalidReasons: ['infrastructure-error'],
-    baselineValid: true,
-    candidateValid: false,
-  }])
-  assert.deepEqual(comparison.newInfrastructureExceptions, [{
-    trial: 'task/a', baselineStatus: 'completed', candidateStatus: 'infrastructure-error',
-  }])
+  assert.equal(comparison.comparable, false)
+  assert.deepEqual(comparison.invalidTrials, [])
+  assert.deepEqual(comparison.newInfrastructureExceptions, [])
   assert.match(comparison.comparisonDigest, /^sha256:[a-f0-9]{64}$/)
 })
 

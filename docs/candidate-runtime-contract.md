@@ -45,11 +45,11 @@ Adapter 安装前按已核验文件清单生成独立暂存副本，再次验证
 
 供应商凭据始终留在 Host。Candidate 只获得该次执行的受限 Broker 通道及短期 lease token 文件；模型 provider/model 身份是非秘密元数据。运行时 overlay 只替换声明入口的模型绑定、插入网关插件，不替换 Candidate 的提示词、工具或执行循环。
 
-## 旧 Candidate 与旧基线
+## 非严格 Candidate 不进入当前流程
 
-历史快照没有 `candidate-runtime.json` 时仍可读取、展示和比较。它不能执行：Doctor 返回 `CANDIDATE_RUNTIME_UNBOUND`，bounded plan 返回安全的 `HARBOR_DIAGNOSTIC_RUNTIME_UNAVAILABLE`。非法绑定对应 `CANDIDATE_RUNTIME_INVALID`，不自动回退到 demo 或 `latest`。
+没有 `candidate-runtime.json` 的旧快照不再进入当前 Workbench 的可执行或可比较 Candidate 流程。Doctor 返回 `CANDIDATE_RUNTIME_UNBOUND`；非法绑定对应 `CANDIDATE_RUNTIME_INVALID`。系统不会回退到 demo、`latest` 或旧 verifier 兼容模式。原始目录若仍保留，只能作为外部归档查看，不能作为当前 Harbor 评分或基线。
 
-为旧 Agent 增加入口、调整依赖、Node 版本或 ACP 组合，都是 Candidate 内容变化。应在新的 Candidate 版本中完成，然后运行新的 baseline；不能改写历史失败记录或把旧评分归给新运行时。Node 插件与 Python Adapter 需要一起更新，不能把“Doctor 没报告新错误”误认为旧 Adapter 理解新契约。
+为旧 Agent 增加入口、调整依赖、Node 版本或 ACP 组合，都是 Candidate 内容变化。必须在新的 Candidate 版本中完成，然后运行新的 baseline；不能改写历史失败记录或把旧评分归给新运行时。Node 插件与 Python Adapter 需要一起更新，不能把“Doctor 没报告新错误”误认为旧 Adapter 理解新契约。
 
 ## Quick diagnostic 模板与制品来源
 

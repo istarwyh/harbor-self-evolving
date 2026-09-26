@@ -105,6 +105,7 @@ test('mutating evaluation runs return bounded receipts instead of raw artifacts'
   const credential = 'Bearer mutation-result-secret-material'
   const candidate = buildEvaluationRunReceipt({
     jobName: 'candidate-job',
+    jobPath: 'jobs/candidate-job',
     mode: 'promotion-eligible',
     processCode: 0,
     summary: {
@@ -123,9 +124,12 @@ test('mutating evaluation runs return bounded receipts instead of raw artifacts'
   assert.deepEqual(candidate, {
     schema_version: 1,
     jobKind: 'candidate-evaluation',
+    evaluationType: 'governed',
+    artifactProfile: 'governed',
     mode: 'promotion-eligible',
     status: 'completed',
     job: 'candidate-job',
+    jobPath: 'jobs/candidate-job',
     summary: {
       artifact_ref: 'evaluation-summary.json',
       artifact_validation: { valid: true },
@@ -164,6 +168,8 @@ test('mutating evaluation runs return bounded receipts instead of raw artifacts'
     judgeModelBinding: { model: credential },
   })
   assert.equal(historical.job, '[redacted token]')
+  assert.equal(historical.jobPath, '[redacted token]')
+  assert.equal(historical.evaluationType, 'experience-diagnostic')
   assert.deepEqual(historical.summary.coverage, {
     scored_trials: 1,
     unscored_trials: 1,

@@ -81,23 +81,27 @@ def make_stack(root: Path, *, version: str = "1.0.0", runner_semantic: bool = Fa
         path.parent.mkdir(parents=True, exist_ok=True)
         if role == "evaluator":
             (path.parent / "evaluator.py").write_text(
-                "def evaluate(payload):\n    return {'schema_version': 1, 'protocol': 'evaluation-result/v1', 'criteria': [{'id': 'citation_accuracy', 'score': 1, 'reason': 'The citation is valid.', 'recommendation': 'Preserve this behavior.'}]}\n"
+                "def build_input(context):\n    return {'schema_version': 2, 'protocol': 'evaluation-input/v2', 'candidate_output': context}\n\ndef evaluate(payload):\n    return {'schema_version': 2, 'protocol': 'evaluation-result/v2', 'criteria': [{'id': 'citation_accuracy', 'status': 'scored', 'score': 1, 'reason': 'The citation is valid.', 'recommendation': 'Preserve this behavior.', 'evidence_refs': ['candidate-output']}], 'aggregate': {'metric_id': 'reward', 'value': 1, 'scored_criteria': 1, 'total_criteria': 1, 'coverage': 1}}\n"
             )
             path.write_text(
                 json.dumps(
                     {
-                        "schema_version": 1,
-                        "interface": "harbor-dsh-evaluator/v1",
+                        "schema_version": 2,
+                        "interface": "harbor-dsh-evaluator/v2",
                         "evaluator_id": "search-evaluator",
                         "version": version,
                         "kind": "script",
-                        "protocol": {"input": "evaluation-input/v1", "output": "evaluation-result/v1"},
+                        "protocol": {"input": "evaluation-input/v2", "output": "evaluation-result/v2"},
                         "implementation": {"entry": "evaluator.py", "language": "python", "callable": "evaluate"},
+                        "input_builder": {"entry": "evaluator.py", "callable": "build_input"},
                         "editable_files": [
                             {"path": "evaluator.py", "role": "implementation", "language": "python", "affects": ["evaluator"]},
                         ],
-                        "criteria": [{"id": "citation_accuracy", "label": "Citation accuracy", "values": [0, 0.5, 1]}],
-                        "aggregate": {"metric_id": "reward", "method": "mean"},
+                        "bundle_files": [
+                            {"path": "evaluator.py", "role": "implementation"},
+                        ],
+                        "criteria": [{"id": "citation_accuracy", "label": "Citation accuracy", "values": [0, 0.5, 1], "required": True}],
+                        "aggregate": {"metric_id": "reward", "method": "mean", "minimum_coverage": 1},
                     },
                     indent=2,
                 )
@@ -128,6 +132,7 @@ def make_stack(root: Path, *, version: str = "1.0.0", runner_semantic: bool = Fa
                 {"id": "integration_valid"},
                 {"id": "renderer_valid"},
                 {"id": "judge_completed"},
+                {"id": "evaluator_identity_match"},
                 {"id": "artifact_schema_valid"},
             ],
         },
@@ -157,7 +162,7 @@ def make_historical_batch(root: Path, *, count: int = 1):
     sessions.mkdir(parents=True)
     policy = {
         "id": "dsh-session-default-redaction",
-        "version": "1.0.0",
+        "version": "2.0.0",
         "projection": "direct-human-and-assembled-assistant-text",
         "tool_payloads": "omit",
         "reasoning": "omit",
@@ -165,7 +170,7 @@ def make_historical_batch(root: Path, *, count: int = 1):
         "credentials": "redact-and-fail-closed",
     }
     policy["digest"] = canonical_digest(
-        policy, namespace="harbor-dsh-session-redaction-policy-v1"
+        policy, namespace="harbor-dsh-session-redaction-policy-v2"
     )
     records = []
     observations = {}
@@ -178,8 +183,8 @@ def make_historical_batch(root: Path, *, count: int = 1):
             {"events": index}, namespace="test-historical-source"
         )
         observation = {
-            "schema_version": 1,
-            "protocol": "dsh-session-observation/v1",
+            "schema_version": 2,
+            "protocol": "dsh-session-observation/v2",
             "record_kind": "dsh-session",
             "execution_mode": "observe-existing",
             "trial_id": trial_id,
@@ -223,7 +228,8 @@ def make_historical_batch(root: Path, *, count: int = 1):
                     "time": f"2026-08-30T00:00:{index:02d}Z",
                 },
             ],
-            "execution": {"tools": [], "turns": [], "usage": {}},
+            "execution": {"tools": [], "evidence_summaries": [], "turns": [], "usage": {}},
+            "evidence_coverage": {"transcript": "complete", "tool_outcomes": "complete", "artifacts": "omitted", "feedback": "omitted"},
             "feedback": {"items": []},
             "completeness": {
                 "transcript_complete": True,
@@ -247,6 +253,8 @@ def make_historical_batch(root: Path, *, count: int = 1):
                 "captured_through_seq": 2,
                 "source_digest": source_digest,
                 "observation_digest": observation["digest"],
+                "observation_protocol": "dsh-session-observation/v2",
+                "evidence_coverage": observation["evidence_coverage"],
                 "last_activity_at": observation["source"]["last_activity_at"],
                 "generator": {
                     "agent_preset": "default",
@@ -257,8 +265,8 @@ def make_historical_batch(root: Path, *, count: int = 1):
             }
         )
     batch = {
-        "schema_version": 1,
-        "protocol": "historical-generation-batch/v1",
+        "schema_version": 2,
+        "protocol": "historical-generation-batch/v2",
         "batch_id": "batch-test",
         "created_at": "2026-08-30T00:01:00Z",
         "project": {
@@ -277,6 +285,7 @@ def make_historical_batch(root: Path, *, count: int = 1):
             "kind": "dsh-session",
             "adapter": "dsh-session-query",
             "session_format_versions": [1],
+            "observation_protocol": "dsh-session-observation/v2",
         },
         "redaction_policy": policy,
         "records": records,

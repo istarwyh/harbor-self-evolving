@@ -61,6 +61,42 @@ if (args[0] === 'dataset' && args[1] === 'validate') {
   })
 }
 
+test('successful Run launches Harbor only with the strict materialized Dataset and repeat count', async () => {
+  const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-runtime-materialized-'))
+  await candidateFixture(projectRoot)
+  const adapter = path.join(projectRoot, 'adapter.cjs')
+  const harbor = path.join(projectRoot, 'harbor.cjs')
+  const callsFile = path.join(projectRoot, 'calls.jsonl')
+  await writeFile(adapter, `#!/usr/bin/env node
+const fs = require('node:fs'); const path = require('node:path');
+const args = process.argv.slice(2); fs.appendFileSync(${JSON.stringify(callsFile)}, JSON.stringify({ tool: 'adapter', args }) + '\\n');
+if (args[0] === 'dataset') console.log(JSON.stringify({ valid: true, findings: [] }));
+else if (args[0] === 'doctor') console.log(JSON.stringify({ promotion_ready: true, findings: [{ level: 'info', code: 'CANDIDATE_RUNTIME_VERIFIED', message: 'verified' }] }));
+else if (args[0] === 'candidate' && args[1] === 'materialize') { const output = args[args.indexOf('--output') + 1]; fs.mkdirSync(output, { recursive: true }); console.log(JSON.stringify({ protocol: 'candidate-evaluation-materialization/v1', dataset_path: output })); }
+else if (args[0] === 'context' && args[1] === 'preview') console.log(JSON.stringify({ schema_version: 1, expected_context: {} }));
+else { console.error('unexpected adapter command'); process.exitCode = 91; }
+`, { mode: 0o700 })
+  await writeFile(harbor, `#!/usr/bin/env node
+const fs = require('node:fs'); const path = require('node:path'); const args = process.argv.slice(2);
+fs.appendFileSync(${JSON.stringify(callsFile)}, JSON.stringify({ tool: 'harbor', args }) + '\\n');
+const jobs = args[args.indexOf('--jobs-dir') + 1], job = args[args.indexOf('--job-name') + 1]; fs.mkdirSync(path.join(jobs, job), { recursive: true });
+fs.writeFileSync(path.join(jobs, job, 'evaluation-summary.json'), JSON.stringify({ schema_version: 3, job, mode: 'diagnostic', n_trials: 2, n_valid_scores: 0, metrics: {}, trials: [] }));
+`, { mode: 0o700 })
+  const binding = { provider: 'test', model: 'test', transport: 'dsh-host-broker', protocol: 'dsh-host-model-gateway/v1' }
+  const lease = { endpoint: 'http://127.0.0.1', token: 'test', candidateProvider: 'test', modelInfo: {}, protocol: binding.protocol, async close() {} }
+  const receipt = await runEvaluation({ projectRoot, jobsDir: 'jobs', harborDshBin: adapter, harborBin: harbor, agentImportPath: 'agent:Agent', pluginImportPath: 'dsh-evolution', timeoutMs: 5000 }, {
+    candidatePath: 'candidate', datasetPath: 'dataset', stackPath: 'stack.yml', mode: 'diagnostic', jobName: 'strict-run', repeats: 2, candidateModelBinding: binding,
+  }, { async openLease() { return lease } })
+
+  const calls = (await readFile(callsFile, 'utf8')).trim().split('\n').map(JSON.parse)
+  const harborCall = calls.find(item => item.tool === 'harbor').args
+  const dataset = harborCall[harborCall.indexOf('-p') + 1]
+  assert.match(dataset, /\.harbor\/private\/candidate-materializations\/strict-run$/)
+  assert.notEqual(dataset, path.join(projectRoot, 'dataset'))
+  assert.deepEqual(harborCall.slice(harborCall.indexOf('--n-attempts'), harborCall.indexOf('--n-attempts') + 2), ['--n-attempts', '2'])
+  assert.equal(receipt.job, 'strict-run')
+})
+
 test('an unbound Candidate is blocked locally even when an old Adapter cannot diagnose it', async () => {
   const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-runtime-local-gate-'))
   await candidateFixture(projectRoot, { bound: false })

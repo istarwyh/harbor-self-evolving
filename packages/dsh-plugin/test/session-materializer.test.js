@@ -42,15 +42,15 @@ function build(projectRoot, selections, options = {}) {
 
 function assertBatchDigest(batch) {
   const { digest, ...content } = batch
-  assert.equal(digest, canonicalDigest(content, 'harbor-dsh-historical-generation-batch-v1'))
+  assert.equal(digest, canonicalDigest(content, 'harbor-dsh-historical-generation-batch-v2'))
 }
 
-test('Historical Batch retains the v1 exact-cwd default and hashes known source projects', () => {
+test('Historical Batch v2 retains the exact-cwd default and hashes known source projects', () => {
   const root = '/tmp/hse-output-project'
   const { batch } = build(root, [selection('private-session-current-project', root)])
 
-  assert.equal(batch.schema_version, 1)
-  assert.equal(batch.protocol, 'historical-generation-batch/v1')
+  assert.equal(batch.schema_version, 2)
+  assert.equal(batch.protocol, 'historical-generation-batch/v2')
   assert.equal(batch.selection.scope, 'exact-cwd')
   assert.equal(batch.selection.scan, undefined)
   assert.equal(batch.records[0].source_project_digest, batch.project.cwd_digest)

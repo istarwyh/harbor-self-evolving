@@ -11,7 +11,7 @@ Candidate quality and Evaluator quality are separate governance problems.
 
 ## Interface and inspection {#interface}
 
-Evaluators implement `harbor-dsh-evaluator/v1`. A descriptor identifies implementation kind (`script` or `llm-as-judge`), ternary Criteria and a bounded allowlist of editable source files. Inspection omits secret-shaped and local-path-shaped values.
+Formal Candidate Evaluators implement `harbor-dsh-evaluator/v2`. A descriptor identifies implementation kind (`script` or `llm-as-judge`), ternary Criteria and a bounded allowlist of editable source files. Inspection omits secret-shaped and local-path-shaped values.
 
 ## Controlled update {#update}
 

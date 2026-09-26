@@ -16,10 +16,17 @@
 - Historical Judge 使用短期 Host Broker capability；运行前互证 provider/model/reasoning、protocol、Job 和 Batch digest，令牌不进入 argv、Stack、Context 或 Job artifacts。
 - Gate 只写报告，不部署、不切流量、不修改 Champion。
 
+## 执行环境边界
+
+- `host` 模式直接在当前主机执行 Candidate。它**不是沙箱**，不提供文件系统隔离、网络封锁、资源限额或容器边界；只适用于调用方明确接受风险的受控环境。
+- `docker` 模式才提供容器隔离边界。需要正式晋级时，Policy 默认应要求 Docker；若使用 Host，Policy 必须显式记录“允许不受限 Host”及审核理由。
+- Governed Docker Job 可记录运行时不可变 image ID；Policy 要求 `require_image_identity=true` 时，缺失该身份会阻断 Gate。
+- 内容寻址的 `job-bundle/v1` 可发现 Job 完成后的意外或非协作性篡改，但它不是外部签名，不能抵御拥有本地文件写权限的恶意所有者同时重写产物和 seal。
+
 ## 调用方仍需负责
 
-- Candidate 在 Harbor 容器内执行；使用最小权限镜像和非生产凭证。
-- 生产评测预构建依赖、锁定 npm/Python/镜像供应链，并按需关闭公网。
+- Docker 模式使用最小权限镜像和非生产凭证；Host 模式仅运行可信 Candidate，并把主机本身视为暴露给该进程。
+- 生产评测预构建依赖、锁定 npm/Python/镜像供应链，并按需关闭公网；不要把 Host 模式描述为已关闭网络。
 - 工具、搜索和业务 API 指向 sandbox/mock/测试租户。
 - 原始 `result.json`、trajectory 和模型输出仍可能含隐私；为 Job 目录配置访问、保留和删除策略。
 - 脱敏会话仍是业务证据；运行 Historical Job 前确认 `.harbor/private` 与 `jobs` 不会被意外提交，并配置明确的清理周期。

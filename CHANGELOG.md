@@ -4,6 +4,14 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+## 0.10.0 - 2026-09-26
+
+- Make `harbor-dsh-evaluator/v2` the only executable business-quality interface for formal Candidate Experiments. Materialize a private Dataset whose strict adapter invokes the exact configured Evaluator bundle; Dataset verifiers, v1 execution compatibility and legacy fallback cannot become score authority.
+- Add trustworthy `evaluation-report/v1` projections, complete content-addressed Job bundles, cross-artifact Evaluator identity verification, execution-failure score suppression, repeated-attempt summaries and uncertainty-aware comparable Job analysis.
+- Add Experience Diagnostic v2 evidence hardening, Candidate-bound immutable business observations, independent Ground Truth meta-evaluation with exact identity binding, confirmed badcase Dataset drafts, and stricter Host/Docker governance and Promotion Gate invariants.
+- Split product surfaces into diagnostic, experiment and governed profiles; only governed workspaces expose Compare, Gate, full Artifact Registry and Audit. Rebuild the DSH Web client and publish 34 byte-identical public schemas in both packages.
+- Verification before release: 632 Node tests and 378 Python tests passed; npm dry-run contained 81 files and all 34 schemas; Deep Research's 13-task materialization and strict meta-evaluation inputs validated. Manual authenticated GUI acceptance, a real paid/provider Candidate Job and local wheel construction were not performed in the development environment; tag workflows remain responsible for package builds and registry publishing.
+
 ## 0.9.8 - 2026-09-21
 
 - Preserve already-resolved Host paths while translating Harbor container paths. Historical Session Observation and Candidate commands no longer receive a second trial-root prefix before execution.

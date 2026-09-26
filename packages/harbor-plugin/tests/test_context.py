@@ -57,6 +57,37 @@ def test_context_preview_finds_comparable_baseline(tmp_path: Path):
     assert preview["comparable_baselines"][0]["job"] == "baseline"
 
 
+def test_docker_preview_ignores_post_run_image_fields_but_preserves_environment_kind(tmp_path: Path):
+    baseline = make_candidate(tmp_path, version="1.0.0")
+    candidate = make_candidate(tmp_path, version="2.0.0", content="v2")
+    dataset = make_dataset(tmp_path)
+    stack = make_stack(tmp_path)
+    jobs = tmp_path / "jobs"
+    job = jobs / "baseline"
+    job.mkdir(parents=True)
+    from harbor_dsh_evolution.context import build_evaluation_context
+    historical = build_evaluation_context(
+        dataset, candidate=load_manifest(baseline), stack_path=stack, project_root=tmp_path,
+        mode="promotion-eligible", candidate_model_binding=MODEL_BINDING, execution_environment="docker",
+    )
+    historical["execution_environment"].update({
+        "runtime_fingerprint": "sha256:" + "a" * 64,
+        "image_identity": "sha256:" + "b" * 64,
+        "image_identities": {"trial-1": "sha256:" + "b" * 64},
+        "identity_strength": "immutable-image-id",
+    })
+    (job / "evaluation-context.json").write_text(json.dumps(historical))
+
+    preview = context_preview(
+        project_root=tmp_path, candidate=load_manifest(candidate), dataset_dir=dataset,
+        stack_path=stack, jobs_dir=jobs, mode="promotion-eligible",
+        candidate_model_binding=MODEL_BINDING, execution_environment="docker",
+    )
+
+    assert preview["fresh_baseline_required"] is False
+    assert preview["comparable_baselines"][0]["job"] == "baseline"
+
+
 def test_model_binding_change_requires_a_fresh_baseline(tmp_path: Path):
     candidate = make_candidate(tmp_path)
     dataset = make_dataset(tmp_path)

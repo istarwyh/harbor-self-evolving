@@ -9,7 +9,7 @@
 - v1 `unvalidated-search`：执行一个未校验的空搜索，真实 LLM 仍会生成答案，但没有可用证据，因而不能产生可信引用。
 - v2 `retrieval-grounded`：先搜索 Task 镜像内的 Source Catalog，只把命中的证据交给同一个 LLM，并用 JSON Schema 限制引用只能指向已检索 source。
 
-搜索状态与 `tool_errors` 来自生成器执行轨迹，不由模型自报。统一的 [`harbor-dsh-evaluator/v1`](../../docs/evaluator-interface.md) 实现位于 `stack/evaluator/`，按三个维度评分：
+搜索状态与 `tool_errors` 来自生成器执行轨迹，不由模型自报。统一的 [`harbor-dsh-evaluator/v2`](../../docs/evaluator-interface.md) 实现位于 `stack/evaluator/`，按三个维度评分：
 
 - 回应问题：`0 / 0.5 / 1`
 - 有趣性：`0 / 0.5 / 1`

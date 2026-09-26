@@ -1,6 +1,6 @@
 # Deep Research 三元 Rubric
 
-这个 `script` Evaluator 实现 `harbor-dsh-evaluator/v1`。三个维度都只能取 `0`、`0.5`、`1`；主指标 `reward` 是三项算术平均，因此聚合值可能出现六分之一的步长。
+这个 `script` Evaluator 实现 `harbor-dsh-evaluator/v2`。三个维度都只能取 `0`、`0.5`、`1`；主指标 `reward` 是三项算术平均，因此聚合值可能出现六分之一的步长。
 
 ## 回应问题（response_quality）
 
@@ -20,4 +20,4 @@
 - `0.5`：引用结构合法且来源存在，但缺少指定来源或完整、成功的检索轨迹。
 - `0`：没有引用，引用不存在的来源，或引用结构无效。
 
-这是为了演示可复现评测而设计的确定性实现。真实业务可以把 `kind` 换成 `llm-as-judge`，但仍应返回同一个 `evaluation-result/v1` 结果，并为每个维度给出非空原因和建议。评测器上线前应通过带 provenance 的独立 GT 做 ESF、SCE 与 RCR 元评测；GT 可以来自人工、程序、共识、独立模型或外部标准。
+这是为了演示可复现评测而设计的确定性实现。真实业务可以把 `kind` 换成 `llm-as-judge`，但仍应返回同一个 `evaluation-result/v2` 结果，并为每个维度给出非空原因和建议。评测器上线前应通过带 provenance 的独立 GT 做 ESF、SCE 与 RCR 元评测；GT 可以来自人工、程序、共识、独立模型或外部标准。

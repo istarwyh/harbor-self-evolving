@@ -75,7 +75,7 @@ setup 后用 Python 的 `platform.machine()`、`harbor --version` 和 `harbor pl
 
 ## 评测器产物口径
 
-声明 `harbor-dsh-evaluator/v1` 后，每个 Trial 都必须产出 `evaluation-result/v1`，且每个 Criterion 都包含 score、reason 和 recommendation。Summary 直接复用 Trial Assessment 的有效性判断，因此不会再出现详情无效但总体仍计入分数的情况。
+正式 Candidate 评测声明 `harbor-dsh-evaluator/v2` 后，每个 Trial 都必须产出 `evaluation-result/v2`，且每个 Criterion 都包含 status、score、reason、recommendation 和 evidence_refs。Summary 直接复用 Trial Assessment 的有效性判断，因此不会再出现详情无效但总体仍计入分数的情况。
 
 ## Secret 分级边界
 

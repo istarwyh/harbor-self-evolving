@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict'
-import { mkdir, mkdtemp, stat, symlink, utimes, writeFile } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
+import { mkdir, mkdtemp, readFile, stat, symlink, utimes, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 
+import { canonicalDigest } from '../lib/bridge-contract.js'
 import { EvolutionService, enforceEvidenceResponseLimit, protectEvaluatorInspectionForAgent, untrustedAgentReadEnvelope } from '../lib/service.js'
 
 async function fixture(name = 'safe-job') {
@@ -16,7 +18,24 @@ async function fixture(name = 'safe-job') {
   }
 }
 
-test('default result Summary uses the bounded redacting dashboard reader', async () => {
+async function sealJob(job, names) {
+  const artifacts = []
+  for (const name of names) {
+    const bytes = await readFile(path.join(job, name))
+    artifacts.push({ path: name, digest: `sha256:${createHash('sha256').update(bytes).digest('hex')}`, size: bytes.length, reward_affecting: true })
+  }
+  const manifest = {
+    schema_version: 1,
+    protocol: 'job-bundle/v1',
+    job: path.basename(job),
+    created_at: '2026-09-25T00:00:00Z',
+    artifacts,
+  }
+  manifest.digest = canonicalDigest(manifest, 'harbor-dsh-job-bundle-v1')
+  await writeFile(path.join(job, 'job-bundle-manifest.json'), JSON.stringify(manifest))
+}
+
+test('explicit Summary result uses the bounded redacting dashboard reader', async () => {
   const { job, service } = await fixture()
   await writeFile(path.join(job, 'evaluation-summary.json'), JSON.stringify({
     schema_version: 3,
@@ -27,7 +46,7 @@ test('default result Summary uses the bounded redacting dashboard reader', async
     explanation: 'x'.repeat(9_000),
   }))
 
-  const result = await service.result({ jobPath: 'jobs/safe-job' })
+  const result = await service.result({ jobPath: 'jobs/safe-job', view: 'summary' })
 
   assert.equal(result.schema, 'harbor-agent-read/v1')
   assert.equal(result.tool, 'harbor_eval_result')
@@ -39,19 +58,125 @@ test('default result Summary uses the bounded redacting dashboard reader', async
   assert.match(result.data.explanation, /\[TRUNCATED 1000 chars\]$/)
 })
 
-test('default result Summary refuses a symlink', async () => {
+test('result resolves a Job name and jobs-relative path consistently and exposes report view', async () => {
+  const { job, service } = await fixture('canonical-job')
+  await writeFile(path.join(job, 'evaluation-summary.json'), JSON.stringify({
+    schema_version: 3,
+    job: 'canonical-job',
+    mode: 'diagnostic',
+    n_trials: 1,
+    n_valid_scores: 1,
+    n_invalid_scores: 0,
+    metrics: { reward: 0.8 },
+    trials: [{ id: 'trial-1', status: 'completed', score: { value: 0.8, valid: true } }],
+    artifact_validation: { valid: true },
+    effective_evaluator: {
+      schema_version: 1,
+      protocol: 'effective-evaluator/v1',
+      configured: { id: 'business-evaluator', version: '1.0.0', portable_digest: `sha256:${'a'.repeat(64)}` },
+      materialized: { id: 'business-evaluator', version: '1.0.0', portable_digest: `sha256:${'a'.repeat(64)}` },
+      executed: { id: 'business-evaluator', version: '1.0.0', portable_digest: `sha256:${'a'.repeat(64)}` },
+      identity_match: true,
+    },
+  }))
+  await writeFile(path.join(job, 'evaluation-context.json'), JSON.stringify({
+    schema_version: 3,
+    job_kind: 'candidate-evaluation',
+    mode: 'diagnostic',
+    digest: 'sha256:context',
+  }))
+  await writeFile(path.join(job, 'evaluation-contract.json'), JSON.stringify({
+    schema_version: 1,
+    contract_id: 'quality',
+    version: '1',
+    primary_metric: 'reward',
+    metrics: [{ id: 'reward', direction: 'maximize' }],
+  }))
+
+  const bareReport = await service.result({ jobPath: 'canonical-job' })
+  const pathReport = await service.result({ jobPath: 'jobs/canonical-job' })
+  const absoluteReport = await service.result({ jobPath: job })
+  const summary = await service.result({ jobPath: 'canonical-job', view: 'summary' })
+
+  assert.equal(bareReport.view, 'report')
+  assert.equal(bareReport.data.protocol, 'evaluation-report/v1')
+  assert.deepEqual(bareReport.data, pathReport.data)
+  assert.deepEqual(bareReport.data, absoluteReport.data)
+  assert.equal(summary.data.job, 'canonical-job')
+  assert.equal(bareReport.data.verdict.code, 'actionable-with-limitations')
+  assert.equal(bareReport.data.quality.overall_score, null)
+  assert.equal(bareReport.data.quality.trust_requirements.job_bundle_verified, false)
+})
+
+test('result trusts scores only when the real job-bundle-manifest seal and Evaluator execution verify', async () => {
+  const { job, service } = await fixture('sealed-job')
+  const identity = { id: 'business-evaluator', version: '2.0.0', portable_digest: `sha256:${'a'.repeat(64)}` }
+  await writeFile(path.join(job, 'evaluation-summary.json'), JSON.stringify({
+    schema_version: 3, job: 'sealed-job', mode: 'diagnostic', n_trials: 1, n_valid_scores: 1, n_invalid_scores: 0,
+    n_evaluation_exceptions: 0, n_infrastructure_exceptions: 0,
+    metrics: { reward: 1 }, trials: [{ id: 'trial-1', status: 'completed', score: { value: 1, valid: true }, criteria: [] }],
+    artifact_validation: { valid: true },
+    effective_evaluator: { schema_version: 1, protocol: 'effective-evaluator/v1', configured: identity, materialized: { ...identity, bundle_complete: true }, executed: { ...identity, bundle_complete: true }, identity_match: true, execution: { status: 'succeeded', error_type: null } },
+  }))
+  await writeFile(path.join(job, 'evaluation-context.json'), JSON.stringify({ schema_version: 3, job_kind: 'candidate-evaluation', mode: 'diagnostic', artifact_profile: 'experiment', digest: 'sha256:context' }))
+  await writeFile(path.join(job, 'evaluation-contract.json'), JSON.stringify({ schema_version: 1, primary_metric: 'reward', metrics: [{ id: 'reward', direction: 'maximize' }] }))
+  await writeFile(path.join(job, 'evaluation-stack-manifest.json'), JSON.stringify({ schema_version: 1 }))
+  await writeFile(path.join(job, 'dataset-manifest.json'), JSON.stringify({ schema_version: 1 }))
+  await sealJob(job, ['evaluation-summary.json', 'evaluation-context.json', 'evaluation-contract.json', 'evaluation-stack-manifest.json', 'dataset-manifest.json'])
+
+  const report = await service.result({ jobPath: 'sealed-job' })
+  assert.equal(report.data.verdict.code, 'reliable-result')
+  assert.equal(report.data.quality.overall_score, 1)
+  assert.equal(report.data.quality.trust_requirements.job_bundle_verified, true)
+  assert.equal(report.data.run_health.status, 'healthy')
+  assert.ok(report.data.advanced.source_artifacts.includes('job-bundle-manifest.json'))
+})
+
+test('result suppresses scores when a declared Job bundle seal is tampered', async () => {
+  const { job, service } = await fixture('tampered-seal-job')
+  const identity = { id: 'business-evaluator', version: '2.0.0', portable_digest: `sha256:${'a'.repeat(64)}` }
+  await writeFile(path.join(job, 'evaluation-summary.json'), JSON.stringify({
+    schema_version: 3, job: 'tampered-seal-job', mode: 'diagnostic', n_trials: 1, n_valid_scores: 1,
+    metrics: { reward: 1 }, trials: [{ id: 'trial-1', status: 'completed', score: { value: 1, valid: true } }],
+    artifact_validation: { valid: true },
+    effective_evaluator: { schema_version: 1, protocol: 'effective-evaluator/v1', configured: identity, materialized: { ...identity, bundle_complete: true }, executed: { ...identity, bundle_complete: true }, identity_match: true, execution: { status: 'succeeded', error_type: null } },
+  }))
+  await writeFile(path.join(job, 'evaluation-context.json'), JSON.stringify({ schema_version: 3, job_kind: 'candidate-evaluation', mode: 'diagnostic', digest: 'sha256:context' }))
+  await writeFile(path.join(job, 'evaluation-contract.json'), JSON.stringify({ schema_version: 1, primary_metric: 'reward', metrics: [{ id: 'reward', direction: 'maximize' }] }))
+  await writeFile(path.join(job, 'job-bundle-manifest.json'), JSON.stringify({ schema_version: 1, protocol: 'job-bundle/v1', job: 'tampered-seal-job', artifacts: [], digest: `sha256:${'0'.repeat(64)}` }))
+
+  const report = await service.result({ jobPath: 'tampered-seal-job' })
+  assert.equal(report.data.quality.overall_score, null)
+  assert.equal(report.data.quality.trust_requirements.job_bundle_verified, false)
+  assert.equal(report.data.run_health.status, 'failed')
+})
+
+test('result rejects paths that are not an immediate child of configured jobsDir', async () => {
+  const { service } = await fixture('bounded-job')
+
+  await assert.rejects(
+    service.result({ jobPath: 'other/bounded-job' }),
+    /HARBOR_AGENT_READ_FAILED/,
+  )
+  await assert.rejects(
+    service.result({ jobPath: 'jobs/nested/bounded-job' }),
+    /HARBOR_AGENT_READ_FAILED/,
+  )
+})
+
+test('explicit result Summary refuses a symlink', async () => {
   const { job, service } = await fixture('linked-job')
   const outside = path.join(path.dirname(job), 'outside-summary.json')
   await writeFile(outside, JSON.stringify({ schema_version: 3, job: 'outside', metrics: {} }))
   await symlink(outside, path.join(job, 'evaluation-summary.json'))
 
-  const result = await service.result({ jobPath: 'jobs/linked-job' })
+  const result = await service.result({ jobPath: 'jobs/linked-job', view: 'summary' })
 
   assert.match(result.data.__readError, /not a safe file/)
   assert.equal(result.data.job, undefined)
 })
 
-test('default result Summary refuses a symlinked ancestor directory', async () => {
+test('explicit result Summary refuses a symlinked ancestor directory', async () => {
   const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-result-ancestor-'))
   const outsideRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-result-outside-'))
   const outsideJob = path.join(outsideRoot, 'escaped-job')
@@ -64,13 +189,13 @@ test('default result Summary refuses a symlinked ancestor directory', async () =
   await symlink(outsideRoot, path.join(projectRoot, 'jobs'))
   const service = new EvolutionService({ projectRoot, jobsDir: 'jobs' })
 
-  const result = await service.result({ jobPath: 'jobs/escaped-job' })
+  const result = await service.result({ jobPath: 'jobs/escaped-job', view: 'summary' })
 
   assert.match(result.data.__readError, /not a safe directory/)
   assert.equal(result.data.job, undefined)
 })
 
-test('default result Summary refuses files larger than the dashboard JSON limit', async () => {
+test('explicit result Summary refuses files larger than the dashboard JSON limit', async () => {
   const { job, service } = await fixture('oversized-job')
   await writeFile(path.join(job, 'evaluation-summary.json'), JSON.stringify({
     schema_version: 3,
@@ -79,7 +204,7 @@ test('default result Summary refuses files larger than the dashboard JSON limit'
     padding: 'x'.repeat(2 * 1024 * 1024),
   }))
 
-  const result = await service.result({ jobPath: 'jobs/oversized-job' })
+  const result = await service.result({ jobPath: 'jobs/oversized-job', view: 'summary' })
 
   assert.match(result.data.__readError, /exceeds 2097152 bytes/)
   assert.equal(result.data.padding, undefined)
@@ -89,13 +214,13 @@ test('bounded JSON cache notices same-size rewrites even when mtime is restored'
   const { job, service } = await fixture('cache-revision-job')
   const summaryPath = path.join(job, 'evaluation-summary.json')
   await writeFile(summaryPath, JSON.stringify({ schema_version: 3, job: 'cache-revision-job', metrics: { reward: 1 } }))
-  assert.equal((await service.result({ jobPath: 'jobs/cache-revision-job' })).data.metrics.reward, 1)
+  assert.equal((await service.result({ jobPath: 'jobs/cache-revision-job', view: 'summary' })).data.metrics.reward, 1)
   const before = await stat(summaryPath)
 
   await writeFile(summaryPath, JSON.stringify({ schema_version: 3, job: 'cache-revision-job', metrics: { reward: 2 } }))
   await utimes(summaryPath, before.atime, before.mtime)
 
-  assert.equal((await service.result({ jobPath: 'jobs/cache-revision-job' })).data.metrics.reward, 2)
+  assert.equal((await service.result({ jobPath: 'jobs/cache-revision-job', view: 'summary' })).data.metrics.reward, 2)
 })
 
 test('Agent result envelopes recursively redact secret values and local paths outside sensitive keys', async () => {
@@ -125,7 +250,7 @@ test('Agent result envelopes recursively redact secret values and local paths ou
     ],
   }))
 
-  const result = await service.result({ jobPath: 'jobs/secret-shaped-job' })
+  const result = await service.result({ jobPath: 'jobs/secret-shaped-job', view: 'summary' })
   const serialized = JSON.stringify(result, null, 2)
 
   assert.equal(result.artifactTrust, 'untrusted-evidence')

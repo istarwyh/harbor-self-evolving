@@ -58,8 +58,8 @@ test('public documentation matches the released Historical Session surface', asy
     assert.match(document, /dsh-historical-evaluation/);
   }
 
-  assert.match(rootReadme, /19 个确定性工具/);
-  assert.match(pluginReadme, /nineteen strict Harbor tools/);
+  assert.match(rootReadme, /21 个确定性工具/);
+  assert.match(pluginReadme, /twenty-one strict Harbor tools/);
   assert.match(pluginReadme, /Historical Session cold start/);
   assert.match(pluginReadme, /completed-unscored/);
   assert.match(rootReadme, /评测最近会话/);
@@ -75,6 +75,8 @@ test('public documentation matches the released Historical Session surface', asy
     'harbor_quick_diagnostic_init',
     'harbor_session_diagnostic_preview',
     'harbor_session_diagnostic_run',
+    'harbor_business_observation_import',
+    'harbor_business_observation_list',
     'harbor_dataset_validate',
     'harbor_context_preview',
     'harbor_eval_run',

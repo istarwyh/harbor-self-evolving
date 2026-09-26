@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/istarwyh/harbor-self-evolving/schemas/historical-generation-batch.schema.json",
-  "title": "Historical Generation Batch v1",
+  "title": "Historical Generation Batch v1/v2",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema_version", "protocol", "batch_id", "created_at", "project", "selection", "source", "redaction_policy", "records", "generator_population", "digest"],
   "properties": {
-    "schema_version": { "const": 1 },
-    "protocol": { "const": "historical-generation-batch/v1" },
+    "schema_version": { "enum": [1, 2] },
+    "protocol": { "enum": ["historical-generation-batch/v1", "historical-generation-batch/v2"] },
     "batch_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$" },
     "created_at": { "type": "string", "format": "date-time" },
     "project": {
@@ -56,7 +56,8 @@
       "properties": {
         "kind": { "const": "dsh-session" },
         "adapter": { "const": "dsh-session-query" },
-        "session_format_versions": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "integer", "minimum": 0 } }
+        "session_format_versions": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "integer", "minimum": 0 } },
+        "observation_protocol": { "enum": ["dsh-session-observation/v1", "dsh-session-observation/v2"] }
       }
     },
     "redaction_policy": {
@@ -84,6 +85,8 @@
           "source_digest": { "$ref": "#/$defs/digest" },
           "source_project_digest": { "$ref": "#/$defs/digest", "description": "Digest of the source Session project, when known; never inferred from the output workspace." },
           "observation_digest": { "$ref": "#/$defs/digest" },
+          "observation_protocol": { "enum": ["dsh-session-observation/v1", "dsh-session-observation/v2"] },
+          "evidence_coverage": { "type": "object" },
           "last_activity_at": { "type": "string", "format": "date-time" },
           "generator": { "type": "object" },
           "observation_path": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+$" }
@@ -93,5 +96,18 @@
     "generator_population": { "type": "object" },
     "digest": { "$ref": "#/$defs/digest" }
   },
+  "allOf": [
+    {
+      "if": { "properties": { "schema_version": { "const": 1 } }, "required": ["schema_version"] },
+      "then": { "properties": { "protocol": { "const": "historical-generation-batch/v1" } } },
+      "else": {
+        "properties": {
+          "protocol": { "const": "historical-generation-batch/v2" },
+          "source": { "required": ["observation_protocol"], "properties": { "observation_protocol": { "const": "dsh-session-observation/v2" } } },
+          "records": { "items": { "required": ["observation_protocol", "evidence_coverage"], "properties": { "observation_protocol": { "const": "dsh-session-observation/v2" } } } }
+        }
+      }
+    }
+  ],
   "$defs": { "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" } }
 }

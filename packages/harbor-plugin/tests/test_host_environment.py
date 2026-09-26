@@ -34,7 +34,7 @@ async def test_host_environment_maps_harbor_paths_and_preserves_mounted_logs(
             {"type": "bind", "source": str(trial_paths.verifier_dir), "target": "/logs/verifier"},
             {"type": "bind", "source": str(trial_paths.artifacts_dir), "target": "/logs/artifacts"},
         ],
-        network_policy=NetworkPolicy(network_mode=NetworkMode.NO_NETWORK),
+        network_policy=NetworkPolicy(network_mode=NetworkMode.PUBLIC),
     )
 
     await environment.start(force_build=True)
@@ -46,6 +46,8 @@ async def test_host_environment_maps_harbor_paths_and_preserves_mounted_logs(
 
     assert result.return_code == 0
     assert result.stdout == "1"
+    task_root = await environment.exec('printf "%s" "$HSE_TASK_ROOT"', user="root")
+    assert task_root.stdout == str(environment.resolve_environment_path("/workspace"))
     assert (trial_paths.verifier_dir / "reward.txt").read_text() == "ready"
     assert environment.resolve_environment_path("/tests").is_dir()
     translated = environment._translate_command(

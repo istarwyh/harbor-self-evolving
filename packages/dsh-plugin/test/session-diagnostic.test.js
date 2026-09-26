@@ -93,14 +93,14 @@ test('Preview and Run preserve a shared token, revalidate sources, and write onl
     omittedFromJudge: ['reasoning', 'tool-payloads', 'attachments'],
     redactionPolicy: {
       id: 'dsh-session-default-redaction',
-      version: '1.1.0',
+      version: '2.0.0',
       digest: preview.dataPolicy.redactionPolicy.digest,
     },
   })
   assert.match(preview.dataPolicy.redactionPolicy.digest, /^sha256:[0-9a-f]{64}$/)
   assert.equal(preview.retention.privateEvidence, '.harbor/private/session-batches')
   assert.deepEqual(preview.evaluation, {
-    evaluator: { id: 'dsh-session-historical-evaluator', version: '1.0.0' },
+    evaluator: { id: 'dsh-session-historical-evaluator', version: '2.0.0', metricTemplate: 'general-agent-session@1' },
     judge: {
       provider: 'judge',
       model: 'model',

@@ -11,7 +11,7 @@ const owner = { sessionId: 'session-a', workspace: 'workspace-a', job: 'historic
 const governance = { stackIdentity: { id: 'stack-a', version: '1.0.0', digest: digest('b') }, components: { evaluator: { id: 'evaluator-a', version: '1.0.0', entry: 'stack/evaluator.json', digest: digest('b') } }, contextDigest: digest('c') }
 const saved = () => ({
   stack: { id: 'stack-a', version: '1.0.1', path: '.harbor/evaluation-stack.yml' },
-  evaluator: { evaluator_id: 'evaluator-a', version: '1.0.1', descriptor_path: 'stack/1.0.1/evaluator.json', digest: digest('a'), editable_files: [{ path: 'stack/1.0.1/rubric.md', text: 'New source should not be duplicated into the journal', digest: digest('d') }] },
+  evaluator: { evaluator_id: 'evaluator-a', version: '1.0.1', descriptor_path: 'stack/1.0.1/evaluator.json', digest: digest('a'), portable_digest: digest('a'), editable_files: [{ path: 'stack/1.0.1/rubric.md', text: 'New source should not be duplicated into the journal', digest: digest('d') }] },
   requires_fresh_baseline: true, automatic_evaluation: false, automatic_gate: false,
 })
 const fixture = async () => {
@@ -121,7 +121,25 @@ test('browser save binds its source Job and governance recovers it after a new s
   await writeFile(path.join(config.projectRoot, 'stack/evaluator.json'), '{}')
   await writeFile(path.join(jobDirectory, 'evaluation-stack-manifest.json'), JSON.stringify({ stack_id: 'stack-a', version: '1.0.0', digest: digest('b'), components: governance.components }))
   await writeFile(path.join(jobDirectory, 'evaluation-context.json'), JSON.stringify({ digest: governance.contextDigest }))
-  const before = { ...saved(), stack: { ...saved().stack, version: '1.0.0' }, evaluator: { ...saved().evaluator, version: '1.0.0', descriptor_path: 'stack/evaluator.json', digest: digest('b') } }
+  const executedIdentity = { id: 'evaluator-a', version: '1.0.0', portable_digest: digest('b') }
+  await writeFile(path.join(jobDirectory, 'evaluation-summary.json'), JSON.stringify({
+    schema_version: 3,
+    job: owner.job,
+    n_trials: 1,
+    n_valid_scores: 1,
+    metrics: {},
+    artifact_validation: { valid: true },
+    effective_evaluator: {
+      schema_version: 1,
+      protocol: 'effective-evaluator/v1',
+      configured: executedIdentity,
+      materialized: { ...executedIdentity, bundle_complete: true },
+      executed: { ...executedIdentity, bundle_complete: true },
+      identity_match: true,
+      execution: { status: 'succeeded', error_type: null },
+    },
+  }))
+  const before = { ...saved(), stack: { ...saved().stack, version: '1.0.0' }, evaluator: { ...saved().evaluator, version: '1.0.0', descriptor_path: 'stack/evaluator.json', digest: digest('b'), portable_digest: digest('b') } }
   const state = path.join(config.projectRoot, 'fixture-inspection.json')
   await writeFile(state, JSON.stringify(before))
   await writeFile(config.harborDshBin, `#!/usr/bin/env node\nimport { readFileSync, writeFileSync } from 'node:fs';\nconst state = ${JSON.stringify(state)};\nif (process.argv[3] === 'update') writeFileSync(state, JSON.stringify(${JSON.stringify(saved())}));\nprocess.stdout.write(readFileSync(state, 'utf8'));\n`, { mode: 0o700 })
@@ -146,4 +164,58 @@ test('browser save binds its source Job and governance recovers it after a new s
   const other = create()
   other.activateProjectRoot(config.projectRoot, 'agent-session', 'session-other')
   assert.equal((await other.governance({ ...args, sessionId: 'session-other' })).savedEvaluatorVersion, undefined)
+})
+
+test('governance forks the verified Job bundle when the live Stack has advanced', async () => {
+  const config = await fixture()
+  config.jobsDir = 'jobs'
+  config.timeoutMs = 5000
+  config.harborDshBin = path.join(config.projectRoot, 'fixture-fork-cli.mjs')
+  const jobDirectory = path.join(config.projectRoot, 'jobs', owner.job)
+  await mkdir(path.join(jobDirectory, 'evaluator-bundle'), { recursive: true })
+  const executedIdentity = { id: 'evaluator-a', version: '1.0.0', portable_digest: digest('b') }
+  await writeFile(path.join(jobDirectory, 'evaluation-stack-manifest.json'), JSON.stringify({
+    stack_id: 'stack-a', version: '1.0.0', digest: digest('b'), components: governance.components,
+  }))
+  await writeFile(path.join(jobDirectory, 'evaluation-context.json'), JSON.stringify({ digest: governance.contextDigest }))
+  await writeFile(path.join(jobDirectory, 'evaluation-summary.json'), JSON.stringify({
+    schema_version: 3, job: owner.job, n_trials: 1, n_valid_scores: 1, metrics: {}, artifact_validation: { valid: true },
+    effective_evaluator: {
+      schema_version: 1, protocol: 'effective-evaluator/v1', configured: executedIdentity,
+      materialized: { ...executedIdentity, bundle_complete: true }, executed: { ...executedIdentity, bundle_complete: true }, identity_match: true,
+      execution: { status: 'succeeded', error_type: null },
+    },
+  }))
+  const live = {
+    stack: { id: 'stack-a', version: '2.0.0', path: '.harbor/evaluation-stack.yml', digest: digest('c') },
+    evaluator: { evaluator_id: 'evaluator-a', version: '2.0.0', portable_digest: digest('c'), editable_files: [] },
+  }
+  const bundle = {
+    evaluator: {
+      evaluator_id: 'evaluator-a', version: '1.0.0', portable_digest: digest('b'), descriptor_path: 'evaluator.json',
+      editable_files: [{ path: 'rubric.md', text: 'executed source', digest: digest('d') }],
+    },
+  }
+  const receipt = saved()
+  const recordedArgs = path.join(config.projectRoot, 'update-args.json')
+  await writeFile(config.harborDshBin, `#!/usr/bin/env node\nimport { writeFileSync } from 'node:fs';\nconst command = process.argv[3];\nif (command === 'inspect') process.stdout.write(JSON.stringify(${JSON.stringify(live)}));\nelse if (command === 'inspect-bundle') process.stdout.write(JSON.stringify(${JSON.stringify(bundle)}));\nelse if (command === 'update') { writeFileSync(${JSON.stringify(recordedArgs)}, JSON.stringify(process.argv.slice(2))); process.stdout.write(JSON.stringify(${JSON.stringify(receipt)})); }\nelse process.exit(2);\n`, { mode: 0o700 })
+
+  const service = new EvolutionService(config)
+  service.activateProjectRoot(config.projectRoot, 'agent-session', owner.sessionId)
+  const dashboard = await service.dashboard({ sessionId: owner.sessionId })
+  const args = { sessionId: owner.sessionId, workspace: dashboard.workspace.id, job: owner.job }
+  const state = await service.governance(args)
+  assert.equal(state.editingPolicy.identityMatch, true)
+  assert.equal(state.editingPolicy.forkFromExecuted, true)
+  assert.equal(state.evaluatorInterface.evaluator.version, '1.0.0')
+  assert.equal(state.evaluatorInterface.evaluator.editable_files[0].text, 'executed source')
+
+  await service.evaluator({
+    ...args, filePath: 'rubric.md', content: 'forked source', expectedDigest: digest('d'),
+    newEvaluatorVersion: '1.0.1', newStackVersion: '2.0.1',
+  })
+  const updateArgs = JSON.parse(await readFile(recordedArgs, 'utf8'))
+  const sourceIndex = updateArgs.indexOf('--source-bundle')
+  assert.notEqual(sourceIndex, -1)
+  assert.equal(updateArgs[sourceIndex + 1], path.join(jobDirectory, 'evaluator-bundle'))
 })

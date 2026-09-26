@@ -38,6 +38,7 @@
     "metrics": { "type": "object", "additionalProperties": { "type": "number" } },
     "trials": { "type": "array", "maxItems": 10, "items": { "type": "object" } },
     "artifact_validation": { "type": "object" },
+    "effective_evaluator": { "type": ["object", "null"] },
     "evaluator_meta_evaluation": {
       "type": "object",
       "additionalProperties": false,

@@ -62,7 +62,11 @@ def observations() -> dict:
     return {
         "schema_version": 1,
         "protocol": "evaluator-observations/v1",
-        "evaluator": {"id": "research-evaluator", "version": "2.0.0"},
+        "ground_truth_digest": validate_ground_truth(ground_truth())["digest"],
+        "evaluator": {"id": "research-evaluator", "version": "2.0.0", "portable_digest": "sha256:" + "a" * 64},
+        "rubric": {"id": "research-rubric", "version": "2.0.0", "digest": "sha256:" + "b" * 64},
+        "judge": {"provider": "fixture", "model": "judge", "version": "1"},
+        "template": {"id": "research-template", "version": "1.0.0", "digest": "sha256:" + "c" * 64},
         "repeat_policy": {"repeats": 3, "seed_policy": "fixed"},
         "observations": values,
     }
@@ -76,6 +80,24 @@ def test_meta_evaluation_reports_esf_sce_rcr_and_badcase_coverage():
     assert report["ground_truth"]["source"]["kind"] == "programmatic"
     assert report["ground_truth"]["badcase_count"] == 1
     assert report["coverage"]["rate"] == 1
+    assert report["evaluation_identity"]["evaluator"]["portable_digest"] == "sha256:" + "a" * 64
+    assert report["evaluation_identity"]["rubric"]["digest"] == "sha256:" + "b" * 64
+    assert report["evaluation_identity"]["template"]["digest"] == "sha256:" + "c" * 64
+    assert report["digest"].startswith("sha256:")
+
+
+def test_meta_evaluation_rejects_observations_without_exact_identity_bundle():
+    value = observations()
+    del value["template"]["digest"]
+    with pytest.raises(ValueError, match="template digest"):
+        meta_evaluate(ground_truth(), value)
+
+
+def test_meta_evaluation_rejects_observations_bound_to_different_ground_truth():
+    value = observations()
+    value["ground_truth_digest"] = "sha256:" + "0" * 64
+    with pytest.raises(ValueError, match="exact Ground Truth"):
+        meta_evaluate(ground_truth(), value)
 
 
 def test_ground_truth_source_can_be_non_human_but_must_be_independent():

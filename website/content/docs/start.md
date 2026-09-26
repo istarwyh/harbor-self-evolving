@@ -3,7 +3,7 @@ title: Install and start
 description: Install the registry release into the selected DSH profile, restart, verify the Plugin and choose an evaluation path.
 weight: 10
 aliases: [/docs/start/install/, /docs/start/recent-sessions/, /docs/start/candidate/]
-verified_against_version: 0.9.8
+verified_against_version: 0.10.0
 source_refs: [AGENTS.md, README.md, docs/dsh-web-quickstart.md]
 ---
 
@@ -13,7 +13,7 @@ source_refs: [AGENTS.md, README.md, docs/dsh-web-quickstart.md]
 - Node.js/npm for the DSH Plugin setup command.
 - Python environment support used by the installed Adapter.
 - Harbor `>=0.21,<0.22`.
-- Docker only if you explicitly choose container execution; 0.9.8 defaults to Host.
+- Docker only if you explicitly choose container execution; 0.10.0 defaults to Host.
 
 ## Install {#install}
 
@@ -23,7 +23,7 @@ Run from the **business Agent workspace**, not from this source repository:
 npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 ```
 
-For a version-pinned installation, replace `latest` with `0.9.8`. Setup writes the selected DSH profile dependency, configures the Harbor project integration, installs the compatible Python Adapter and exposes the bundled `evolve-agent-with-harbor` Skill. Follow the exact restart command printed by setup.
+For a version-pinned installation, replace `latest` with `0.10.0`. Setup writes the selected DSH profile dependency, configures the Harbor project integration, installs the compatible Python Adapter and exposes the bundled `evolve-agent-with-harbor` Skill. Follow the exact restart command printed by setup.
 
 > [!WARNING]
 > Do not use `dsh plugin add ./packages/dsh-plugin` for a normal installation. That creates a machine-local `link:` dependency and omits the Adapter setup.
@@ -32,7 +32,7 @@ For a version-pinned installation, replace `latest` with `0.9.8`. Setup writes t
 
 After restart, confirm all three surfaces:
 
-1. the selected profile depends on exact registry version `"dsh-harbor-evolution": "0.9.8"`, not `link:...`;
+1. the selected profile depends on exact registry version `"dsh-harbor-evolution": "0.10.0"`, not `link:...`;
 2. `harbor plugins list` contains `dsh-evolution` and `dsh-historical-evaluation`;
 3. the bundled `evolve-agent-with-harbor` Skill is present.
 
@@ -52,4 +52,4 @@ Only contributors modifying this repository should clone it and run:
 ./hse dsh-install-source web
 ```
 
-Source builds can contain unreleased behavior and must not be presented as the formal 0.9.8 package. The earlier untagged one-click updater preview was withdrawn before 0.9.7; the browser only checks versions and copies a complete, reviewable terminal command.
+Source builds can contain unreleased behavior and must not be presented as the formal 0.10.0 package. The earlier untagged one-click updater preview was withdrawn before 0.9.7; the browser only checks versions and copies a complete, reviewable terminal command.

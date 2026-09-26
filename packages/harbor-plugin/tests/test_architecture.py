@@ -70,6 +70,36 @@ def test_stack_snapshot_separates_comparison_and_full_identity(tmp_path: Path):
     assert first["comparison_digest"] == second["comparison_digest"]
 
 
+def test_doctor_requires_explicit_policy_acceptance_for_unrestricted_host(tmp_path: Path):
+    candidate = make_candidate(tmp_path)
+    dataset = make_dataset(tmp_path)
+    stack_path = make_stack(tmp_path)
+    policy_path = tmp_path / "promotion-policy.json"
+    policy_path.write_text(json.dumps({
+        "schema_version": 2,
+        "policy_id": "docker-governed",
+        "version": "1.0.0",
+        "primary_metric": "reward",
+        "primary_direction": "maximize",
+        "min_improvement": 0,
+        "minimums": {},
+        "maximums": {},
+        "non_regression": [],
+        "execution_environment": {"strategy": "docker-required", "require_image_identity": True},
+    }))
+    result = architecture_doctor(
+        project_root=tmp_path,
+        stack_path=stack_path,
+        dataset_path=dataset,
+        candidate_path=candidate,
+        policy_path=policy_path,
+        execution_environment="host",
+        runtime_checks=False,
+    )
+    assert "HOST_EXECUTION_RISK_NOT_ACCEPTED" in {item["code"] for item in result["findings"]}
+    assert result["promotion_ready"] is False
+
+
 def test_doctor_blocks_god_runner_and_direct_promotion(tmp_path: Path):
     candidate = make_candidate(tmp_path)
     dataset = make_dataset(tmp_path)
@@ -181,7 +211,7 @@ def test_doctor_reports_duplicate_task_implementations_and_runner_semantics(tmp_
     }.issubset(codes)
 
 
-def test_doctor_requires_evaluator_result_artifact_when_interface_is_declared(tmp_path: Path):
+def test_doctor_ignores_dataset_scoring_code_because_strict_adapter_replaces_it(tmp_path: Path):
     dataset = make_dataset(tmp_path)
     (dataset / "search-task/tests/test.sh").write_text(
         "#!/bin/sh\nmkdir -p /logs/verifier\nprintf '{\"reward\":1}' > /logs/verifier/reward.json\n"
@@ -192,7 +222,27 @@ def test_doctor_requires_evaluator_result_artifact_when_interface_is_declared(tm
         stack_path=make_stack(tmp_path),
         dataset_path=dataset,
     )
-    assert "EVALUATOR_RESULT_OUTPUT_MISSING" in {item["code"] for item in result["findings"]}
+    codes = {item["code"] for item in result["findings"]}
+    assert "EVALUATOR_RESULT_OUTPUT_MISSING" not in codes
+    assert "STRICT_EVALUATOR_BUNDLE_REQUIRED" not in codes
+    assert "STRICT_EVALUATOR_INPUT_BUILDER_REQUIRED" not in codes
+
+
+def test_doctor_blocks_incomplete_candidate_evaluator_bundle(tmp_path: Path):
+    dataset = make_dataset(tmp_path)
+    stack = make_stack(tmp_path)
+    stack_value = yaml.safe_load(stack.read_text())
+    descriptor_path = tmp_path / stack_value["components"]["evaluator"]["entry"]
+    descriptor = json.loads(descriptor_path.read_text())
+    descriptor.pop("input_builder")
+    descriptor.pop("bundle_files")
+    descriptor_path.write_text(json.dumps(descriptor))
+
+    result = architecture_doctor(project_root=tmp_path, stack_path=stack, dataset_path=dataset)
+
+    codes = {item["code"] for item in result["findings"]}
+    assert "STRICT_EVALUATOR_BUNDLE_REQUIRED" in codes
+    assert "STRICT_EVALUATOR_INPUT_BUILDER_REQUIRED" in codes
 
 
 def test_runtime_doctor_reports_missing_local_image_and_unproven_acp_dependencies(tmp_path: Path, monkeypatch):
@@ -272,6 +322,11 @@ def test_initializer_is_non_overwriting_and_creates_strict_project(tmp_path: Pat
     assert descriptor["jobs"] == "jobs"
     assert descriptor["stack"] == ".harbor/evaluation-stack.yml"
     assert (tmp_path / "policies" / "promotion.json").is_file()
+    stack = yaml.safe_load((tmp_path / ".harbor/evaluation-stack.yml").read_text())
+    evaluator = json.loads((tmp_path / stack["components"]["evaluator"]["entry"]).read_text())
+    assert evaluator["interface"] == "harbor-dsh-evaluator/v2"
+    assert evaluator["protocol"] == {"input": "evaluation-input/v2", "output": "evaluation-result/v2"}
+    assert evaluator["aggregate"]["minimum_coverage"] == 1
 
 
 def test_initializer_rejects_different_stack_id_and_supports_namespaced_workspaces(tmp_path: Path):

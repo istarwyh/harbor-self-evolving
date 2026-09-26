@@ -82,10 +82,23 @@ test('Session Observation allowlists visible text and removes secret-bearing pay
   }])
   const serialized = JSON.stringify(observation)
 
-  assert.equal(observation.protocol, 'dsh-session-observation/v1')
+  assert.equal(observation.protocol, 'dsh-session-observation/v2')
   assert.equal(observation.visible_transcript.length, 2)
   assert.equal(observation.execution.tools[0].name, 'exec_command')
-  assert.equal(observation.execution.tools[0].result_summary, 'Tool completed; payload intentionally omitted.')
+  assert.equal(observation.execution.tools[0].result_summary, 'Deterministic bounded evidence summary available.')
+  assert.equal(observation.execution.evidence_summaries.length, 1)
+  assert.deepEqual(
+    Object.fromEntries(Object.entries(observation.execution.evidence_summaries[0]).filter(([key]) => !['call_ref', 'result_digest'].includes(key))),
+    {
+      tool: 'exec_command', category: 'unknown', outcome: 'succeeded', duration_ms: 1,
+      facts: [], artifact_refs: [], redaction: { replacements: 1, truncated: false },
+    },
+  )
+  assert.match(observation.execution.evidence_summaries[0].call_ref, /^sha256:[0-9a-f]{64}$/)
+  assert.match(observation.execution.evidence_summaries[0].result_digest, /^sha256:[0-9a-f]{64}$/)
+  assert.deepEqual(observation.evidence_coverage, {
+    transcript: 'complete', tool_outcomes: 'complete', artifacts: 'omitted', feedback: 'available',
+  })
   assert.equal(observation.execution.usage.reasoning_tokens, undefined)
   assert.deepEqual(observation.generator.model_segments, [
     { from_seq: 5, through_seq: 6, provider: 'provider', model: 'model-[REDACTED_SESSION_ID]' },
@@ -133,6 +146,69 @@ test('Session Observation redacts opaque tokens, credential URLs, and a private 
   assert.doesNotMatch(serialized, /dbpassword|supersecret|github_pat_|syntheticfixtureonly|eyJhbGci|ASIA1234|opaque-private-material/)
 })
 
+test('Historical Evidence v2 extracts only allowlisted test facts and bounded outcomes', () => {
+  const selected = selectedFixture()
+  selected.events[3].data.name = 'bash'
+  selected.events[3].data.arguments = JSON.stringify({ command: 'pytest -q' })
+  selected.events[4].data.message.content[0].content[0].text = `120 passed, 2 failed\n[exit code: 1]\ntoken=${API_SECRET}\n${'x'.repeat(40_000)}`
+
+  const observation = buildSessionObservation(selected)
+  const evidence = observation.execution.evidence_summaries[0]
+  const serialized = JSON.stringify(evidence)
+
+  assert.equal(evidence.category, 'test')
+  assert.equal(evidence.outcome, 'failed')
+  assert.equal(evidence.exit_code, 1)
+  assert.deepEqual(evidence.facts, [{ kind: 'test-count', passed: 120, failed: 2 }])
+  assert.equal(evidence.redaction.truncated, true)
+  assert.doesNotMatch(serialized, /token=|sk-super-secret|xxxxxx/)
+})
+
+test('Historical Evidence category cannot be spoofed by tool output text', () => {
+  const selected = selectedFixture()
+  selected.events[3].data.name = 'custom-tool'
+  selected.events[4].data.message.content[0].content[0].text = '999 passed, 0 failed\n[exit code: 0]'
+
+  const evidence = buildSessionObservation(selected).execution.evidence_summaries[0]
+
+  assert.equal(evidence.category, 'unknown')
+  assert.deepEqual(evidence.facts, [])
+})
+
+test('Historical Evidence marks tool coverage partial when more than 200 calls are omitted', () => {
+  const selected = selectedFixture()
+  const turnEnd = selected.events.pop()
+  for (let index = 1; index < 205; index += 1) {
+    const callId = `call-${index + 1}`
+    selected.events.push({ type: 'tool/call', seq: 6 + index * 2, time: 2_000 + index * 2, data: { turn: 0, step: index, callId, name: 'custom-tool', arguments: '{}' } })
+    selected.events.push({ type: 'tool/result', seq: 7 + index * 2, time: 2_001 + index * 2, data: { turn: 0, step: index, message: { id: `tool-${index}`, role: 'user', source: { kind: 'tool', callId }, content: [{ type: 'tool-result', toolCallId: callId, content: [{ type: 'text', text: 'ok' }] }] } } })
+  }
+  selected.events.push({ ...turnEnd, seq: 500, time: 3_000 })
+  selected.capturedThroughSeq = 500
+  selected.index.lastSeq = 500
+
+  const observation = buildSessionObservation(selected)
+
+  assert.equal(observation.execution.tools.length, 200)
+  assert.equal(observation.execution.evidence_summaries.length, 200)
+  assert.equal(observation.completeness.tool_payloads_complete, false)
+  assert.equal(observation.evidence_coverage.tool_outcomes, 'partial')
+  assert.ok(observation.completeness.truncations.some(item => String(item).includes('tool')))
+})
+
+test('Historical Evidence v2 keeps unknown tools to outcome metadata without free text', () => {
+  const selected = selectedFixture()
+  selected.events[3].data.name = 'custom-secret-tool'
+  selected.events[4].data.message.content[0].content[0].text = 'private business content that must not become a summary'
+
+  const evidence = buildSessionObservation(selected).execution.evidence_summaries[0]
+
+  assert.equal(evidence.category, 'unknown')
+  assert.equal(evidence.outcome, 'succeeded')
+  assert.deepEqual(evidence.facts, [])
+  assert.equal(JSON.stringify(evidence).includes('private business content'), false)
+})
+
 test('Historical Batch is immutable, private, and contains no raw Session id', async () => {
   const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'hse-private-batch-'))
   const selected = selectedFixture()
@@ -145,7 +221,7 @@ test('Historical Batch is immutable, private, and contains no raw Session id', a
   const batchText = await readFile(written.batchPath, 'utf8')
   const observationText = await readFile(path.join(written.batchDir, batch.records[0].observation_path), 'utf8')
 
-  assert.equal(batch.protocol, 'historical-generation-batch/v1')
+  assert.equal(batch.protocol, 'historical-generation-batch/v2')
   assert.equal(batch.records.length, 1)
   assert.equal((await stat(written.batchDir)).mode & 0o777, 0o700)
   assert.equal((await stat(written.batchPath)).mode & 0o777, 0o600)

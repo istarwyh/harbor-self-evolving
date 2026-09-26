@@ -1,12 +1,18 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/istarwyh/harbor-self-evolving/schemas/meta-evaluation-report.schema.json",
   "title": "Evaluator Meta-Evaluation Report v1",
   "type": "object",
-  "required": ["schema_version", "protocol", "ground_truth", "evaluator", "coverage", "metrics", "disagreements"],
+  "additionalProperties": false,
+  "required": ["schema_version", "protocol", "ground_truth", "evaluation_identity", "evaluator", "coverage", "metrics", "criterion_sce", "disagreements", "digest"],
   "properties": {
     "schema_version": { "const": 1 },
     "protocol": { "const": "meta-evaluation-report/v1" },
     "ground_truth": { "type": "object" },
+    "evaluation_identity": {
+      "type": "object",
+      "required": ["evaluator", "rubric", "judge", "template", "digest"]
+    },
     "evaluator": { "type": "object" },
     "coverage": { "type": "object" },
     "metrics": {
@@ -18,6 +24,8 @@
         "rcr": { "type": ["number", "null"], "minimum": 0, "maximum": 1 }
       }
     },
-    "disagreements": { "type": "array" }
+    "criterion_sce": { "type": "object", "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 } },
+    "disagreements": { "type": "array" },
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
   }
 }

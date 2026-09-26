@@ -6,6 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from jsonschema import Draft202012Validator
 
 from harbor_dsh_evolution.historical_plugin import (
     COMPLETION_SENTINEL,
@@ -90,8 +91,27 @@ async def test_historical_plugin_writes_summary_meta_status_and_completion_senti
     (trial / "artifacts" / "logs" / "artifacts" / "session-observation.json").write_text(
         json.dumps(observations[record_id])
     )
+    task_root = Path(task["path"])
+    if not task_root.is_absolute():
+        task_root = dataset / task_root
+    evaluator_materialization = json.loads(
+        (task_root / "tests" / "evaluator-materialization.json").read_text()
+    )
+    runtime_identity = evaluator_materialization["materialized"]
+    effective_evaluator = {
+        "schema_version": 1,
+        "protocol": "effective-evaluator/v1",
+        "configured": evaluator_materialization["configured"],
+        "materialized": runtime_identity,
+        "executed": runtime_identity,
+        "identity_match": True,
+    }
     (trial / "verifier" / "evaluation-result.json").write_text(
-        json.dumps(evaluator_result(scored=False))
+        json.dumps(
+            evaluator_result(
+                scored=False, effective_evaluator=effective_evaluator
+            )
+        )
     )
     payload = {
         "id": execution_id,
@@ -124,16 +144,29 @@ async def test_historical_plugin_writes_summary_meta_status_and_completion_senti
     assert summary["n_invalid_scores"] == 0
     assert summary["coverage"]["unscored_trials"] == 1
     assert summary["evaluator_meta_evaluation"]["status"] == "not-run"
+    assert summary["effective_evaluator"]["identity_match"] is True
+    assert (
+        summary["effective_evaluator"]["configured"]["portable_digest"]
+        == summary["effective_evaluator"]["executed"]["portable_digest"]
+    )
     completion = json.loads((job.job_dir / COMPLETION_SENTINEL).read_text())
     assert completion["status"] == "completed"
     assert completion["valid"] is True
     lifecycle = json.loads((job.job_dir / "trial-lifecycle.json").read_text())
     assert lifecycle["counts"] == {"completed-unscored": 1}
+    schema_root = Path(__file__).parents[3] / "schemas"
+    registry = json.loads((job.job_dir / "artifact-registry.json").read_text())
+    registry_schema = json.loads((schema_root / "artifact-registry.schema.json").read_text())
+    Draft202012Validator(registry_schema).validate(registry)
+    assessment_schema = json.loads((schema_root / "trial-assessment.schema.json").read_text())
+    assessment_schema["properties"]["effective_evaluator"]["anyOf"][0] = json.loads(
+        (schema_root / "effective-evaluator.schema.json").read_text()
+    )
+    historical_assessment = json.loads(next((job.job_dir / "trial-assessments").glob("*.json")).read_text())
+    Draft202012Validator(assessment_schema).validate(historical_assessment)
 
-    # Harbor 0.21 treats the same config/job directory as a resume. Existing
-    # TrialResults do not emit the Trial callbacks again, so plugin finalization
-    # must invalidate the old sentinel and rebuild job-owned artifacts exactly
-    # once from the combined JobResult.
+    # Completed Jobs are sealed and never resumed in place. A retry must create
+    # a new Job so the original evidence remains immutable.
     resumed = HistoricalGenerationEvaluationPlugin(
         batch_path=str(batch_path),
         dataset_path=str(dataset),
@@ -141,16 +174,8 @@ async def test_historical_plugin_writes_summary_meta_status_and_completion_senti
         project_root=str(tmp_path),
         mode="diagnostic",
     )
-    await resumed.on_job_start(job)
-    assert not (job.job_dir / COMPLETION_SENTINEL).exists()
-    assert not (job.job_dir / "evaluation-summary.json").exists()
-    await resumed.on_job_end(SimpleNamespace(trial_results=[result]))
-    assert len(list((job.job_dir / "trial-assessments").glob("*.json"))) == 1
-    resumed_summary = json.loads((job.job_dir / "evaluation-summary.json").read_text())
-    assert resumed_summary["artifact_validation"]["valid"] is True
-    assert json.loads((job.job_dir / COMPLETION_SENTINEL).read_text())["valid"] is True
-    resumed_lifecycle = json.loads((job.job_dir / "trial-lifecycle.json").read_text())
-    assert resumed_lifecycle["counts"] == {"completed-unscored": 1}
+    with pytest.raises(ValueError, match="JOB_ALREADY_SEALED"):
+        await resumed.on_job_start(job)
 
 
 @pytest.mark.asyncio

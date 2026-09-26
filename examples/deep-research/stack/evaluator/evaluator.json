@@ -1,17 +1,21 @@
 {
-  "schema_version": 1,
-  "interface": "harbor-dsh-evaluator/v1",
+  "schema_version": 2,
+  "interface": "harbor-dsh-evaluator/v2",
   "evaluator_id": "deep-research-verifier",
   "version": "4.0.0",
   "kind": "script",
   "protocol": {
-    "input": "evaluation-input/v1",
-    "output": "evaluation-result/v1"
+    "input": "evaluation-input/v2",
+    "output": "evaluation-result/v2"
   },
   "implementation": {
     "entry": "evaluator.py",
     "language": "python",
     "callable": "evaluate"
+  },
+  "input_builder": {
+    "entry": "evaluator.py",
+    "callable": "build_input"
   },
   "editable_files": [
     {
@@ -27,13 +31,18 @@
       "affects": ["evaluator", "rubric"]
     }
   ],
+  "bundle_files": [
+    { "path": "evaluator.py", "role": "implementation" },
+    { "path": "rubric.md", "role": "rubric" }
+  ],
   "criteria": [
-    { "id": "response_quality", "label": "回应问题", "values": [0, 0.5, 1] },
-    { "id": "interestingness", "label": "有趣性", "values": [0, 0.5, 1] },
-    { "id": "citation_compliance", "label": "引用规范性", "values": [0, 0.5, 1] }
+    { "id": "response_quality", "label": "回应问题", "values": [0, 0.5, 1], "required": true },
+    { "id": "interestingness", "label": "有趣性", "values": [0, 0.5, 1], "required": true },
+    { "id": "citation_compliance", "label": "引用规范性", "values": [0, 0.5, 1], "required": true }
   ],
   "aggregate": {
     "metric_id": "reward",
-    "method": "mean"
+    "method": "mean",
+    "minimum_coverage": 1.0
   }
 }

@@ -159,7 +159,8 @@ test('Deep Research sample materializes 13 real questions, controlled badcases, 
   assert.equal(spec.tasks.filter(item => item.badcase).length, 3)
 
   const descriptor = JSON.parse(readFileSync(fileURLToPath(new URL('../../../examples/deep-research/stack/evaluator/evaluator.json', import.meta.url)), 'utf8'))
-  assert.equal(descriptor.interface, 'harbor-dsh-evaluator/v1')
+  assert.equal(descriptor.interface, 'harbor-dsh-evaluator/v2')
+  assert.deepEqual(descriptor.protocol, { input: 'evaluation-input/v2', output: 'evaluation-result/v2' })
   assert.equal(descriptor.kind, 'script')
   assert.deepEqual(descriptor.criteria.map(item => item.label), ['回应问题', '有趣性', '引用规范性'])
   assert.ok(descriptor.criteria.every(item => JSON.stringify(item.values) === '[0,0.5,1]'))

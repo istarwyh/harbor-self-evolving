@@ -219,7 +219,19 @@ def test_materializes_one_harbor_task_per_record_with_broker_templates(tmp_path:
         "reasoning_effort": "high",
     }
     assert result["default_evaluator"]["judge"]["provider"] == "judge-provider"
-    assert stack["components"]["evaluator"]["interface"]["schema_version"] == 2
+    interface = stack["components"]["evaluator"]["interface"]
+    assert interface["schema_version"] == 2
+    assert interface["bundle_complete"] is True
+    materialization = json.loads(
+        (
+            dataset
+            / manifest["tasks"][0]["path"]
+            / "tests"
+            / "evaluator-materialization.json"
+        ).read_text()
+    )
+    assert materialization["configured"]["portable_digest"] == interface["portable_digest"]
+    assert materialization["materialized"]["bundle_complete"] is True
 
 
 def test_materialized_stack_marks_same_generator_and_judge_route_as_coupled(
@@ -319,23 +331,27 @@ class _JudgeHandler(BaseHTTPRequestHandler):
         return
 
 
-def _scored_judge_result():
+def _scored_judge_result(observation: dict):
+    user = next(item for item in observation["visible_transcript"] if item["role"] == "user")
+    assistant = next(item for item in observation["visible_transcript"] if item["role"] == "assistant")
+    refs = {
+        "goal_progress": ["task.initial_user_goal", f"visible_transcript:{assistant['message_ref']}"],
+        "execution_reliability": ["task.initial_user_goal"],
+        "evidence_alignment": [f"visible_transcript:{assistant['message_ref']}:claim"],
+        "interaction_quality": [f"visible_transcript:{user['message_ref']}", f"visible_transcript:{assistant['message_ref']}"],
+    }
+    scored = {"goal_progress", "interaction_quality"}
     return {
         "criteria": [
             {
                 "id": identity,
-                "status": "scored",
-                "score": 1,
-                "reason": "The visible record supports this score.",
-                "recommendation": "Preserve the observed behavior.",
-                "evidence_refs": ["generation_record.visible_transcript"],
+                "status": "scored" if identity in scored else "insufficient-evidence",
+                "score": 1 if identity in scored else None,
+                "reason": "The visible record supports this score." if identity in scored else "No execution evidence is present.",
+                "recommendation": "Preserve the observed behavior." if identity in scored else "Capture execution evidence before scoring.",
+                "evidence_refs": refs[identity],
             }
-            for identity in (
-                "goal_progress",
-                "execution_reliability",
-                "evidence_alignment",
-                "interaction_quality",
-            )
+            for identity in refs
         ]
     }
 
@@ -377,7 +393,7 @@ def test_generated_evaluator_calls_mock_host_broker_and_parses_ndjson(
     model_info: dict,
 ):
     _, batch, observations = make_historical_batch(tmp_path)
-    _JudgeHandler.response_value = _scored_judge_result()
+    _JudgeHandler.response_value = _scored_judge_result(next(iter(observations.values())))
     _JudgeHandler.attestation_value = _judge_attestation(batch["digest"])
     _JudgeHandler.post_count = 0
     server = ThreadingHTTPServer(("127.0.0.1", 0), _JudgeHandler)
@@ -416,9 +432,9 @@ def test_generated_evaluator_calls_mock_host_broker_and_parses_ndjson(
     assert result["aggregate"] == {
         "metric_id": "reward",
         "value": 1.0,
-        "scored_criteria": 4,
+        "scored_criteria": 2,
         "total_criteria": 4,
-        "coverage": 1.0,
+        "coverage": 0.5,
     }
     assert _JudgeHandler.observed_get_authorization == "Bearer job-capability-token"
     assert _JudgeHandler.observed_authorization == "Bearer job-capability-token"
@@ -495,7 +511,7 @@ def test_generated_evaluator_rejects_wrong_broker_attestation_or_info_before_pos
         lease_info["model_info"]["provider"] = "other-provider"
     else:
         lease_info["model_info"]["id"] = "other-model"
-    _JudgeHandler.response_value = _scored_judge_result()
+    _JudgeHandler.response_value = _scored_judge_result(next(iter(observations.values())))
     _JudgeHandler.attestation_value = attestation
     _JudgeHandler.post_count = 0
     server = ThreadingHTTPServer(("127.0.0.1", 0), _JudgeHandler)
@@ -545,7 +561,7 @@ def test_materialized_verifier_uses_mock_broker_and_writes_v2_artifacts(tmp_path
     dataset = Path(result["dataset_path"])
     task = next(path for path in dataset.iterdir() if path.is_dir())
     verifier_dir = tmp_path / "verifier-output"
-    _JudgeHandler.response_value = _scored_judge_result()
+    _JudgeHandler.response_value = _scored_judge_result(next(iter(observations.values())))
     _JudgeHandler.attestation_value = _judge_attestation(batch["digest"])
     _JudgeHandler.post_count = 0
     server = ThreadingHTTPServer(("127.0.0.1", 0), _JudgeHandler)
@@ -580,5 +596,52 @@ def test_materialized_verifier_uses_mock_broker_and_writes_v2_artifacts(tmp_path
     reward = json.loads((verifier_dir / "reward.json").read_text())
     assert evaluation["protocol"] == "evaluation-result/v2"
     assert evaluation["aggregate"]["value"] == 1.0
-    assert reward == {"reward": 1.0}
+    assert evaluation["effective_evaluator"]["identity_match"] is True
+    assert (
+        evaluation["effective_evaluator"]["configured"]["portable_digest"]
+        == evaluation["effective_evaluator"]["executed"]["portable_digest"]
+    )
+    assert reward == {"criterion_coverage": 0.5}
     assert "evaluation-result/v2" in completed.stdout
+
+
+def test_materialized_verifier_fails_closed_before_executing_tampered_evaluator(
+    tmp_path: Path,
+):
+    batch_path, _, _ = make_historical_batch(tmp_path)
+    result = materialize_historical_dataset(
+        project_root=tmp_path,
+        batch_path=batch_path,
+        output_path=tmp_path / "dataset",
+        **HISTORICAL_JUDGE_BINDING,
+    )
+    dataset = Path(result["dataset_path"])
+    task = next(path for path in dataset.iterdir() if path.is_dir())
+    evaluator_path = task / "tests" / "evaluator.py"
+    evaluator_path.write_text(evaluator_path.read_text() + "\nTAMPERED = True\n")
+    verifier_dir = tmp_path / "tampered-verifier-output"
+    completed = subprocess.run(
+        [sys.executable, str(task / "tests" / "verify.py")],
+        cwd=task / "tests",
+        env={
+            **os.environ,
+            "HSE_SESSION_OBSERVATION_PATH": str(
+                task / "environment" / "session-observation.json"
+            ),
+            "HSE_VERIFIER_LOG_DIR": str(verifier_dir),
+        },
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    evaluation = json.loads((verifier_dir / "evaluation-result.json").read_text())
+    reward = json.loads((verifier_dir / "reward.json").read_text())
+    assert evaluation["effective_evaluator"]["identity_match"] is False
+    assert evaluation["effective_evaluator"]["executed"] is None
+    assert {item["status"] for item in evaluation["criteria"]} == {
+        "evaluation-error"
+    }
+    assert evaluation["aggregate"]["value"] is None
+    assert reward == {"criterion_coverage": 0.0}
