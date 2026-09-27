@@ -12,7 +12,7 @@ npx --yes dsh-harbor-evolution@latest setup --project-root "$PWD"
 
 Follow the restart command printed by setup. Verify that:
 
-- the selected DSH profile depends on the exact current registry version `"dsh-harbor-evolution": "0.10.1"`, not `link:...`;
+- the selected DSH profile depends on the exact current registry version `"dsh-harbor-evolution": "0.10.2"`, not `link:...`;
 - `harbor plugins list` contains both `dsh-evolution` and `dsh-historical-evaluation`;
 - the bundled `evolve-agent-with-harbor` Skill is present.
 
@@ -27,6 +27,10 @@ Only when the user explicitly wants to modify or debug this repository, clone it
 ```
 
 This command installs the linked checkout's locked Node.js dependencies before adding it to the profile and installs the local Python Adapter. Do not call `dsh plugin add` on the source directory directly.
+
+# Testing instructions for coding agents
+
+Keep testing deliberately minimal. Write or update only the smallest number of tests needed for the most critical happy path, and run only the narrowest targeted tests that cover it. Avoid full test suites, broad regression coverage, edge-case tests, and redundant tests unless the user explicitly requests them.
 
 # Release handoff instructions for coding agents
 
