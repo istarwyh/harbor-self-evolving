@@ -18,20 +18,21 @@ This page distinguishes a formal tag/public package from local development and s
 
 ## Current release {#current}
 
-### 0.10.2 · Stable Workbench styling
+### 0.10.3 · Actionable project-directory recovery
 
-- Formal tag: [`v0.10.2`](https://github.com/istarwyh/harbor-self-evolving/releases/tag/v0.10.2)
+- Formal tag: [`v0.10.3`](https://github.com/istarwyh/harbor-self-evolving/releases/tag/v0.10.3)
 - Compatibility: Harbor `>=0.21,<0.22`
-- Main change: client-plugin stylesheet ownership survives duplicate-instance disposal and live reload; Job status text is pinned to the card's top-right corner without a background bubble.
-- Evidence: targeted client build and lifecycle/layout regression checks.
-- Limit: source and bundle checks do not replace a complete cross-platform visual acceptance pass.
+- Main change: protected project-directory failures now use a stable redaction-safe error, actionable bilingual recovery steps, collapsed technical details and a copy action; source installs retain locked dev dependencies under production hosts.
+- Evidence: targeted service/client/setup regressions, a built client bundle and a real source-development setup.
+- Limit: source and bundle checks do not replace complete cross-platform TCC/ACL or visual acceptance; desktop app signing remains a Host concern.
 
-[Read the 0.10.2 evidence summary](https://istarwyh.github.io/harbor-self-evolving/releases/0.10.2/).
+[Read the 0.10.3 evidence summary](https://istarwyh.github.io/harbor-self-evolving/releases/0.10.3/).
 
 ## Release history {#history}
 
 | Version | Product step | Evidence note |
 |---|---|---|
+| 0.10.2 | Stable Workbench styling | Targeted client lifecycle/layout checks and coordinated package publication |
 | 0.10.1 | Trustworthy scientific evaluation loop | Coordinated npm/PyPI release with complete automated package and deterministic fixture evidence |
 | 0.10.0 | Publication incomplete | npm published; PyPI/tag CI failed before Python artifact build; superseded by 0.10.1 |
 | 0.9.8 | Host path translation fix | Synthetic Host integration and complete package checks; no model call |

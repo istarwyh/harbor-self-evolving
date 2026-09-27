@@ -18,20 +18,21 @@ cascade:
 
 ## 当前发布 {#current}
 
-### 0.10.2 · 稳定 Workbench 样式
+### 0.10.3 · 可操作的项目目录权限恢复
 
-- 正式 tag：[`v0.10.2`](https://github.com/istarwyh/harbor-self-evolving/releases/tag/v0.10.2)
+- 正式 tag：[`v0.10.3`](https://github.com/istarwyh/harbor-self-evolving/releases/tag/v0.10.3)
 - 兼容：Harbor `>=0.21,<0.22`
-- 主要变化：client-plugin 样式所有权可承受重复实例销毁和热重载；Job 状态固定在卡片右上角且不显示背景圈。
-- 证据：针对性的 client 构建与生命周期/布局回归检查。
-- 限制：源码与 bundle 检查不能替代完整的跨平台视觉验收。
+- 主要变化：受保护项目目录失败改用稳定脱敏错误、双语恢复步骤、折叠技术详情和复制操作；生产宿主中的源码安装保留锁定 dev dependencies。
+- 证据：针对性的 service/client/setup 回归、构建后 client bundle 与真实源码开发安装。
+- 限制：源码与 bundle 检查不能替代完整跨平台 TCC/ACL 或视觉验收；桌面应用签名仍是宿主问题。
 
-[阅读 0.10.2 证据摘要](https://istarwyh.github.io/harbor-self-evolving/zh/releases/0.10.2/)。
+[阅读 0.10.3 证据摘要](https://istarwyh.github.io/harbor-self-evolving/zh/releases/0.10.3/)。
 
 ## 发布历史 {#history}
 
 | 版本 | 产品阶段 | 证据说明 |
 |---|---|---|
+| 0.10.2 | 稳定 Workbench 样式 | 针对性 client 生命周期/布局检查与协调 package 发布 |
 | 0.10.1 | 可信科学评测闭环 | npm/PyPI 协调发布，包含完整自动化 package 与确定性 fixture 证据 |
 | 0.10.0 | 发布不完整 | npm 已发布；PyPI/tag CI 在 Python artifact 构建前失败；由 0.10.1 取代 |
 | 0.9.8 | Host 路径转换修复 | 合成 Host 集成与完整 package 检查；无模型调用 |

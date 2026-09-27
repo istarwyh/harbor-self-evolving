@@ -4,6 +4,7 @@
 
 | 版本 | 主要变化 | 图集 |
 | --- | --- | --- |
+| 0.10.3 | 项目目录权限错误恢复、稳定脱敏错误码与源码安装依赖修复 | [测试与发布验证记录](v0.10.3/README.md) |
 | 0.10.2 | Workbench 样式生命周期隔离；Job 状态固定在右上角并移除背景圈 | [测试与发布验证记录](v0.10.2/README.md) |
 | 0.10.1 | 正式 Evaluator v2、可信 Job bundle、科学 Experiment 与 governed Gate；修复 clean Linux release tests | [测试与发布验证记录](v0.10.1/README.md) |
 | 0.10.0 | 发布不完整：npm 成功、PyPI/tag CI 失败；由 0.10.1 取代 | [失败与验证记录](v0.10.0/README.md) |

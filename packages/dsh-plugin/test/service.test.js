@@ -4,7 +4,7 @@ import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 
-import { EvolutionService, resolveEvaluatorStackPath } from '../lib/service.js'
+import { EvolutionService, projectRootAccessError, resolveEvaluatorStackPath } from '../lib/service.js'
 
 test('Evaluator governance finds the nearest nested active Stack without leaving projectRoot', async () => {
   const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'harbor-service-stack-'))
@@ -22,6 +22,15 @@ test('Evaluator governance finds the nearest nested active Stack without leaving
     undefined,
   )
   assert.equal(await resolveEvaluatorStackPath({ projectRoot }, governance, '.harbor/custom.yml'), '.harbor/custom.yml')
+})
+
+test('project directory permission failures expose a stable redaction-safe error code', () => {
+  const source = Object.assign(new Error("EPERM: operation not permitted, scandir '/Users/alice/Desktop/private-project'"), { code: 'EPERM', syscall: 'scandir' })
+  const normalized = projectRootAccessError(source)
+  assert.equal(normalized.code, 'HARBOR_PROJECT_ROOT_ACCESS_DENIED')
+  assert.equal(normalized.cause, source)
+  assert.doesNotMatch(normalized.message, /Users|Desktop|private-project/)
+  assert.equal(projectRootAccessError(Object.assign(new Error('EACCES: permission denied, open file'), { code: 'EACCES', syscall: 'open' })).code, 'EACCES')
 })
 
 test('version check binds the exact installation identity and never executes an update', async () => {

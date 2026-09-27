@@ -158,6 +158,7 @@ test('setup installs both runtimes, writes an idempotent profile patch, and veri
   assert.ok(calls.some(call => call.command === 'uv' && call.args.includes('/source/harbor-plugin')))
   const sourceInstallCalls = calls.filter(call => call.command === 'npm' && call.args[0] === 'ci')
   assert.equal(sourceInstallCalls.length, 2)
+  assert.ok(sourceInstallCalls[0].args.includes('--include=dev'))
   assert.equal(sourceInstallCalls[0].options.cwd, pluginSource)
   const sourceBuildCalls = calls.filter(call => call.command === 'npm' && call.args[0] === 'run' && call.args[1] === 'build')
   assert.equal(sourceBuildCalls.length, 2)

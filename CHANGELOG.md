@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+## 0.10.3 - 2026-09-27
+
+- Turn macOS-protected project directory failures into a stable, redaction-safe `HARBOR_PROJECT_ROOT_ACCESS_DENIED` response instead of exposing raw `EPERM/scandir` output.
+- Show actionable bilingual recovery guidance in the Harbor Workbench, keep technical details collapsed, and let users copy the exact recovery steps before retrying.
+- Keep source-development installs complete under production-host environments by explicitly including locked dev dependencies; targeted setup coverage prevents React and build tooling from disappearing after `dsh-install-source`.
+
 ## 0.10.2 - 2026-09-27
 
 - Keep each live Web client-plugin lifetime on its own Harbor stylesheet tag so disposing an older duplicate or hot-reloaded instance cannot remove the active Workbench styles.

@@ -109,6 +109,15 @@ test('source and draft conflicts request reload instead of suggesting a network 
   assert.equal(normalizeHarborUiError({ code: 'HARBOR_DRAFT_SOURCE_CONFLICT' }).category, 'conflict')
 })
 
+test('filesystem access failures receive actionable permission guidance instead of a network retry', async () => {
+  const { normalizeHarborUiError } = await loadClient()
+  assert.equal(normalizeHarborUiError({ code: 'HARBOR_PROJECT_ROOT_ACCESS_DENIED', message: 'the operating system denied access' }).category, 'filesystem-permission')
+  assert.equal(normalizeHarborUiError({ code: 'EPERM', message: "EPERM: operation not permitted, scandir '[local path]'" }).category, 'filesystem-permission')
+  assert.equal(normalizeHarborUiError({ code: 'EACCES', message: "EACCES: permission denied, readdir '[local path]'" }).category, 'filesystem-permission')
+  assert.equal(normalizeHarborUiError({ code: 'EACCES', message: "EACCES: permission denied, open '[local path]'" }).category, 'retry')
+  assert.equal(normalizeHarborUiError({ code: 'HARBOR_ACTION_PERMISSION_DENIED', message: 'Action denied' }).category, 'permission')
+})
+
 test('repreparing an expired proposal preserves its original typed selection, not the current page', async () => {
   const { actionDraftContext } = await loadClient()
   const digest = `sha256:${'a'.repeat(64)}`
