@@ -5,8 +5,8 @@
 - 被验证的产品版本 / 提交：`v0.10.3`；tag commit `a42bd1c2aa1ef6b68e46655f731acb52c06f4a5e`
 - 验收环境：macOS 15.6.1 arm64；Node.js 22.19.0；YourBuddy / DSH Web；GitHub clean Linux runner
 - 数据与模型：无需评测数据或模型调用；本次为 Web 错误恢复、服务端错误协议与源码安装修复
-- 包发布状态：npm、PyPI 已通过 OIDC 发布；GitHub Release 与附件在本归档提交后创建
-- 资料归档状态：源码、构建产物、针对性回归、公开 workflow、package artifacts 与 checksums 已核对；verification ZIP 在 GitHub Release 创建时上传
+- 包发布状态：npm、PyPI 与 GitHub Release 已发布；registry 文件摘要、workflow artifacts 与 Release 附件一致
+- 资料归档状态：源码、构建产物、针对性回归、公开 workflow、package artifacts、checksums 与 verification ZIP 已归档
 
 ## 这次改了什么
 
@@ -61,11 +61,11 @@
 | 与本次改动相关的测试/验收 | `npm run check`；`npm pack --dry-run`；`uv run --frozen pytest`；`uv build` | 本地 Node 635 tests passed；Python 378 passed（20 条既有 artifact overlap warning）；npm dry-run 81 files；Python wheel/sdist 构建成功。当前机器未安装 Hugo，网站由 main/tag clean Linux CI 的 warning-strict job 验证 |
 | npm 包与对应发布运行 | [`dsh-harbor-evolution@0.10.3`](https://www.npmjs.com/package/dsh-harbor-evolution/v/0.10.3)；[run 36321542883](https://github.com/istarwyh/harbor-self-evolving/actions/runs/36321542883) | OIDC 发布成功；公开 tgz 与 workflow artifact SHA-256 `dd2fdcd0136ff2703c22aadd49c6e244f49a5abad23f6270383e50c75a54d0a5` |
 | PyPI wheel/sdist 与对应发布运行 | [`harbor-dsh-evolution==0.10.3`](https://pypi.org/project/harbor-dsh-evolution/0.10.3/)；[run 36321542878](https://github.com/istarwyh/harbor-self-evolving/actions/runs/36321542878) | OIDC 发布成功；公开 wheel SHA-256 `964ca5f175d60d38cf244f814f4dce56389ee1871c7e7baa6c8578dcefa5e075`，sdist `6edd2d2973570a0dd292087fa69594f2dfc3c387f10fa6b2c68626d1e0d11655`，与 workflow artifacts 一致 |
-| GitHub Release 与附件 | [`v0.10.3`](https://github.com/istarwyh/harbor-self-evolving/releases/tag/v0.10.3) | Release 在本归档提交后创建；将附 npm tgz、wheel、sdist、verification ZIP 与 SHA256SUMS |
+| GitHub Release 与附件 | [`v0.10.3`](https://github.com/istarwyh/harbor-self-evolving/releases/tag/v0.10.3) | 已附 npm tgz、wheel、sdist、verification ZIP 与 SHA256SUMS；下载后 checksum 校验全部通过 |
 
 ## 未完成项与验证边界
 
-- `v0.10.3` tag、main/tag CI、npm/PyPI OIDC workflow、公开 registry 与 package artifact 摘要已完成核对；GitHub Release 与 verification ZIP 在本归档提交后创建。
+- `v0.10.3` tag、main/tag CI、npm/PyPI OIDC workflow、公开 registry、package artifact 摘要、GitHub Release 与 verification ZIP 已完成核对。
 - 未执行付费/真实 Provider Candidate Job；本次修复不涉及 Evaluator、评分、Gate 或业务质量逻辑。
 - 未把用户会话截图、真实本机路径或系统隐私设置截图纳入公开 evidence；源码/bundle 测试不能替代最终用户设备上的完整视觉验收。
 - YourBuddy 桌面应用的 Developer ID 签名、Team ID、macOS usage description 和原生“打开系统设置”能力不属于本仓库，本版本未修复这些宿主层问题。
