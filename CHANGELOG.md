@@ -4,7 +4,7 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
-- Keep each live Web client-plugin lifetime on its own Harbor stylesheet tag so disposing an older duplicate or hot-reloaded instance cannot remove the active Workbench styles.
+- Keep each live Web client-plugin lifetime on its own Harbor stylesheet tag so disposing an older duplicate or hot-reloaded instance cannot remove the active Workbench styles. Keep Job status text pinned to the card's top-right corner without a stretched background bubble.
 
 ## 0.10.1 - 2026-09-26
 

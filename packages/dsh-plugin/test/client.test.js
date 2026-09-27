@@ -212,6 +212,8 @@ test('built Web client registers the Workbench, invisible input synchronization,
   assert.match(source, /ESF.*SCE.*RCR/s, 'Meta-evaluation must expose the accepted reliability metrics')
   assert.match(source, /function gateReasonText/, 'Gate must render structured and legacy string reasons safely')
   assert.doesNotMatch(source, /StageSummary|hse-stage-summary|what_happened/, 'stage tabs must open directly on user-facing evidence')
+  assert.match(source, /\.hse-job-top\{[^}]*align-items:flex-start/, 'Job status must stay at the top instead of stretching to the card height')
+  assert.match(source, /\.hse-status\{[^}]*background:transparent/, 'Job status must not render an outer background bubble')
   assert.ok(bundle.length > 150_000, 'the embedded ocean asset should ship in the portable client bundle')
 })
 
