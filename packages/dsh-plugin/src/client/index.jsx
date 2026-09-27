@@ -167,12 +167,14 @@ const CSS = `
 `
 
 function installStyles() {
-  const id = 'dsh-harbor-evolution/client'
-  if (document.querySelector(`style[data-plugin-css="${id}"]`)) return () => {}
   const style = document.createElement('style')
-  style.dataset.pluginCss = id
+  style.dataset.plugin = 'dsh-harbor-evolution'
+  style.dataset.pluginCss = 'dsh-harbor-evolution/client'
   style.textContent = CSS
   document.head.appendChild(style)
+  // Each plugin lifetime owns its own tag. Reusing an existing tag is unsafe:
+  // during live reload an older lifetime can dispose after the replacement has
+  // mounted and remove the shared stylesheet, leaving the active UI unstyled.
   return () => style.remove()
 }
 
@@ -2866,4 +2868,4 @@ export function apply(ctx) {
   })
 }
 
-module.exports = { name, inject, apply, HarborInputSync, HarborToolView, createHarborActionHandlers, actionDraftContext, resolvedUiContext, harborDisplayedAnswerBasis, recoverHarborTurn, applySourceProposal, removeContextPart, mergeHarborFocus, selectedSourceLines, sectionForNavigation, HarborUiBridge, buildUiContext, harborContextFilters, replaceStructuredHarborReference, clearStructuredHarborReferences, needsStructuredHarborNormalization, commitIssuedDraft, isHarborInputBusy, dashboardFailureState, workbenchSuccessState, workbenchFailureState, harborTurnProjection, harborSubmissionTransition, effectiveHarborSubmissionReference, shouldClearObservedExplicit, isExplicitContextExpired, evidenceCriterionOwners, evidenceFocusKey, isEvidenceFocused, trialNavigationView, trialRestoreView, navigationHistoryEntry, ownsNavigationHistoryEntry, restoreNavigationSelection, clearConsumedNavigation, ownsTrialRequest, trialListSuccessState, trialListFailureState, hasTrialFilters, trialDetailLoadingState, trialDetailErrorState, comparisonCandidates, governanceRequestKey, ownsGovernanceRequest, ownsGovernanceBinding, normalizeHarborUiError, harborApiError, trustedHarborUiAction, trustedHarborResolvedContext, trustedHarborReferences, harborAnswerBasis, toolUiAction }
+module.exports = { name, inject, apply, installStyles, HarborInputSync, HarborToolView, createHarborActionHandlers, actionDraftContext, resolvedUiContext, harborDisplayedAnswerBasis, recoverHarborTurn, applySourceProposal, removeContextPart, mergeHarborFocus, selectedSourceLines, sectionForNavigation, HarborUiBridge, buildUiContext, harborContextFilters, replaceStructuredHarborReference, clearStructuredHarborReferences, needsStructuredHarborNormalization, commitIssuedDraft, isHarborInputBusy, dashboardFailureState, workbenchSuccessState, workbenchFailureState, harborTurnProjection, harborSubmissionTransition, effectiveHarborSubmissionReference, shouldClearObservedExplicit, isExplicitContextExpired, evidenceCriterionOwners, evidenceFocusKey, isEvidenceFocused, trialNavigationView, trialRestoreView, navigationHistoryEntry, ownsNavigationHistoryEntry, restoreNavigationSelection, clearConsumedNavigation, ownsTrialRequest, trialListSuccessState, trialListFailureState, hasTrialFilters, trialDetailLoadingState, trialDetailErrorState, comparisonCandidates, governanceRequestKey, ownsGovernanceRequest, ownsGovernanceBinding, normalizeHarborUiError, harborApiError, trustedHarborUiAction, trustedHarborResolvedContext, trustedHarborReferences, harborAnswerBasis, toolUiAction }

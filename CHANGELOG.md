@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+- Keep each live Web client-plugin lifetime on its own Harbor stylesheet tag so disposing an older duplicate or hot-reloaded instance cannot remove the active Workbench styles.
+
 ## 0.10.1 - 2026-09-26
 
 - Repair clean Linux CI collection for the new Candidate materialization and Evaluator fork regression modules by using the repository's established test-helper import boundary.

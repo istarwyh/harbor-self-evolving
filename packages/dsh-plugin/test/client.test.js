@@ -214,3 +214,39 @@ test('built Web client registers the Workbench, invisible input synchronization,
   assert.doesNotMatch(source, /StageSummary|hse-stage-summary|what_happened/, 'stage tabs must open directly on user-facing evidence')
   assert.ok(bundle.length > 150_000, 'the embedded ocean asset should ship in the portable client bundle')
 })
+
+test('stylesheet ownership survives overlapping client-plugin lifetimes', async () => {
+  const bundle = await readFile(new URL('../lib/client.js', import.meta.url), 'utf8')
+  let descriptor
+  new Function('window', bundle)({ __ModuleLoader__: { load(value) { descriptor = value } } })
+  const plugin = descriptor.factory(id => {
+    if (id === 'react') return React
+    throw new Error(`unexpected client dependency: ${id}`)
+  })
+  const styles = []
+  const previousDocument = globalThis.document
+  globalThis.document = {
+    createElement(tagName) {
+      const node = {
+        tagName, dataset: {}, textContent: '',
+        remove() { const index = styles.indexOf(node); if (index >= 0) styles.splice(index, 1) },
+      }
+      return node
+    },
+    head: { appendChild(node) { styles.push(node) } },
+  }
+  try {
+    const disposeOld = plugin.installStyles()
+    const disposeReplacement = plugin.installStyles()
+    assert.equal(styles.length, 2)
+    assert.ok(styles.every(style => style.dataset.pluginCss === 'dsh-harbor-evolution/client'))
+    assert.ok(styles.every(style => style.textContent.includes('.hse-root')))
+    disposeOld()
+    assert.equal(styles.length, 1, 'disposing the previous plugin lifetime must preserve replacement styles')
+    disposeReplacement()
+    assert.equal(styles.length, 0)
+  } finally {
+    if (previousDocument === undefined) delete globalThis.document
+    else globalThis.document = previousDocument
+  }
+})

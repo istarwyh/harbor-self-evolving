@@ -2716,11 +2716,9 @@ var CSS = `
 .hse-action-draft{padding:12px;margin:10px 0;border:1px solid #70cfff55;border-radius:10px;font-size:11px}.hse-action-draft header{display:flex;justify-content:space-between;gap:8px}.hse-action-draft dl{display:grid;grid-template-columns:80px minmax(0,1fr);gap:5px;margin:10px 0}.hse-action-draft dd{margin:0;overflow-wrap:anywhere}.hse-action-draft code{font-size:9px;overflow-wrap:anywhere}.hse-action-draft pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto}.hse-action-preview{padding:10px;margin:8px 0;border:1px solid #e4a23b55;border-radius:7px;font-size:11px}.hse-action-preview>code{display:block;overflow-wrap:anywhere;font-size:9px}.hse-action-draft button:disabled{opacity:.45;cursor:not-allowed}
 `;
 function installStyles() {
-  const id = "dsh-harbor-evolution/client";
-  if (document.querySelector(`style[data-plugin-css="${id}"]`)) return () => {
-  };
   const style = document.createElement("style");
-  style.dataset.pluginCss = id;
+  style.dataset.plugin = "dsh-harbor-evolution";
+  style.dataset.pluginCss = "dsh-harbor-evolution/client";
   style.textContent = CSS;
   document.head.appendChild(style);
   return () => style.remove();
@@ -5295,7 +5293,7 @@ function apply(ctx) {
     for (const key of ["harbor_candidate_snapshot", "harbor_model_binding", "harbor_evolution_init", "harbor_evolution_doctor", "harbor_quick_diagnostic_init", "harbor_session_diagnostic_preview", "harbor_session_diagnostic_run", "harbor_business_observation_import", "harbor_business_observation_list", "harbor_dataset_validate", "harbor_context_preview", "harbor_eval_run", "harbor_eval_result", "harbor_evaluator_inspect", "harbor_evaluator_update", "harbor_ground_truth_init", "harbor_evaluator_meta_evaluate", "harbor_candidate_compare", "harbor_resolve_page_context", "harbor_get_evidence", "harbor_propose_action"]) yield ctx.slots.register({ name: "tool.call.toolview", key, inject: injected }, HarborToolView);
   });
 }
-module.exports = { name, inject, apply, HarborInputSync, HarborToolView, createHarborActionHandlers, actionDraftContext, resolvedUiContext, harborDisplayedAnswerBasis, recoverHarborTurn, applySourceProposal, removeContextPart, mergeHarborFocus, selectedSourceLines, sectionForNavigation, HarborUiBridge, buildUiContext, harborContextFilters, replaceStructuredHarborReference, clearStructuredHarborReferences, needsStructuredHarborNormalization, commitIssuedDraft, isHarborInputBusy, dashboardFailureState, workbenchSuccessState, workbenchFailureState, harborTurnProjection, harborSubmissionTransition, effectiveHarborSubmissionReference, shouldClearObservedExplicit, isExplicitContextExpired, evidenceCriterionOwners, evidenceFocusKey, isEvidenceFocused, trialNavigationView, trialRestoreView, navigationHistoryEntry, ownsNavigationHistoryEntry, restoreNavigationSelection, clearConsumedNavigation, ownsTrialRequest, trialListSuccessState, trialListFailureState, hasTrialFilters, trialDetailLoadingState, trialDetailErrorState, comparisonCandidates, governanceRequestKey, ownsGovernanceRequest, ownsGovernanceBinding, normalizeHarborUiError, harborApiError, trustedHarborUiAction, trustedHarborResolvedContext, trustedHarborReferences, harborAnswerBasis, toolUiAction };
+module.exports = { name, inject, apply, installStyles, HarborInputSync, HarborToolView, createHarborActionHandlers, actionDraftContext, resolvedUiContext, harborDisplayedAnswerBasis, recoverHarborTurn, applySourceProposal, removeContextPart, mergeHarborFocus, selectedSourceLines, sectionForNavigation, HarborUiBridge, buildUiContext, harborContextFilters, replaceStructuredHarborReference, clearStructuredHarborReferences, needsStructuredHarborNormalization, commitIssuedDraft, isHarborInputBusy, dashboardFailureState, workbenchSuccessState, workbenchFailureState, harborTurnProjection, harborSubmissionTransition, effectiveHarborSubmissionReference, shouldClearObservedExplicit, isExplicitContextExpired, evidenceCriterionOwners, evidenceFocusKey, isEvidenceFocused, trialNavigationView, trialRestoreView, navigationHistoryEntry, ownsNavigationHistoryEntry, restoreNavigationSelection, clearConsumedNavigation, ownsTrialRequest, trialListSuccessState, trialListFailureState, hasTrialFilters, trialDetailLoadingState, trialDetailErrorState, comparisonCandidates, governanceRequestKey, ownsGovernanceRequest, ownsGovernanceBinding, normalizeHarborUiError, harborApiError, trustedHarborUiAction, trustedHarborResolvedContext, trustedHarborReferences, harborAnswerBasis, toolUiAction };
     return module.exports;
   },
 });
