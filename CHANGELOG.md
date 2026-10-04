@@ -4,6 +4,11 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+## 0.10.4 - 2026-10-04
+
+- Publish the finalized 0.10.3 public-artifact verification records inside the tagged source tree and advance all coordinated npm Plugin, bundled Skill, Python Adapter, installer guidance, and website identities to 0.10.4.
+- This is a release-archive and version-coordination maintenance release; runtime evaluation behavior is unchanged from 0.10.3.
+
 ## 0.10.3 - 2026-09-27
 
 - Turn macOS-protected project directory failures into a stable, redaction-safe `HARBOR_PROJECT_ROOT_ACCESS_DENIED` response instead of exposing raw `EPERM/scandir` output.

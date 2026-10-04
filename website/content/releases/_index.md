@@ -18,20 +18,21 @@ This page distinguishes a formal tag/public package from local development and s
 
 ## Current release {#current}
 
-### 0.10.3 · Actionable project-directory recovery
+### 0.10.4 · Coordinated release archive maintenance
 
-- Formal tag: [`v0.10.3`](https://github.com/istarwyh/harbor-self-evolving/releases/tag/v0.10.3)
+- Formal tag: [`v0.10.4`](https://github.com/istarwyh/harbor-self-evolving/releases/tag/v0.10.4)
 - Compatibility: Harbor `>=0.21,<0.22`
-- Main change: protected project-directory failures now use a stable redaction-safe error, actionable bilingual recovery steps, collapsed technical details and a copy action; source installs retain locked dev dependencies under production hosts.
-- Evidence: targeted service/client/setup regressions, a built client bundle and a real source-development setup.
-- Limit: source and bundle checks do not replace complete cross-platform TCC/ACL or visual acceptance; desktop app signing remains a Host concern.
+- Main change: the finalized 0.10.3 public-artifact verification records now live in the tagged source tree, while npm Plugin, bundled Skill, Python Adapter, installer guidance and website identities advance together.
+- Evidence: coordinated metadata checks, generated-client verification, package builds and public registry/release checks.
+- Limit: runtime evaluation behavior is unchanged from 0.10.3; this release does not add real-provider or business-quality evidence.
 
-[Read the 0.10.3 evidence summary](https://istarwyh.github.io/harbor-self-evolving/releases/0.10.3/).
+[Read the 0.10.4 evidence summary](https://istarwyh.github.io/harbor-self-evolving/releases/0.10.4/).
 
 ## Release history {#history}
 
 | Version | Product step | Evidence note |
 |---|---|---|
+| 0.10.3 | Actionable project-directory recovery | Targeted service/client/setup checks plus matched public npm/PyPI artifacts |
 | 0.10.2 | Stable Workbench styling | Targeted client lifecycle/layout checks and coordinated package publication |
 | 0.10.1 | Trustworthy scientific evaluation loop | Coordinated npm/PyPI release with complete automated package and deterministic fixture evidence |
 | 0.10.0 | Publication incomplete | npm published; PyPI/tag CI failed before Python artifact build; superseded by 0.10.1 |

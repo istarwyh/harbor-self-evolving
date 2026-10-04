@@ -4,6 +4,7 @@
 
 | 版本 | 主要变化 | 图集 |
 | --- | --- | --- |
+| 0.10.4 | 归档已核验的 0.10.3 公开制品结果并协调推进 Plugin、Skill、Adapter 与安装文档版本 | [测试与发布验证记录](v0.10.4/README.md) |
 | 0.10.3 | 项目目录权限错误恢复、稳定脱敏错误码与源码安装依赖修复 | [测试与发布验证记录](v0.10.3/README.md) |
 | 0.10.2 | Workbench 样式生命周期隔离；Job 状态固定在右上角并移除背景圈 | [测试与发布验证记录](v0.10.2/README.md) |
 | 0.10.1 | 正式 Evaluator v2、可信 Job bundle、科学 Experiment 与 governed Gate；修复 clean Linux release tests | [测试与发布验证记录](v0.10.1/README.md) |
