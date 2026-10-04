@@ -2,7 +2,7 @@
 
 - 归档日期（含时区）：2026-10-04 UTC+08:00 CST
 - 目标发布版本 / tag：`0.10.4` / `v0.10.4`
-- 被验证的产品版本 / 提交：`0.10.4`；正式 tag 与提交将在发布后核对补录
+- 被验证的产品版本 / 提交：`0.10.4`；release preparation commit `6ca5f774438d2e146ef17fea1c5dc146be01e68c`；正式 tag commit 将在发布后核对补录
 - 验收环境：macOS arm64；Node.js 22.19.0；Python 3.12 / uv；GitHub clean Linux runner（待核对）
 - 数据与模型：无需评测数据或模型调用；本次为归档和协调版本维护
 - 包发布状态：待核对 npm、PyPI 与 GitHub Release
@@ -31,7 +31,7 @@
 ## 02 · Plugin、Skill 与 Adapter 版本协调
 
 - 验证日期（含时区）：2026-10-04 UTC+08:00 CST
-- 版本/提交与环境：本地 0.10.4 release tree；macOS arm64
+- 版本/提交与环境：`6ca5f774438d2e146ef17fea1c5dc146be01e68c`；macOS arm64
 - 来源与证据类型：本次源码、构建与 package metadata 验证；synthetic/package verification
 - 操作过程：同步 Node/Python package identity、生成 client、安装文档与网站当前版本 → 运行最小必要 Node/Python 检查和 package build
 - 预期结果：Node 与 Python 版本一致，生成 client 记录 0.10.4，文档一致性测试和 package 构建通过
